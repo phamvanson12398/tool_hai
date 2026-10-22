@@ -166,9 +166,11 @@ def _parse_mods(mods: str, beat: Beat, errors: list[str], warnings: list[str],
         elif tok_lower in ("gesture", "cu_chi", "gestures"):
             continue
         else:
-            # Có vẻ là tên cử chỉ viết sai -> báo lỗi tiếng Việt kèm số dòng
+            # Tên biểu cảm / cử chỉ viết sai -> báo lỗi tiếng Việt kèm số dòng
             errors.append(
-                f"Dòng {line_no}: không có cử chỉ '{tok}'. "
+                f"Dòng {line_no}: không nhận ra '{tok}' (không phải biểu cảm, "
+                f"tiếng động hay cử chỉ). "
+                f"Biểu cảm hợp lệ: {', '.join(sorted(VALID_EXPRESSIONS))}. "
                 f"Các cử chỉ hợp lệ: {', '.join(sorted(valid_gestures))}. "
                 f"Hiệu ứng cả người: {', '.join(EFFECT_NAMES)}."
             )

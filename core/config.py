@@ -54,7 +54,7 @@ LANGUAGES = {
 # --- Biểu cảm hỗ trợ ---
 EXPRESSIONS = [
     "neutral", "happy", "sad", "angry", "shocked",
-    "proud", "embarrassed", "smirk", "worried", "tired",
+    "proud", "embarrassed", "smug", "worried", "tired",
 ]
 
 # --- Tiếng động có sẵn (đặt tên file vào thư mục data/sfx) ---

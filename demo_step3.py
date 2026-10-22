@@ -16,16 +16,16 @@ script_text = """# tieu_de: 피카츄의 하루
 피카츄 (proud): 전기 기술 보여줄까?
 > 잠만보 (shocked, zoom, boing) 0.8
 잠만보 (angry, zoom): 안돼! 자고 싶어!
-피카чу (happy, zoom): 그럼 같이 자자!
+피카츄 (happy, zoom): 그럼 같이 자자!
 잠만보 (embarrassed): 음... 그래...
-피카츄 (smirk): 근데 나 코고 자는 거 알아?
+피카츄 (smug): 근데 나 코고 자는 거 알아?
 > 잠만보 (shocked, zoom, gasp) 0.6
 잠만보 (worried): 뭐? 진짜?!
 피카츄 (laughing, zoom): 장난이야! 각성하지 마!
 잠만보 (neutral): 하... 재미있구나.
 피카츄 (proud): 그럼 어디 한번 더 보여줄까?
 > 잠만보 (embarrassed, zoom, thud) 0.5
-잠만보 (sleepy): 이제 정말 자야겠어...
+잠만보 (tired): 이제 정말 자야겠어...
 피카츄 (tired): 알았어... 나도 졸려...
 피카츄 (neutral): 그럼 내일 보자!
 잠만보 (neutral): 잘 자...
@@ -68,7 +68,7 @@ out_chars.mkdir(parents=True, exist_ok=True)
 
 # Tạo đủ bộ biểu cảm
 exprs1 = ['neutral', 'happy', 'proud', 'shocked', 'angry', 'laughing',
-          'embarrassed', 'smirk', 'worried', 'tired']
+          'embarrassed', 'smug', 'worried', 'tired']
 exprs2 = ['neutral', 'tired', 'shocked', 'angry', 'embarrassed', 'worried']
 
 imgs1 = ck.build_sheet(spec1, out_chars / 'pikachu', exprs1)
