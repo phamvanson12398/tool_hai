@@ -4,10 +4,9 @@
 - Tách nền bằng morphology (ảnh vẽ nét đen trên nền trắng).
 - Ước đoán vị trí khớp bằng mô hình nhận dáng người (nếu cài được pip package),
   không thì đặt khung xương mặc định theo hình dạng ảnh.
-- Uốn lưới tam giác theo khung xương (SCIPY affine trên từng vùng tam giác).
-- Phần ĐẦU luôn giữ cứng để gắn biểu cảm và miệng như cũ.
-
-Module độc lập, chưa gắn vào luồng dựng chính.
+- Chia ảnh theo xương (mỗi điểm ảnh thuộc đoạn xương gần nhất), rồi xoay
+  cứng từng đoạn tay/chân quanh khớp (đoạn con đi theo đoạn cha); đầu xoay
+  nguyên khối quanh cổ.
 """
 from __future__ import annotations
 
@@ -25,12 +24,22 @@ from .character_kit import CharSpec
 
 # ------------------------------------------------------------------ tách nền
 
+def _imread(img_path: Path):
+    """Đọc ảnh BGR, chịu được tên file tiếng Hàn/tiếng Việt trên Windows
+    (cv2.imread không mở được đường dẫn có ký tự Unicode)."""
+    try:
+        buf = np.fromfile(str(img_path), dtype=np.uint8)
+    except OSError:
+        return None
+    return cv2.imdecode(buf, cv2.IMREAD_COLOR) if buf.size else None
+
+
 def remove_background_stick(img_path: Path) -> tuple[Image.Image, np.ndarray]:
     """Tách nền trắng của ảnh vẽ nét đen.
 
     Trả về (PIL Image RGBA đã tách nền, mask uint8 0/255 của vùng vẽ).
     """
-    img = cv2.imread(str(img_path), cv2.IMREAD_COLOR)
+    img = _imread(img_path)
     if img is None:
         raise FileNotFoundError(f"Không đọc được ảnh: {img_path}")
     gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
@@ -121,7 +130,9 @@ def _estimate_pose_mediapipe(img_rgb: np.ndarray) -> PhotoJoints | None:
 
 def estimate_joints(img_path: Path) -> tuple[PhotoJoints, str]:
     """Ước đoán khớp từ ảnh. Trả về (joints, nguồn: 'mediapipe'|'fallback')."""
-    img = cv2.imread(str(img_path))
+    img = _imread(img_path)
+    if img is None:
+        raise FileNotFoundError(f"Không đọc được ảnh: {img_path}")
     img_rgb = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
     joints = _estimate_pose_mediapipe(img_rgb)
     if joints is not None:
@@ -149,97 +160,123 @@ def estimate_joints(img_path: Path) -> tuple[PhotoJoints, str]:
                        ankle_l, ankle_r), "fallback"
 
 
-# ------------------------------------------------------------------ uốn lưới tam giác
+# ------------------------------------------------------------------ cử động theo xương
 
-def _tri_warp(src: np.ndarray, dst: np.ndarray,
-              src_tri: np.ndarray, dst_tri: np.ndarray,
-              out_shape: tuple[int, int]) -> np.ndarray:
-    """Warp một vùng tam giác từ src_tri sang dst_tri bằng affine (scipy)."""
-    from scipy.ndimage import affine_transform
-    M = cv2.getAffineTransform(src_tri.astype(np.float32),
-                               dst_tri.astype(np.float32))
-    Minv = cv2.invertAffineTransform(M)
-    out = np.zeros((out_shape[0], out_shape[1], 4), dtype=np.uint8)
-    for ch in range(4):
-        out[..., ch] = affine_transform(src[..., ch], Minv[:2, :2],
-                                        offset=Minv[:2, 2],
-                                        output_shape=out_shape,
-                                        order=1, mode="constant", cval=0)
+def _rot_mat(cx: float, cy: float, a: float) -> np.ndarray:
+    """Ma trận 3x3 xoay góc a (rad) quanh (cx, cy), cùng chiều với rig.py
+    (toạ độ ảnh y hướng xuống: góc dương = quay theo chiều kim đồng hồ)."""
+    ca, sa = math.cos(a), math.sin(a)
+    return np.array([[ca, -sa, cx - ca * cx + sa * cy],
+                     [sa, ca, cy - sa * cx - ca * cy],
+                     [0.0, 0.0, 1.0]])
+
+
+def _seg_dist(xx: np.ndarray, yy: np.ndarray, p0, p1) -> np.ndarray:
+    """Khoảng cách từ mỗi điểm ảnh tới đoạn thẳng p0→p1."""
+    dx, dy = p1[0] - p0[0], p1[1] - p0[1]
+    ll = dx * dx + dy * dy
+    if ll < 1e-6:
+        return np.hypot(xx - p0[0], yy - p0[1])
+    t = np.clip(((xx - p0[0]) * dx + (yy - p0[1]) * dy) / ll, 0.0, 1.0)
+    return np.hypot(xx - (p0[0] + t * dx), yy - (p0[1] + t * dy))
+
+
+_LABEL_CACHE: dict = {}
+
+
+def _bone_labels(h: int, w: int, j: PhotoJoints) -> np.ndarray:
+    """Chia ảnh theo xương: mỗi điểm ảnh thuộc đoạn xương gần nó nhất.
+
+    Thứ tự nhãn: 0 thân, 1 đầu, rồi (trên, dưới) của chân trái, chân phải,
+    tay trái, tay phải. Kết quả được nhớ lại theo khung xương.
+    """
+    key = (h, w, tuple(j.as_dict().items()))
+    if key in _LABEL_CACHE:
+        return _LABEL_CACHE[key]
+    yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+    hip_c = ((j.hip_l[0] + j.hip_r[0]) / 2, (j.hip_l[1] + j.hip_r[1]) / 2)
+    segs = [(j.neck, hip_c), (j.neck, _extend(j.neck, j.head, 0.6))]
+    for root, mid, end in ((j.hip_l, j.knee_l, j.ankle_l),
+                           (j.hip_r, j.knee_r, j.ankle_r),
+                           (j.shoulder_l, j.elbow_l, j.wrist_l),
+                           (j.shoulder_r, j.elbow_r, j.wrist_r)):
+        segs.append((root, mid))
+        segs.append((mid, _extend(mid, end, 0.35)))
+    dist = np.stack([_seg_dist(xx, yy, a, b) for a, b in segs])
+    labels = np.argmin(dist, axis=0).astype(np.uint8)
+    if len(_LABEL_CACHE) > 8:
+        _LABEL_CACHE.clear()
+    _LABEL_CACHE[key] = labels
+    return labels
+
+
+def _extend(p0, p1, k: float) -> tuple[float, float]:
+    """Kéo dài đoạn p0→p1 thêm k lần độ dài (để ăn cả bàn tay, bàn chân)."""
+    return (p1[0] + (p1[0] - p0[0]) * k, p1[1] + (p1[1] - p0[1]) * k)
+
+
+def _over(dst: np.ndarray, src: np.ndarray) -> np.ndarray:
+    """Chồng ảnh RGBA src lên dst (alpha over)."""
+    sa = src[..., 3:4].astype(np.float32) / 255.0
+    da = dst[..., 3:4].astype(np.float32) / 255.0
+    out_a = sa + da * (1 - sa)
+    rgb = (src[..., :3] * sa + dst[..., :3] * da * (1 - sa)) / np.maximum(out_a, 1e-6)
+    out = np.empty_like(dst)
+    out[..., :3] = np.clip(rgb, 0, 255).astype(np.uint8)
+    out[..., 3:4] = np.clip(out_a * 255, 0, 255).astype(np.uint8)
     return out
 
 
 def warp_by_bones(img_rgba: np.ndarray, joints: PhotoJoints,
                   angles: dict[str, float]) -> np.ndarray:
-    """Uớn lưới tam giác theo các góc xương cho trước.
+    """Cử động ảnh theo các góc xương cho trước.
 
-    angles: {ten_xuong: rad}. Các xương hỗ trợ: vai->khuyu->co_tay,
-    dui->goi->co_chan, dau, co, than.
-    Trả về ảnh RGBA đã uốn (cùng kích thước đầu vào).
+    Mỗi điểm ảnh thuộc đoạn xương gần nó nhất; đoạn tay/chân được xoay cứng
+    quanh khớp, đoạn con đi theo đoạn cha (vai → khuỷu, đùi → gối).
+    angles: {ten_xuong: rad}. Các xương hỗ trợ: vai/khuyu, dui/goi, dau.
+    Trả về ảnh RGBA đã cử động (cùng kích thước đầu vào).
     """
     h, w = img_rgba.shape[:2]
-    R = math.radians
+    j = joints
+    # (khớp gốc, khớp giữa, xương trên, xương dưới), cùng thứ tự với _bone_labels
+    chains = [
+        (j.hip_l, j.knee_l, "dui_left", "goi_left"),
+        (j.hip_r, j.knee_r, "dui_right", "goi_right"),
+        (j.shoulder_l, j.elbow_l, "vai_left", "khuyu_left"),
+        (j.shoulder_r, j.elbow_r, "vai_right", "khuyu_right"),
+    ]
+    a_dau = angles.get("dau", 0.0)
+    head_moves = abs(a_dau) > math.radians(0.3)
+    moving = [(i, c) for i, c in enumerate(chains)
+              if abs(angles.get(c[2], 0.0)) > 1e-4 or abs(angles.get(c[3], 0.0)) > 1e-4]
+    if not moving and not head_moves:
+        return img_rgba.copy()
 
-    def rot(px, py, cx, cy, a):
-        ca, sa = math.cos(a), math.sin(a)
-        dx, dy = px - cx, py - cy
-        return (cx + dx * ca - dy * sa, cy + dx * sa + dy * ca)
+    labels = _bone_labels(h, w, j)
+    alpha = img_rgba[..., 3]
+    body = img_rgba.copy()
+    layers: list[np.ndarray] = []
 
-    result = img_rgba.copy()
+    def take(label: int, m3: np.ndarray) -> None:
+        sel = labels == label
+        part = img_rgba.copy()
+        part[..., 3] = np.where(sel, alpha, 0)
+        body[..., 3][sel] = 0
+        layers.append(cv2.warpAffine(part, m3[:2], (w, h), flags=cv2.INTER_LINEAR,
+                                     borderMode=cv2.BORDER_CONSTANT,
+                                     borderValue=(0, 0, 0, 0)))
 
-    def warp_segment(result_in, p0, p1, p2, ang_deg):
-        """Warp tam giác (p0,p1,p2) xoay góc ang_deg quanh p0, trả về ảnh mới."""
-        a = R(ang_deg)
-        q0 = p0
-        q1 = rot(p1[0], p1[1], p0[0], p0[1], a)
-        q2 = rot(p2[0], p2[1], p0[0], p0[1], a)
-        src_tri = np.array([p0, p1, p2], dtype=np.float32)
-        dst_tri = np.array([q0, q1, q2], dtype=np.float32)
-        mask = np.zeros((h, w), dtype=np.uint8)
-        cv2.fillConvexPoly(mask, np.array([p0, p1, p2], dtype=np.int32), 255)
-        src_tri_masked = cv2.bitwise_and(result_in, result_in, mask=mask)
-        warped = _tri_warp(src_tri_masked, result_in, src_tri, dst_tri, (h, w))
-        mask2 = np.zeros((h, w), dtype=np.uint8)
-        cv2.fillConvexPoly(mask2, np.array([q0, q1, q2], dtype=np.int32), 255)
-        cleared = cv2.bitwise_and(result_in, result_in, mask=cv2.bitwise_not(mask2))
-        return cv2.add(cleared, cv2.bitwise_and(warped, warped, mask=mask2))
+    for i, (root, mid, up_key, low_key) in moving:
+        m_up = _rot_mat(root[0], root[1], angles.get(up_key, 0.0))
+        m_low = m_up @ _rot_mat(mid[0], mid[1], angles.get(low_key, 0.0))
+        take(2 + 2 * i, m_up)
+        take(3 + 2 * i, m_low)
+    if head_moves:
+        take(1, _rot_mat(j.neck[0], j.neck[1], a_dau))
 
-    # Tay phải
-    if "vai_right" in angles:
-        result = warp_segment(result, joints.shoulder_r, joints.elbow_r,
-                              joints.wrist_r, math.degrees(angles["vai_right"]))
-    if "khuyu_right" in angles:
-        result = warp_segment(result, joints.elbow_r, joints.wrist_r,
-                              (joints.wrist_r[0] + 20, joints.wrist_r[1]),
-                              math.degrees(angles["khuyu_right"]))
-    # Tay trái
-    if "vai_left" in angles:
-        result = warp_segment(result, joints.shoulder_l, joints.elbow_l,
-                              joints.wrist_l, math.degrees(angles["vai_left"]))
-    if "khuyu_left" in angles:
-        result = warp_segment(result, joints.elbow_l, joints.wrist_l,
-                              (joints.wrist_l[0] - 20, joints.wrist_l[1]),
-                              math.degrees(angles["khuyu_left"]))
-    # Chân
-    if "dui_right" in angles:
-        result = warp_segment(result, joints.hip_r, joints.knee_r,
-                              joints.ankle_r, math.degrees(angles["dui_right"]))
-    if "goi_right" in angles:
-        result = warp_segment(result, joints.knee_r, joints.ankle_r,
-                              (joints.ankle_r[0], joints.ankle_r[1] + 40),
-                              math.degrees(angles["goi_right"]))
-    if "dui_left" in angles:
-        result = warp_segment(result, joints.hip_l, joints.knee_l,
-                              joints.ankle_l, math.degrees(angles["dui_left"]))
-    if "goi_left" in angles:
-        result = warp_segment(result, joints.knee_l, joints.ankle_l,
-                              (joints.ankle_l[0], joints.ankle_l[1] + 40),
-                              math.degrees(angles["goi_left"]))
-    # Đầu giữ cứng — chỉ áp nếu góc dau đủ lớn
-    if "dau" in angles and abs(angles["dau"]) > math.radians(2):
-        result = warp_segment(result, joints.neck, joints.head,
-                              (joints.head[0] + 60, joints.head[1]),
-                              math.degrees(angles["dau"]))
-
+    result = body
+    for layer in layers:
+        result = _over(result, layer)
     return result
 
 
@@ -266,7 +303,7 @@ class PhotoCharacter:
                mouth_open: bool = False,
                size: tuple[int, int] = (config.WIDTH, config.HEIGHT)
                ) -> Image.Image:
-        """Render một khung: uốn lưới theo angles, đầu giữ cứng."""
+        """Render một khung: cử động theo angles."""
         arr = np.array(self.rgba.convert("RGBA"))
         warped = warp_by_bones(arr, self.joints, angles)
         img = Image.fromarray(warped, "RGBA")

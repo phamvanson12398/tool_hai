@@ -13,6 +13,7 @@ import traceback
 import uuid
 from datetime import datetime
 from pathlib import Path
+from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
@@ -1188,7 +1189,7 @@ def api_rig_upload():
         return _err("Chưa chọn ảnh.", 400)
     pdir = config.DATA / "tmp" / "rig"
     pdir.mkdir(parents=True, exist_ok=True)
-    dst = pdir / f.filename
+    dst = pdir / Path(f.filename).name
     f.save(str(dst))
     try:
         char = photo_rig.PhotoCharacter.load("tmp", dst)
@@ -1197,11 +1198,18 @@ def api_rig_upload():
     return jsonify({
         "ok": True,
         "path": str(dst),
+        "url": "/api/rig/image/" + quote(dst.name),
         "size": list(char.rgba.size),
         "joints": char.joints.as_dict(),
         "source": char.source,
         "valid": char.valid,
     })
+
+
+@app.get("/api/rig/image/<name>")
+def api_rig_image(name):
+    """Ảnh gốc đã tải lên ở màn Dựng xương (chỉ đọc trong thư mục tmp/rig)."""
+    return send_from_directory(str(config.DATA / "tmp" / "rig"), name)
 
 
 @app.post("/api/rig/save")
@@ -1269,33 +1277,73 @@ def api_rig_save():
     return jsonify({"ok": True, "path": str(p)})
 
 
-@app.get("/api/rig/preview")
+@app.route("/api/rig/preview", methods=["GET", "POST"])
 def api_rig_preview():
-    """Xem thử vẫy tay hoặc đi bộ trên ảnh đã load (trả về base64 các khung)."""
+    """Xem thử một cử chỉ trên ảnh đã load, dùng khung xương chị đã sửa.
+
+    Trả về chuỗi khung JPEG (base64) đủ một vòng cử chỉ để phát lặp lại.
+    """
     import base64, io
-    path = request.args.get("path")
-    mode = request.args.get("mode", "wave")
-    print("[RIG] preview", mode, path)
+    from PIL import Image
+    from core import gestures as gmod
+    body = request.get_json(silent=True) or {}
+    path = body.get("path") or request.args.get("path")
+    mode = body.get("gesture") or body.get("mode") or request.args.get("mode", "wave")
+    gesture_name = {"wave": "vaytay", "walk": "dibo"}.get(mode, mode)
     if not path:
         return _err("Thiếu path ảnh.", 400)
+    _, lib = gmod.ensure_library()
+    gesture = lib.get(gesture_name)
+    if gesture is None and gesture_name != "tho":
+        return _err(f"Không có cử chỉ '{gesture_name}'.", 400)
     try:
         char = photo_rig.PhotoCharacter.load("tmp", Path(path))
     except Exception as e:  # noqa: BLE001
         return _err(f"Không load ảnh: {e}", 400)
+    joints = body.get("joints")
+    if isinstance(joints, dict):
+        cur = char.joints.as_dict()
+        try:
+            cur.update({k: (float(v[0]), float(v[1])) for k, v in joints.items() if k in cur})
+        except (TypeError, ValueError, IndexError):
+            return _err("Dữ liệu khớp không hợp lệ.", 400)
+        char.joints = photo_rig.PhotoJoints(**cur)
+
+    fps = 12
+    duration = gesture.duration if gesture is not None else 2.0
+    if gesture is not None and gesture.loop:
+        duration *= 2   # cử chỉ lặp: cho chạy hai vòng
+    duration = min(max(duration + 0.4, 1.5), 4.0)
+    n = int(duration * fps)
+    w, h = char.rgba.size
+    scale = min(1.0, 640 / h)
+    out_size = (max(1, int(w * scale)), max(1, int(h * scale)))
     frames = []
-    for i in range(6):
-        t = i / 6.0
-        angles = core_rig.merge(breathe_angles(t, 0))
-        if mode == "wave":
-            angles = core_rig.merge(angles, core_rig.wave_angles(t, side="right"))
-        else:
-            angles = core_rig.merge(angles, core_rig.idle_angles(t))
-        img = char.render(angles, mouth_open=(i % 2 == 1))
+    for i in range(n):
+        t = i / fps
+        angles = gmod.breathe_angles(t, 0)
+        if gesture is not None:
+            angles = gmod.merge_angles(angles, gmod.gesture_angles(gesture, t))
+        img = char.render(angles, size=(w, h))
+        bg = Image.new("RGB", (w, h), (30, 41, 59))
+        bg.paste(img, mask=img.getchannel("A"))
+        if scale < 1.0:
+            bg = bg.resize(out_size, Image.LANCZOS)
         buf = io.BytesIO()
-        img.convert("RGB").save(buf, format="JPEG", quality=85)
+        bg.save(buf, format="JPEG", quality=82)
         frames.append("data:image/jpeg;base64," + base64.b64encode(buf.getvalue()).decode())
-    print(f"[RIG] preview {mode} → trả về {len(frames)} khung ảnh")
-    return jsonify({"ok": True, "mode": mode, "frames": frames})
+    return jsonify({"ok": True, "gesture": gesture_name, "fps": fps, "frames": frames})
+
+
+@app.get("/api/rig/gestures")
+def api_rig_gestures():
+    """Danh sách cử chỉ để chọn xem thử."""
+    from core import gestures as gmod
+    _, lib = gmod.ensure_library()
+    items = [{"name": "tho", "label": "Đứng thở (không cử chỉ)"}]
+    items += [{"name": g.name, "label": g.label or g.name} for g in lib.values()]
+    return jsonify({"gestures": items})
+
 
 def main() -> None:
     host = "127.0.0.1"

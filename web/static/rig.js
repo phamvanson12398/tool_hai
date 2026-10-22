@@ -28,7 +28,8 @@
     joints: {},
     dragJoint: null,
     showLabels: true,
-    previewFrames: []
+    previewFrames: [],
+    previewTimer: null
   };
 
   function $(id) { return document.getElementById(id); }
@@ -118,6 +119,7 @@
       return api("/api/rig/upload", {method: "POST", body: fd})
         .then(function(data) {
           state.imagePath = data.path;
+          state.imageUrl = data.url || ("/api/library/image/" + encodeURIComponent(data.path));
           state.imageNaturalSize = data.size;
           state.joints = data.joints || {};
 
@@ -142,6 +144,7 @@
           // Hiện canvas
           $("rig-canvas-card").hidden = false;
           renderCanvas();
+          showStill(state.imageUrl);
           toast("ok", "Đã load ảnh", "Kéo chấm khớp để điều chỉnh vị trí.");
         })
         .catch(function(e) {
@@ -271,7 +274,7 @@
       };
     };
 
-    img.src = "/api/library/image/" + encodeURIComponent(state.imagePath);
+    img.src = state.imageUrl;
   }
 
   // ---------------------- Lưu rig.json ----------------------
@@ -301,84 +304,91 @@
 
   // ---------------------- Xem thử vẫy tay / đi bộ ----------------------
 
-  function previewGesture(mode) {
+  function stopPreview() {
+    if (state.previewTimer) clearInterval(state.previewTimer);
+    state.previewTimer = null;
+  }
+
+  function showStill(src) {
+    stopPreview();
+    var stage = $("rig-preview-stage");
+    stage.innerHTML = "";
+    var img = document.createElement("img");
+    img.src = src;
+    img.style.cssText = "width:100%;height:auto;display:block;border-radius:8px";
+    stage.appendChild(img);
+    stage.appendChild(el("p", "hint", "Chọn cử chỉ rồi bấm “Xem thử cử chỉ” để xem nhân vật cử động."));
+  }
+
+  function previewGesture() {
     if (!state.imagePath) {
       toast("warn", "Chưa có ảnh", "Load ảnh trước khi xem thử.");
       return;
     }
+    var sel = $("rig-gesture");
+    var gesture = sel.value;
+    var label = sel.options[sel.selectedIndex] ? sel.options[sel.selectedIndex].text : gesture;
 
-    var btn = mode === "wave" ? $("btn-rig-preview-wave") : $("btn-rig-preview-walk");
-    withBusy(btn, function() {
-      return api("/api/rig/preview?path=" + encodeURIComponent(state.imagePath) + "&mode=" + mode)
-        .then(function(data) {
-          state.previewFrames = data.frames || [];
-          if (state.previewFrames.length) {
-            playPreview();
-            toast("ok", "Xem thử " + (mode === "wave" ? "vẫy tay" : "đi bộ"), "Hiển thị " + state.previewFrames.length + " khung");
-          } else {
-            toast("warn", "Không có khung", "Server không trả về khung xem thử.");
-          }
-        })
-        .catch(function(e) {
-          toast("error", "Xem thử thất bại", e.message || e);
-        });
+    withBusy($("btn-rig-preview"), function() {
+      return api("/api/rig/preview", {
+        method: "POST",
+        body: {path: state.imagePath, gesture: gesture, joints: state.joints}
+      }).then(function(data) {
+        state.previewFrames = data.frames || [];
+        if (state.previewFrames.length) {
+          playPreview(data.fps || 12, label);
+        } else {
+          toast("warn", "Không có khung", "Server không trả về khung xem thử.");
+        }
+      }).catch(function(e) {
+        toast("error", "Xem thử thất bại", e.message || e);
+      });
     });
   }
 
-  function playPreview() {
+  function playPreview(fps, label) {
+    stopPreview();
+    var frames = state.previewFrames;
     var stage = $("rig-preview-stage");
     stage.innerHTML = "";
 
-    // Tạo khung lớn (preview chính)
-    var mainWrap = el("div");
-    mainWrap.style.cssText = "margin-bottom:12px;border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#000";
-    var mainImg = document.createElement("img");
-    mainImg.style.cssText = "width:100%;height:auto;display:block";
-    mainImg.src = state.previewFrames[0];
-    mainWrap.appendChild(mainImg);
-    stage.appendChild(mainWrap);
+    var wrap = el("div");
+    wrap.style.cssText = "border:1px solid var(--line);border-radius:8px;overflow:hidden;background:#1E293B";
+    var img = document.createElement("img");
+    img.style.cssText = "width:100%;height:auto;display:block";
+    img.src = frames[0];
+    wrap.appendChild(img);
+    stage.appendChild(wrap);
 
-    // Tạo lưới 6 ảnh nhỏ
-    var grid = el("div");
-    grid.style.cssText = "display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px";
-    state.previewFrames.forEach(function(src, i) {
-      var thumb = document.createElement("img");
-      thumb.src = src;
-      thumb.style.cssText = "width:100%;height:auto;border:2px solid var(--line);border-radius:6px;cursor:pointer;transition:border-color .2s";
-      thumb.addEventListener("mouseenter", function() { thumb.style.borderColor = "#38BDF8"; });
-      thumb.addEventListener("mouseleave", function() { thumb.style.borderColor = "var(--line)"; });
-      thumb.addEventListener("click", function() {
-        mainImg.src = src;
-        Array.from(grid.children).forEach(function(t) { t.style.borderColor = "var(--line)"; });
-        thumb.style.borderColor = "#F97316";
-      });
-      grid.appendChild(thumb);
-    });
-    stage.appendChild(grid);
+    var bar = el("div", "row-actions");
+    bar.style.marginTop = "10px";
+    var btn = el("button", "btn btn-ghost", "⏸ Dừng");
+    btn.type = "button";
+    var info = el("span", "hint", "");
+    bar.appendChild(btn);
+    bar.appendChild(info);
+    stage.appendChild(bar);
 
-    // Nút phát
-    var playBtn = el("button", "btn btn-primary", "▶ Phát animation");
-    playBtn.style.cssText = "width:100%";
-    var playing = false;
     var idx = 0;
-    var timer = null;
-
-    playBtn.addEventListener("click", function() {
-      if (playing) {
-        playing = false;
-        clearInterval(timer);
-        playBtn.textContent = "▶ Phát animation";
+    function tick() {
+      img.src = frames[idx];
+      info.textContent = label + " · khung " + (idx + 1) + "/" + frames.length;
+      idx = (idx + 1) % frames.length;
+    }
+    function start() {
+      state.previewTimer = setInterval(tick, 1000 / fps);
+      btn.textContent = "⏸ Dừng";
+    }
+    btn.addEventListener("click", function() {
+      if (state.previewTimer) {
+        stopPreview();
+        btn.textContent = "▶ Phát";
       } else {
-        playing = true;
-        playBtn.textContent = "⏸ Dừng";
-        idx = 0;
-        timer = setInterval(function() {
-          mainImg.src = state.previewFrames[idx % state.previewFrames.length];
-          idx++;
-        }, 166);
+        start();
       }
     });
-    stage.appendChild(playBtn);
+    tick();
+    start();
   }
 
   // ---------------------- Wiring ----------------------
@@ -405,6 +415,8 @@
       $("rig-image-info").textContent = "Chưa chọn ảnh";
       $("rig-joint-info").innerHTML = "";
       $("rig-image").value = "";
+      stopPreview();
+      $("rig-preview-stage").innerHTML = '<div class="stage-empty">Chưa có ảnh</div>';
       toast("ok", "Đã bỏ qua", "Chọn ảnh mới để bắt đầu lại.");
     });
 
@@ -414,8 +426,20 @@
     });
 
     $("btn-rig-save").addEventListener("click", saveRig);
-    $("btn-rig-preview-wave").addEventListener("click", function() { previewGesture("wave"); });
-    $("btn-rig-preview-walk").addEventListener("click", function() { previewGesture("walk"); });
+    $("btn-rig-preview").addEventListener("click", previewGesture);
+
+    api("/api/rig/gestures").then(function(data) {
+      var sel = $("rig-gesture");
+      var cur = sel.value;
+      sel.innerHTML = "";
+      (data.gestures || []).forEach(function(g) {
+        var o = document.createElement("option");
+        o.value = g.name;
+        o.textContent = g.label;
+        sel.appendChild(o);
+      });
+      sel.value = cur;
+    }).catch(function() { /* giữ danh sách mặc định */ });
   }
 
   // Lắng nghe sự kiện switch tab từ app.js
