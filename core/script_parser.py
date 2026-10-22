@@ -13,11 +13,16 @@
     수아 (angry, zoom=지은): 왜?!
     // Ôi, sao lại thế nhỉ?
 
+    ## canh: quán cà phê, buổi chiều
+    지은 (shocked): 여기서 또 만나네!
+
 Trong ngoặc: biểu cảm, có zoom hay không, tiếng động, thay đổi biểu cảm
 người nghe (Tên=biểu_cảm), zoom vào người khác (zoom=Tên), nghỉ thêm
 (pause=0.5).
 Dòng bắt đầu bằng '>' là nhịp phản ứng không lời, kèm số giây.
 Dòng bắt đầu bằng '//' là bản dịch tiếng Việt, chỉ hiện trong ô soạn.
+Dòng '## canh: <mô tả>' chuyển sang bối cảnh mới; các câu phía sau thuộc
+bối cảnh đó. Cùng mô tả = cùng bối cảnh (quay lại chỗ cũ dùng lại ảnh nền).
 """
 
 from __future__ import annotations
@@ -29,6 +34,9 @@ from .comedy_lib import VALID_EXPRESSIONS, VALID_SFX
 from .gestures import gesture_names, EFFECT_NAMES  # noqa: E402
 
 HEADER_RE = re.compile(r"^\s*#\s*([A-Za-z_]+)\s*:\s*(.*)$")
+# '## canh: phòng khách' — chuyển bối cảnh
+SCENE_RE = re.compile(r"^\s*##\s*(?:canh|cảnh|boi_canh|bối cảnh|scene)\s*:\s*(.*)$",
+                      re.IGNORECASE)
 LINE_RE = re.compile(
     r"^\s*(?P<name>[^():]+?)\s*"
     r"(?:\((?P<mods>[^)]*)\))?\s*:\s*(?P<text>.*)$"
@@ -58,6 +66,7 @@ class Beat:
     translation: str = ""          # bản dịch tiếng Việt (dòng '//')
     gestures: list[str] = field(default_factory=list)   # cử chỉ: vaytay, omdau...
     effects: list[str] = field(default_factory=list)    # hiệu ứng cả người
+    scene: int = 0                 # chỉ số bối cảnh (Script.scenes)
 
     def mods(self) -> list[str]:
         out = [self.expression]
@@ -83,6 +92,8 @@ class Script:
     cast: list[str] = field(default_factory=list)      # thứ tự xuất hiện
     sides: dict[str, str] = field(default_factory=dict)  # tên -> trai|phai|giua
     beats: list[Beat] = field(default_factory=list)
+    # mô tả từng bối cảnh theo thứ tự xuất hiện ("" = bối cảnh chung của tập)
+    scenes: list[str] = field(default_factory=list)
     raw: str = ""
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -92,6 +103,10 @@ class Script:
 
     def reacts(self) -> list[Beat]:
         return [b for b in self.beats if b.kind == "react"]
+
+    def scene_of(self, idx: int) -> str:
+        """Mô tả bối cảnh theo chỉ số ("" nếu không có)."""
+        return self.scenes[idx] if 0 <= idx < len(self.scenes) else ""
 
     def speakers_in_order(self) -> list[str]:
         seen: list[str] = []
@@ -184,6 +199,14 @@ def parse_script(text: str) -> Script:
 
     lines = text.splitlines()
     in_body = False
+    cur_scene: int | None = None   # chưa có '## canh' nào
+
+    def scene_index() -> int:
+        nonlocal cur_scene
+        if cur_scene is None:          # câu trước mọi '## canh': bối cảnh chung
+            s.scenes.append("")
+            cur_scene = 0
+        return cur_scene
 
     for i, raw_line in enumerate(lines, start=1):
         line = raw_line.rstrip()
@@ -199,6 +222,21 @@ def parse_script(text: str) -> Script:
                 s.warnings.append(
                     f"Dòng {i}: dòng '//' không có câu nào phía trước để gán bản dịch."
                 )
+            continue
+
+        sm = SCENE_RE.match(line)
+        if sm:
+            desc = sm.group(1).strip()
+            if not desc:
+                s.errors.append(f"Dòng {i}: '## canh:' cần mô tả bối cảnh (vd '## canh: bếp').")
+                continue
+            # cùng mô tả với cảnh đã có -> quay lại cảnh đó
+            norm = [x.strip().lower() for x in s.scenes]
+            if desc.lower() in norm:
+                cur_scene = norm.index(desc.lower())
+            else:
+                s.scenes.append(desc)
+                cur_scene = len(s.scenes) - 1
             continue
 
         m = HEADER_RE.match(line)
@@ -229,7 +267,7 @@ def parse_script(text: str) -> Script:
         in_body = True
 
         if line.lstrip().startswith(">"):
-            beat = Beat(kind="react", line_no=i)
+            beat = Beat(kind="react", line_no=i, scene=scene_index())
             rest = line.lstrip()[1:].strip()
 
             # tách phần trong ngoặc (biểu cảm, zoom, tiếng động)
@@ -263,7 +301,7 @@ def parse_script(text: str) -> Script:
 
         lm = LINE_RE.match(line)
         if lm:
-            beat = Beat(kind="line", line_no=i)
+            beat = Beat(kind="line", line_no=i, scene=scene_index())
             beat.speaker = lm.group("name").strip()
             _parse_mods(lm.group("mods") or "", beat, s.errors, s.warnings, i)
             beat.text = lm.group("text").strip()
@@ -308,7 +346,11 @@ def serialize_script(s: Script) -> str:
     )
     out.append("# nhan_vat: " + cast)
     out.append("")
+    last_scene = 0 if (s.scenes and s.scenes[0] == "") else None
     for b in s.beats:
+        if b.scene != last_scene and s.scene_of(b.scene):
+            out.append(f"## canh: {s.scene_of(b.scene)}")
+        last_scene = b.scene
         mods = ", ".join(b.mods())
         if b.kind == "react":
             out.append(f"> {b.speaker} ({mods}) {b.duration:g}")

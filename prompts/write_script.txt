@@ -31,6 +31,7 @@ Quy tắc:
 - Có thêm hiệu ứng cả người trong ngoặc (chọn từ): nhun, nhay, rung, nghieng, quay, nga.
 - Tuỳ chọn thêm: pause=0.5 (nghỉ thêm sau câu, giây), Tên=biểu_cảm (đổi biểu cảm người nghe), zoom=Tên (zoom vào người khác).
 - Dòng bắt đầu bằng `>` là nhịp phản ứng KHÔNG có lời, kèm số giây (0.5–1.2). Đây là khoảng lặng có chủ đích.
+- Bối cảnh: nếu câu chuyện diễn ra ở nhiều nơi (vd ở nhà rồi ra quán, hoặc cú lật ở chỗ khác), chuyển cảnh bằng một dòng riêng `## canh: <mô tả ngắn bằng tiếng Việt, kèm ngày/đêm nếu cần>` (vd `## canh: quán cà phê, buổi tối`). Các câu phía sau thuộc cảnh đó. Tối đa 3 cảnh, chỉ đổi cảnh khi giúp câu chuyện buồn cười hơn; truyện ở một chỗ thì đặt một dòng `## canh:` ở đầu. Quay lại chỗ cũ thì viết đúng mô tả cũ.
 - Mỗi dòng thoại có thể kèm dòng bản dịch tiếng Việt bắt đầu bằng `//` ngay sau dòng đó (để chị dễ đọc).
 - Câu chốt phải có cú lật hoặc châm biếm đáng nhớ.
 - Câu nối câu: ít dấu câu ở cuối, nhịp nhanh, không dài dòng.

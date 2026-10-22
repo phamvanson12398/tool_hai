@@ -37,6 +37,8 @@ PART_W, PART_H = CW + PAD_X * 2, CH + PAD_Y * 2
 OUTLINE = (30, 30, 30, 255)
 LW = 5
 PANTS = (66, 70, 96, 255)
+STICK_LW = 14                     # độ dày nét người que
+STICK_INK = (34, 30, 40, 255)
 SHOE = (48, 48, 60, 255)
 
 # Thứ tự lớp: tay sau, chân, thân, đầu, tay trước
@@ -93,8 +95,25 @@ class Geometry:
         return (float(self.head_cx), float(self.head_cy + self.head_ry - 5))
 
 
-def geometry(body: str = "adult") -> Geometry:
-    """Tỉ lệ xương, bám theo _geom() của character_kit để ảnh khớp nhau."""
+def geometry(body: str = "adult", style: str = "flat") -> Geometry:
+    """Tỉ lệ xương, bám theo _geom() của character_kit để ảnh khớp nhau.
+
+    style="stick": người que đầu to — tay, chân mọc từ một đường thân.
+    """
+    if style == "stick":
+        if body == "child":
+            head_cy, r, shoulder_y, body_h = 280, 155, 480, 190
+            upper, fore, thigh, shin = 105.0, 95.0, 140.0, 135.0
+        else:
+            head_cy, r, shoulder_y, body_h = 215, 130, 400, 250
+            upper, fore, thigh, shin = 125.0, 115.0, 150.0, 145.0
+        return Geometry(
+            head_cx=300, head_cy=head_cy, head_rx=r, head_ry=r,
+            shoulder_y=shoulder_y, body_w=0, body_h=body_h,
+            shoulder_dx=34.0, arm_w=STICK_LW, upper_len=upper, fore_len=fore,
+            hand_r=19, hip_dx=4.0, thigh_w=STICK_LW, thigh_len=thigh,
+            shin_len=shin, foot_w=54,
+        )
     if body == "child":
         head_cx, head_cy, head_rx, head_ry = 300, 300, 150, 160
         shoulder_y, body_w, body_h = 470, 300, 420
@@ -129,6 +148,12 @@ def _char_geom(g: Geometry) -> dict:
 
 
 # ------------------------------------------------------------------ vẽ bộ phận
+
+def _blend(a: float) -> float:
+    """0 khi góc nhỏ (giữ tư thế đứng), 1 khi góc từ 40° trở lên."""
+    u = min(1.0, abs(a) / math.radians(40))
+    return u * u * (3 - 2 * u)
+
 
 def _new_canvas() -> Image.Image:
     """Canvas rộng rãi để vẽ và xoay không bị cắt."""
@@ -179,10 +204,12 @@ def draw_neck(spec: CharSpec, g: Geometry) -> Image.Image:
     return img
 
 
-def draw_head(spec: CharSpec, g: Geometry, mouth_open: bool) -> Image.Image:
+def draw_head(spec: CharSpec, g: Geometry, mouth_open: bool,
+              expression: str = "neutral") -> Image.Image:
     """Đầu (tóc + mặt + phụ kiện). Pivot ở chỗ cổ bám vào.
 
     Tóc dài vẽ SAU mặt, mũ tóc vẽ trên trán — không che mắt, miệng.
+    Mặt vẽ theo biểu cảm (mắt, mày, miệng như ảnh tĩnh của bộ ghép).
     """
     img = _new_canvas()
     d = ImageDraw.Draw(img)
@@ -260,38 +287,10 @@ def draw_head(spec: CharSpec, g: Geometry, mouth_open: bool) -> Image.Image:
                 d.rounded_rectangle(rect(x - 46, cy - ry * 0.5, x + 46, cy + ry * 0.6),
                                     radius=24, fill=col, outline=OUTLINE, width=LW)
 
-    # 4. chi tiết mặt + phụ kiện — vẽ bằng toạ độ đã lề
-    _face_details(d, spec, cg, mouth_open, S, rect, ell, pie)
+    # 4. chi tiết mặt theo biểu cảm + phụ kiện
+    _draw_face(img, spec, g, expression, mouth_open, accessories=False)
     _accessories(d, spec, cg, S, rect, ell, pie)
     return img
-
-
-def _face_details(d, spec, cg, mouth_open, S, rect, ell, pie) -> None:
-    """Mắt, lông mày, miệng — vẽ bằng toạ độ đã lề."""
-    cx, ey, dx, r = cg["head_cx"], cg["eye_y"], cg["eye_dx"], cg["eye_r"]
-    white = (255, 255, 255, 255)
-    for sgn in (-1, 1):
-        x = cx + sgn * dx
-        d.ellipse(ell(x - r, ey - r, x + r, ey + r), fill=white,
-                  outline=OUTLINE, width=4)
-        d.ellipse(ell(x - r * 0.5, ey - r * 0.5, x + r * 0.5, ey + r * 0.5),
-                  fill=OUTLINE)
-    # lông mày
-    by = cg["brow_y"]
-    for sgn in (-1, 1):
-        x = cx + sgn * dx
-        a, b = S(x - 34, by)
-        c, e = S(x + 34, by)
-        d.line([a, b, c, e], fill=OUTLINE, width=LW)
-    # miệng
-    my = cg["mouth_y"]
-    if mouth_open:
-        d.ellipse(ell(cx - 40, my - 17, cx + 40, my + 17),
-                  fill=(196, 84, 92, 255), outline=OUTLINE, width=LW)
-    else:
-        a, b = S(cx - 22, my + 4)
-        c, e = S(cx + 22, my + 4)
-        d.line([a, b, c, e], fill=OUTLINE, width=LW)
 
 
 def _accessories(d, spec, cg, S, rect, ell, pie) -> None:
@@ -423,6 +422,247 @@ def draw_foot(spec: CharSpec, g: Geometry, side: str) -> Image.Image:
     return img
 
 
+# ------------------------------------------------------------------ người que
+
+def _stick_line(d: ImageDraw.ImageDraw, a, b, width: int = STICK_LW,
+                fill=STICK_INK) -> None:
+    """Nét thẳng đầu tròn (toạ độ khung gốc)."""
+    pa, pb = _p(a), _p(b)
+    d.line([pa, pb], fill=fill, width=width)
+    r = width / 2
+    for x, y in (pa, pb):
+        d.ellipse([x - r, y - r, x + r, y + r], fill=fill)
+
+
+def _face_geom(g: Geometry, spec: CharSpec) -> dict:
+    """dict hình học cho các hàm vẽ mặt của character_kit."""
+    if spec.style == "stick":
+        r = g.head_rx
+        return {
+            "head_cx": g.head_cx, "head_cy": g.head_cy,
+            "head_rx": r, "head_ry": r, "neck_w": STICK_LW,
+            "shoulder_y": g.shoulder_y, "body_w": 0, "body_h": g.body_h,
+            "eye_dx": int(r * 0.38), "eye_y": int(g.head_cy - r * 0.05),
+            "eye_r": int(r * 0.17), "mouth_y": int(g.head_cy + r * 0.42),
+            "brow_y": int(g.head_cy - r * 0.38),
+        }
+    return _char_geom(g)
+
+
+def _draw_face(img: Image.Image, spec: CharSpec, g: Geometry, expression: str,
+               mouth_open: bool, accessories: bool) -> None:
+    """Mắt, mày, miệng, má hồng/mồ hôi/nước mắt theo biểu cảm (bộ vẽ của
+    character_kit), vẽ trên lớp riêng rồi đặt vào canvas có lề."""
+    mood = ck.EXPRESSION_MAP.get(expression, ck.EXPRESSION_MAP["neutral"])
+    fg = _face_geom(g, spec)
+    layer = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    ck._draw_brows(d, fg, mood["brow"])
+    ck._draw_eyes(d, spec, fg, mood["eye"])
+    ck._draw_mouth(d, fg, mood["mouth"], mouth_open)
+    extras_spec = spec if accessories else CharSpec.from_dict({**spec.to_dict(), "accessory": "none"})
+    ck._draw_extras(d, extras_spec, fg, mood)
+    img.alpha_composite(layer, (PAD_X, PAD_Y))
+
+
+def _stick_head(spec: CharSpec, g: Geometry, mouth_open: bool,
+                expression: str) -> Image.Image:
+    """Đầu người que: hình tròn to, tóc vẽ nguệch ngoạc, mặt theo biểu cảm."""
+    img = _new_canvas()
+    d = ImageDraw.Draw(img)
+    cx, cy, r = g.head_cx, g.head_cy, g.head_rx
+    col = ck.HAIR_COLORS.get(spec.hair_color, ck.HAIR_COLORS["black"]) + (255,)
+    skin = ck.SKIN_TONES.get(spec.skin, ck.SKIN_TONES["light"]) + (255,)
+    st = spec.hair_style
+    hw = 13                                    # độ dày nét tóc
+
+    def P(x, y):
+        return _p((x, y))
+
+    def on_head(deg, k=1.0):
+        a = math.radians(deg)
+        return (cx + math.cos(a) * r * k, cy - math.sin(a) * r * k)
+
+    def strand(pts, width=hw):
+        d.line([P(*q) for q in pts], fill=col, width=width, joint="curve")
+        for q in (pts[0], pts[-1]):
+            x, y = P(*q)
+            d.ellipse([x - width / 2, y - width / 2, x + width / 2, y + width / 2], fill=col)
+
+    def top_arc(a0=200, a1=340, width=30, k=1.0):
+        box = [P(cx - r * k, cy - r * k), P(cx + r * k, cy + r * k)]
+        d.arc([box[0][0], box[0][1], box[1][0], box[1][1]], a0, a1, fill=col, width=width)
+
+    # 1. tóc phía sau đầu
+    if st in ("long", "wavy"):
+        for sgn in (-1, 1):
+            x0 = cx + sgn * r * 0.92
+            pts = [(x0, cy - r * 0.2)]
+            for i in range(1, 7):
+                wig = (14 if i % 2 else -14) if st == "wavy" else 0
+                pts.append((x0 + sgn * 12 + wig, cy - r * 0.2 + i * r * 0.27))
+            strand(pts, 16)
+    elif st == "ponytail":
+        x, y = on_head(20, 1.0)
+        d.ellipse([*P(x - 10, y - 30), *P(x + 90, y + 110)], outline=col, width=hw)
+    elif st == "twintails":
+        for sgn in (-1, 1):
+            x = cx + sgn * (r + 40)
+            d.ellipse([*P(x - 38, cy - 10), *P(x + 38, cy + 120)], outline=col, width=hw)
+            bx, by = P(x - sgn * 34, cy - 4)          # nơ hồng
+            d.polygon([(bx, by), (bx - 22, by - 14), (bx - 22, by + 14)], fill=(236, 120, 160, 255))
+            d.polygon([(bx, by), (bx + 22, by - 14), (bx + 22, by + 14)], fill=(236, 120, 160, 255))
+    elif st == "bun":
+        x, y = on_head(90, 1.0)
+        d.ellipse([*P(x - 44, y - 82), *P(x + 44, y + 6)], fill=col, outline=STICK_INK, width=6)
+
+    # 2. đầu
+    d.ellipse([*P(cx - r, cy - r), *P(cx + r, cy + r)], fill=skin,
+              outline=STICK_INK, width=STICK_LW - 4)
+
+    # 3. tóc phía trước (trên đỉnh đầu)
+    if st == "short":
+        for deg in (55, 75, 95, 115, 130):
+            bx, by = on_head(deg, 0.97)
+            tx, ty = on_head(deg + 8, 1.32)
+            strand([(bx, by), (tx, ty)])
+    elif st == "buzz":
+        x, y = on_head(95, 0.98)
+        strand([(x, y), (x + 14, y - 34), (x + 34, y - 26), (x + 22, y - 10)], 10)
+    elif st == "sidepart":
+        top_arc(150, 330, 34)
+        strand([on_head(150, 1.0), on_head(120, 1.18), on_head(70, 1.12), on_head(30, 0.92)], 18)
+    elif st == "bob":
+        top_arc(180, 360, 34)
+        for sgn in (-1, 1):
+            x = cx + sgn * r * 0.96
+            strand([(x, cy - r * 0.1), (x + sgn * 6, cy + r * 0.55)], 22)
+    elif st in ("long", "wavy", "ponytail", "twintails", "bun"):
+        top_arc(185, 355, 34)
+        if st in ("long", "wavy"):
+            strand([on_head(95, 1.0), on_head(115, 0.72), on_head(140, 0.62)], 14)
+    elif st == "curly":
+        for deg in range(30, 160, 18):
+            x, y = on_head(deg, 1.05)
+            d.ellipse([*P(x - 22, y - 22), *P(x + 22, y + 22)], outline=col, width=9)
+    else:
+        top_arc(200, 340, 30)
+
+    # 4. mặt + phụ kiện
+    _draw_face(img, spec, g, expression, mouth_open, accessories=True)
+    return img
+
+
+def _stick_torso(spec: CharSpec, g: Geometry) -> Image.Image:
+    """Đường thân + cà vạt màu áo (để phân biệt nhân vật)."""
+    img = _new_canvas()
+    d = ImageDraw.Draw(img)
+    cx, sy = g.head_cx, g.shoulder_y
+    _stick_line(d, (cx, sy - 14), g.hip)
+    for sgn in (-1, 1):                      # vai ngắn để tay mọc ra hai bên
+        _stick_line(d, (cx, sy - 14), (cx + sgn * g.shoulder_dx, sy))
+    tie = ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
+    k = 0.8 if spec.body == "child" else 1.0
+    pts = [(cx, sy + 4), (cx - 22 * k, sy + 34 * k), (cx, sy + 118 * k), (cx + 22 * k, sy + 34 * k)]
+    d.polygon([_p(q) for q in pts], fill=tie, outline=STICK_INK)
+    d.line([_p(q) for q in pts + [pts[0]]], fill=STICK_INK, width=4)
+    return img
+
+
+def _stick_neck(spec: CharSpec, g: Geometry) -> Image.Image:
+    img = _new_canvas()
+    _stick_line(ImageDraw.Draw(img), g.chin, (g.head_cx, g.shoulder_y))
+    return img
+
+
+def _stick_limb(g: Geometry, a, b) -> Image.Image:
+    img = _new_canvas()
+    _stick_line(ImageDraw.Draw(img), a, b)
+    return img
+
+
+def _stick_hand(spec: CharSpec, g: Geometry, side: str) -> Image.Image:
+    img = _new_canvas()
+    d = ImageDraw.Draw(img)
+    skin = ck.SKIN_TONES.get(spec.skin, ck.SKIN_TONES["light"]) + (255,)
+    sx = g.head_cx + (g.shoulder_dx if side == "right" else -g.shoulder_dx)
+    wy = g.shoulder_y + g.upper_len + g.fore_len
+    r = g.hand_r
+    d.ellipse([*_p((sx - r, wy - 4)), *_p((sx + r, wy + 2 * r - 4))], fill=skin,
+              outline=STICK_INK, width=6)
+    return img
+
+
+def _stick_foot(spec: CharSpec, g: Geometry, side: str) -> Image.Image:
+    """Bàn chân hình giày nhỏ, mũi giày chĩa ra ngoài."""
+    img = _new_canvas()
+    d = ImageDraw.Draw(img)
+    sgn = 1 if side == "right" else -1
+    hx = g.head_cx + sgn * g.hip_dx
+    ay = g.hip[1] + g.thigh_len + g.shin_len
+    x0, x1 = (hx - 14, hx + g.foot_w) if sgn > 0 else (hx - g.foot_w, hx + 14)
+    d.ellipse([*_p((x0, ay - 12)), *_p((x1, ay + 22))], fill=STICK_INK)
+    return img
+
+
+def _parts_for(spec: CharSpec, g: Geometry):
+    """Bảng hàm vẽ bộ phận theo kiểu nhân vật."""
+    if spec.style == "stick":
+        def arm_up(sp, gg, side):
+            sx = gg.head_cx + (gg.shoulder_dx if side == "right" else -gg.shoulder_dx)
+            return _stick_limb(gg, (sx, gg.shoulder_y), (sx, gg.shoulder_y + gg.upper_len))
+
+        def arm_fore(sp, gg, side):
+            sx = gg.head_cx + (gg.shoulder_dx if side == "right" else -gg.shoulder_dx)
+            ey = gg.shoulder_y + gg.upper_len
+            return _stick_limb(gg, (sx, ey), (sx, ey + gg.fore_len))
+
+        def thigh(sp, gg, side):
+            hx = gg.head_cx + (gg.hip_dx if side == "right" else -gg.hip_dx)
+            return _stick_limb(gg, (hx, gg.hip[1]), (hx, gg.hip[1] + gg.thigh_len))
+
+        def shin(sp, gg, side):
+            hx = gg.head_cx + (gg.hip_dx if side == "right" else -gg.hip_dx)
+            ky = gg.hip[1] + gg.thigh_len
+            return _stick_limb(gg, (hx, ky), (hx, ky + gg.shin_len))
+
+        return {"torso": _stick_torso, "neck": _stick_neck, "head": _stick_head,
+                "upper": arm_up, "fore": arm_fore, "hand": _stick_hand,
+                "thigh": thigh, "shin": shin, "foot": _stick_foot}
+    return {"torso": draw_torso, "neck": draw_neck, "head": draw_head,
+            "upper": draw_upper_arm, "fore": draw_forearm, "hand": draw_hand,
+            "thigh": draw_thigh, "shin": draw_shin, "foot": draw_foot}
+
+
+def stick_arm_limits(angles: dict[str, float]) -> dict[str, float]:
+    """Người que đầu to: không cho tay giơ chéo qua đầu.
+
+    Cánh tay trên giơ tối đa 130°, cẳng tay (góc tổng) tối đa thẳng đứng —
+    cử chỉ soạn cho nhân vật vai rộng vẫn đọc được mà tay không che mặt.
+    """
+    out = dict(angles)
+    lim_up, lim_tot = math.radians(130), math.radians(185)
+    for side, sgn in (("right", 1), ("left", -1)):
+        up_k, lo_k = f"vai_{side}", f"khuyu_{side}"
+        if up_k not in out and lo_k not in out:
+            continue
+        up = out.get(up_k, 0.0) * sgn          # quy về chiều tay phải
+        lo = out.get(lo_k, 0.0) * sgn
+        up2 = max(-lim_up, up)
+        tot = max(-lim_tot, up2 + lo)
+        if up_k in out or up2 != up:
+            out[up_k] = up2 * sgn
+        if lo_k in out or tot != up + lo:
+            out[lo_k] = (tot - up2) * sgn
+    return out
+
+
+# Tư thế đứng mặc định của người que: tay dang nhẹ, chân hơi choãi
+# (góc thực, tay/chân trái đã lật dấu).
+STICK_REST = {"vai_right": math.radians(-24), "vai_left": math.radians(24),
+              "dui_right": math.radians(-8), "dui_left": math.radians(8)}
+
+
 # ------------------------------------------------------------------ xương
 
 @dataclass
@@ -515,7 +755,14 @@ class Rig:
         angles = angles or {}
         world: dict[str, dict] = {}
         for b in self._ordered():
-            local = angles.get(b.name, b.angle)
+            if b.name in angles:
+                # Góc cử chỉ tính từ tư thế buông thẳng. Xương có tư thế đứng
+                # riêng (người que dang tay): cử động nhỏ cộng vào tư thế đó,
+                # cử chỉ lớn ra đúng góc cử chỉ.
+                a = angles[b.name]
+                local = a + b.angle * (1.0 - _blend(a)) if b.angle else a
+            else:
+                local = b.angle
             if b.parent is None:
                 wp = (b.offset[0], b.offset[1])
                 wa = local
@@ -534,6 +781,99 @@ class Rig:
 
 # ------------------------------------------------------------------ dựng rig
 
+def _crop_head_pair(dong: Image.Image, mo: Image.Image,
+                    pivot_canvas: tuple[float, float]):
+    """Cắt hai ảnh đầu (miệng ngậm/mở) theo CÙNG một khung để chung pivot."""
+    boxes = [b for b in (dong.getbbox(), mo.getbbox()) if b]
+    if not boxes:
+        return dong, mo, pivot_canvas
+    box = (min(b[0] for b in boxes), min(b[1] for b in boxes),
+           max(b[2] for b in boxes), max(b[3] for b in boxes))
+    pivot = (pivot_canvas[0] - box[0], pivot_canvas[1] - box[1])
+    return dong.crop(box), mo.crop(box), pivot
+
+
+def head_images(spec: CharSpec, expression: str = "neutral"):
+    """(ảnh đầu miệng ngậm, ảnh miệng mở, pivot) theo biểu cảm."""
+    g = geometry(spec.body, spec.style)
+    draw = _parts_for(spec, g)["head"]
+    return _crop_head_pair(draw(spec, g, False, expression),
+                           draw(spec, g, True, expression), _p(g.chin))
+
+
+def build_parts(spec: CharSpec, expression: str = "neutral"
+                ) -> tuple[list[Bone], dict[str, Image.Image]]:
+    """Vẽ mọi bộ phận (trong bộ nhớ). Trả về (danh sách xương, {tên file: ảnh})."""
+    g = geometry(spec.body, spec.style)
+    fn = _parts_for(spec, g)
+    rest = STICK_REST if spec.style == "stick" else {}
+    bones: list[Bone] = []
+    images: dict[str, Image.Image] = {}
+
+    def add(name, parent, joint, offset, part_name, pivot_canvas, layer,
+            img: Image.Image) -> None:
+        cropped, pivot = _crop_pivot(img, pivot_canvas)
+        images[part_name] = cropped
+        bones.append(Bone(name=name, parent=parent, offset=offset,
+                          part=part_name, pivot=pivot, layer=layer,
+                          angle=rest.get(name, 0.0)))
+
+    hip = g.hip
+    neck = g.neck
+    chin = g.chin
+
+    # --- thân (root) ---
+    add("than", None, hip, hip, "than.png", _p(hip), LAYER_THAN, fn["torso"](spec, g))
+
+    # --- cổ, con của thân ---
+    add("co", "than", neck, (neck[0] - hip[0], neck[1] - hip[1]),
+        "co.png", _p(neck), LAYER_THAN, fn["neck"](spec, g))
+
+    # --- đầu, con của cổ (hai ảnh miệng ngậm/mở chung pivot) ---
+    dong, mo, hpivot = head_images(spec, expression)
+    images["dau_dong.png"] = dong
+    images["dau_mo.png"] = mo
+    bones.append(Bone(name="dau", parent="co",
+                      offset=(chin[0] - neck[0], chin[1] - neck[1]),
+                      part="dau_dong.png", pivot=hpivot, layer=LAYER_DAU))
+
+    # --- tay --- (người que: cả hai tay nằm sau đầu để không che mặt)
+    arm_layers = (("left", LAYER_THAN), ("right", LAYER_THAN)) if spec.style == "stick" \
+        else (("left", LAYER_TAY_SAU), ("right", LAYER_TAY_TRUOC))
+    for side, layer in arm_layers:
+        sgn = 1 if side == "right" else -1
+        shoulder = (g.head_cx + sgn * g.shoulder_dx, float(g.shoulder_y))
+        elbow = (shoulder[0], shoulder[1] + g.upper_len)
+        wrist = (shoulder[0], elbow[1] + g.fore_len)
+        add(f"vai_{side}", "than", shoulder,
+            (shoulder[0] - hip[0], shoulder[1] - hip[1]),
+            f"vai_{side}.png", _p(shoulder), layer, fn["upper"](spec, g, side))
+        add(f"khuyu_{side}", f"vai_{side}", elbow,
+            (elbow[0] - shoulder[0], elbow[1] - shoulder[1]),
+            f"khuyu_{side}.png", _p(elbow), layer, fn["fore"](spec, g, side))
+        add(f"co_tay_{side}", f"khuyu_{side}", wrist,
+            (wrist[0] - elbow[0], wrist[1] - elbow[1]),
+            f"co_tay_{side}.png", _p(wrist), layer, fn["hand"](spec, g, side))
+
+    # --- chân ---
+    for side in ("left", "right"):
+        sgn = 1 if side == "right" else -1
+        hip_joint = (g.head_cx + sgn * g.hip_dx, g.hip[1])
+        knee = (hip_joint[0], hip_joint[1] + g.thigh_len)
+        ankle = (hip_joint[0], knee[1] + g.shin_len)
+        add(f"dui_{side}", "than", hip_joint,
+            (hip_joint[0] - hip[0], hip_joint[1] - hip[1]),
+            f"dui_{side}.png", _p(hip_joint), LAYER_CHAN, fn["thigh"](spec, g, side))
+        add(f"goi_{side}", f"dui_{side}", knee,
+            (knee[0] - hip_joint[0], knee[1] - hip_joint[1]),
+            f"goi_{side}.png", _p(knee), LAYER_CHAN, fn["shin"](spec, g, side))
+        add(f"co_chan_{side}", f"goi_{side}", ankle,
+            (ankle[0] - knee[0], ankle[1] - knee[1]),
+            f"co_chan_{side}.png", _p(ankle), LAYER_CHAN, fn["foot"](spec, g, side))
+
+    return bones, images
+
+
 def build_rig(spec: CharSpec, out_dir: Path) -> Rig:
     """Vẽ các bộ phận, lưu ảnh + rig.json vào out_dir.
 
@@ -544,83 +884,33 @@ def build_rig(spec: CharSpec, out_dir: Path) -> Rig:
     out_dir = Path(out_dir)
     parts_dir = out_dir / "parts"
     parts_dir.mkdir(parents=True, exist_ok=True)
-
-    g = geometry(spec.body)
-    bones: list[Bone] = []
-
-    def add(name, parent, joint, offset, part_name, pivot_canvas, layer,
-            img: Image.Image) -> None:
-        cropped, pivot = _crop_pivot(img, pivot_canvas)
-        cropped.save(parts_dir / part_name)
-        bones.append(Bone(name=name, parent=parent, offset=offset,
-                          part=part_name, pivot=pivot, layer=layer))
-
-    hip = g.hip
-    neck = g.neck
-    chin = g.chin
-
-    # --- thân (root) ---
-    add("than", None, hip, hip, "than.png", _p(hip), LAYER_THAN,
-        draw_torso(spec, g))
-
-    # --- cổ, con của thân ---
-    add("co", "than", neck,
-        (neck[0] - hip[0], neck[1] - hip[1]),
-        "co.png", _p(neck), LAYER_THAN, draw_neck(spec, g))
-
-    # --- đầu, con của cổ ---
-    add("dau", "co", chin,
-        (chin[0] - neck[0], chin[1] - neck[1]),
-        "dau_dong.png", _p(chin), LAYER_DAU, draw_head(spec, g, False))
-    head_open, _ = _crop_pivot(draw_head(spec, g, True), _p(chin))
-    head_open.save(parts_dir / "dau_mo.png")
-
-    # --- tay ---
-    for side, layer in (("left", LAYER_TAY_SAU), ("right", LAYER_TAY_TRUOC)):
-        sgn = 1 if side == "right" else -1
-        shoulder = (g.head_cx + sgn * g.shoulder_dx, float(g.shoulder_y))
-        elbow = (shoulder[0], shoulder[1] + g.upper_len)
-        wrist = (shoulder[0], elbow[1] + g.fore_len)
-
-        add(f"vai_{side}", "than", shoulder,
-            (shoulder[0] - hip[0], shoulder[1] - hip[1]),
-            f"vai_{side}.png", _p(shoulder), layer,
-            draw_upper_arm(spec, g, side))
-        add(f"khuyu_{side}", f"vai_{side}", elbow,
-            (elbow[0] - shoulder[0], elbow[1] - shoulder[1]),
-            f"khuyu_{side}.png", _p(elbow), layer,
-            draw_forearm(spec, g, side))
-        add(f"co_tay_{side}", f"khuyu_{side}", wrist,
-            (wrist[0] - elbow[0], wrist[1] - elbow[1]),
-            f"co_tay_{side}.png", _p(wrist), layer,
-            draw_hand(spec, g, side))
-
-    # --- chân ---
-    for side in ("left", "right"):
-        sgn = 1 if side == "right" else -1
-        hip_joint = (g.head_cx + sgn * g.hip_dx, g.hip[1])
-        knee = (hip_joint[0], hip_joint[1] + g.thigh_len)
-        ankle = (hip_joint[0], knee[1] + g.shin_len)
-
-        add(f"dui_{side}", "than", hip_joint,
-            (hip_joint[0] - hip[0], hip_joint[1] - hip[1]),
-            f"dui_{side}.png", _p(hip_joint), LAYER_CHAN,
-            draw_thigh(spec, g, side))
-        add(f"goi_{side}", f"dui_{side}", knee,
-            (knee[0] - hip_joint[0], knee[1] - hip_joint[1]),
-            f"goi_{side}.png", _p(knee), LAYER_CHAN,
-            draw_shin(spec, g, side))
-        add(f"co_chan_{side}", f"goi_{side}", ankle,
-            (ankle[0] - knee[0], ankle[1] - knee[1]),
-            f"co_chan_{side}.png", _p(ankle), LAYER_CHAN,
-            draw_foot(spec, g, side))
-
+    bones, images = build_parts(spec)
+    for name, img in images.items():
+        img.save(parts_dir / name)
     rig = Rig(name=spec.name, root="than", bones=bones,
               spec=spec.to_dict(), parts_dir="parts")
     (out_dir / "rig.json").write_text(
         json.dumps(rig.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8"
     )
     return rig
+
+
+def render_still(spec: CharSpec, expression: str = "neutral",
+                 mouth_open: bool = False) -> Image.Image:
+    """Ảnh tĩnh một nhân vật ở tư thế đứng (dùng cho bộ ảnh biểu cảm).
+
+    Cắt theo khung cố định của dáng người (không theo nội dung từng ảnh), để
+    mọi biểu cảm cùng cỡ — đổi biểu cảm nhân vật không bị nhảy kích thước.
+    """
+    bones, images = build_parts(spec, expression)
+    rig = Rig(name=spec.name, root="than", bones=bones, spec=spec.to_dict())
+    rr = RigRenderer(rig, Path("."))
+    rr._cache.update(images)
+    img = rr.render({}, mouth_open=mouth_open, crop=False)
+    g = geometry(spec.body, spec.style)
+    top = g.head_cy - g.head_ry - 70
+    bottom = g.hip[1] + g.thigh_len + g.shin_len + 30
+    return img.crop((PAD_X - 60, PAD_Y + top, PAD_X + CW + 60, PAD_Y + bottom))
 
 
 def load_rig(rig_path: Path) -> Rig:
@@ -639,6 +929,8 @@ class RigRenderer:
         self.parts_dir = self.base_dir / rig.parts_dir if rig.parts_dir else self.base_dir
         self._cache: dict[str, Image.Image] = {}
         self._np_cache: dict[str, object] = {}
+        # đầu theo biểu cảm, vẽ khi cần: tên file -> pivot
+        self._head_pivots: dict[str, tuple[float, float]] = {}
         # OpenCV tăng tốc render (nếu không có thì dùng đường PIL)
         self._cv = None
         self._np = None
@@ -658,9 +950,27 @@ class RigRenderer:
             self._cache[filename] = img
         return img
 
+    def _head_part(self, b: "Bone", mouth_open: bool, expression: str | None
+                   ) -> tuple[str, tuple[float, float]]:
+        """Ảnh đầu cho biểu cảm (vẽ lần đầu khi cần) và pivot của nó."""
+        tag = "mo" if mouth_open else "dong"
+        if not expression or expression == "neutral" or not self.rig.spec:
+            return f"dau_{tag}.png", b.pivot
+        name = f"dau_{expression}_{tag}.png"
+        if name not in self._head_pivots:
+            try:
+                spec = CharSpec.from_dict(self.rig.spec)
+                dong, mo, pivot = head_images(spec, expression)
+            except Exception:  # noqa: BLE001 - lỗi vẽ -> mặt bình thường
+                return f"dau_{tag}.png", b.pivot
+            for t, im in (("dong", dong), ("mo", mo)):
+                self._cache[f"dau_{expression}_{t}.png"] = im
+                self._head_pivots[f"dau_{expression}_{t}.png"] = pivot
+        return name, self._head_pivots[name]
+
     def render(self, angles: dict[str, float] | None = None,
                mouth_open: bool = False,
-               crop: bool = True) -> Image.Image:
+               crop: bool = True, expression: str | None = None) -> Image.Image:
         """Vẽ một khung nhân vật theo góc xương cho trước.
 
         Kết quả trả về trong khung gốc 600x1000 (nếu crop=True thì cắt sát
@@ -671,17 +981,16 @@ class RigRenderer:
         ordered.sort(key=lambda b: world[b.name]["layer"])
 
         if self._cv_ok:
-            return self._render_cv(world, ordered, mouth_open, crop)
+            return self._render_cv(world, ordered, mouth_open, crop, expression)
 
         canvas = Image.new("RGBA", (PART_W, PART_H), (0, 0, 0, 0))
 
         for b in ordered:
-            filename = b.part
+            filename, pivot_img = b.part, b.pivot
             if b.name == "dau":
-                filename = "dau_mo.png" if mouth_open else "dau_dong.png"
+                filename, pivot_img = self._head_part(b, mouth_open, expression)
             img = self._part(filename)
             angle = world[b.name]["angle"]
-            pivot_img = b.pivot
 
             # Xoay quanh khớp (PIL xoay ngược chiều kim đồng hồ)
             if abs(angle) > 1e-6:
@@ -719,7 +1028,8 @@ class RigRenderer:
     # ------------------------------------------------------- render nhanh (OpenCV)
 
     def _render_cv(self, world: dict, ordered: list[Bone],
-                   mouth_open: bool, crop: bool) -> Image.Image:
+                   mouth_open: bool, crop: bool,
+                   expression: str | None = None) -> Image.Image:
         """Render bằng OpenCV warpAffine + numpy — nhanh hơn PIL rotate nhiều lần.
 
         Mỗi bộ phận được xoay quanh khớp bằng phép biến đổi phẳng (affine)
@@ -730,15 +1040,15 @@ class RigRenderer:
         canvas = np.zeros((PART_H, PART_W, 4), dtype=np.uint8)
 
         for b in ordered:
-            filename = b.part
+            filename, pivot0 = b.part, b.pivot
             if b.name == "dau":
-                filename = "dau_mo.png" if mouth_open else "dau_dong.png"
+                filename, pivot0 = self._head_part(b, mouth_open, expression)
             angle = world[b.name]["angle"]
             if abs(angle) > 1e-6:
                 # khung vuông tâm ở khớp: xoay góc nào cũng không bị cắt
-                part, pivot_img = self._padded_np(filename, b.pivot)
+                part, pivot_img = self._padded_np(filename, pivot0)
             else:
-                part, pivot_img = self._part_np(filename), b.pivot
+                part, pivot_img = self._part_np(filename), pivot0
             ph, pw = part.shape[:2]
 
             if abs(angle) > 1e-6:
@@ -908,23 +1218,26 @@ class CharacterAnimator:
         return angles
 
     def render_frame(self, t: float, speaking: bool, mouth_open: bool,
-                     canvas_size: tuple[int, int] | None = None
-                     ) -> Image.Image:
+                     canvas_size: tuple[int, int] | None = None,
+                     expression: str | None = None) -> Image.Image:
         """Render mot khung hinh nhan vat (trong khung goc 600x1000, scale ve
         canvas_size neu co). Goc vua dung luu o self.last_angles (gom ca
         dich_x/dich_y de dat vi tri nhan vat)."""
         angles = self.angles_at(t, speaking, mouth_open)
+        if self.rig.spec.get("style") == "stick":
+            angles = stick_arm_limits(angles)
         self.last_angles = angles
         if canvas_size is None:
             # Không cắt về khung 600x1000 (tay giơ cao/dang rộng sẽ bị mất):
             # trả về ảnh sát nội dung, kèm vị trí khung gốc trong ảnh để
             # người đặt nhân vật giữ đúng chỗ đứng (frame_origin, frame_size).
-            img = self.renderer.render(angles, mouth_open=mouth_open, crop=False)
+            img = self.renderer.render(angles, mouth_open=mouth_open, crop=False,
+                                       expression=expression)
             bbox = img.getbbox() or (PAD_X, PAD_Y, PAD_X + CW, PAD_Y + CH)
             self.frame_origin = (PAD_X - bbox[0], PAD_Y - bbox[1])
             self.frame_size = (CW, CH)
             return img.crop(bbox)
-        img = self.renderer.render(angles, mouth_open=mouth_open)
+        img = self.renderer.render(angles, mouth_open=mouth_open, expression=expression)
         if img.size != canvas_size:
             img = img.resize(canvas_size, Image.LANCZOS)
         return img

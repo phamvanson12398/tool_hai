@@ -61,6 +61,63 @@ def _load_project(pid: str) -> dict:
     return json.loads(p.read_text(encoding="utf-8"))
 
 
+# ---------------------------------------------------------- nhiều bối cảnh
+# Bối cảnh chung của tập ở assets.background (như cũ); bối cảnh từng cảnh
+# ('## canh: ...') ở assets.backgrounds, khoá theo mô tả cảnh (viết thường),
+# nên cảnh lặp lại dùng chung một ảnh.
+
+def _scene_key(desc: str) -> str:
+    return (desc or "").strip().lower()
+
+
+def _scene_bg(data: dict, desc: str) -> dict | None:
+    """Bản ghi ảnh nền của một cảnh (None nếu cảnh chưa có ảnh riêng)."""
+    if not _scene_key(desc):
+        return data["assets"].get("background")
+    return (data["assets"].get("backgrounds") or {}).get(_scene_key(desc))
+
+
+def _set_scene_bg(data: dict, desc: str, rec: dict) -> None:
+    rec["scene"] = desc
+    if not _scene_key(desc):
+        data["assets"]["background"] = rec
+    else:
+        data["assets"].setdefault("backgrounds", {})[_scene_key(desc)] = rec
+
+
+def _scene_bg_paths(data: dict, s) -> dict[int, Path]:
+    """{chỉ số cảnh: ảnh nền} cho các cảnh có ảnh riêng."""
+    out: dict[int, Path] = {}
+    for i, desc in enumerate(s.scenes):
+        rec = _scene_bg(data, desc) if _scene_key(desc) else None
+        img = (rec or {}).get("image")
+        if img and Path(img).exists():
+            out[i] = Path(img)
+    return out
+
+
+def _draw_scene_bg(data: dict, pdir: Path, desc: str, hint: str = "") -> tuple[dict, str | None]:
+    """Claude chọn mẫu + màu cho cảnh, tool vẽ và lưu. Trả về (bản ghi, cảnh báo)."""
+    from core import scene_art
+    warn = None
+    try:
+        bg = claude_cli.design_background(data.get("script", ""),
+                                          data.get("language", "ko"),
+                                          desc or hint)
+    except Exception as e:  # noqa: BLE001
+        warn = f"Claude chọn bối cảnh '{desc or 'chung'}' lỗi ({e}); dùng mẫu mặc định."
+        bg = {}
+    if not bg:
+        bg = {"name": desc or "boi_canh", "kind": "phong_khach", "time": "ngay"}
+    slug = assets.config_slug(desc or "chung") or "chung"
+    out = scene_art.save_scene(bg, pdir / "assets" / f"bg_{slug}_{uuid.uuid4().hex[:4]}.png")
+    rec = assets.save_background(out, bg.get("name") or desc or "boi_canh")
+    rec["desc"] = bg.get("desc", desc)
+    rec["kind"] = bg.get("kind")
+    rec["time"] = bg.get("time")
+    return rec, warn
+
+
 def _save_project(pid: str, data: dict) -> None:
     _project_file(pid).write_text(
         json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
@@ -306,9 +363,11 @@ def api_parse_script():
              "zoom": b.zoom, "sfx": b.sfx, "text": b.text,
              "duration": b.duration, "line_no": b.line_no,
              "pause": b.pause, "zoom_target": b.zoom_target,
-             "other_expr": b.other_expr, "translation": b.translation}
+             "other_expr": b.other_expr, "translation": b.translation,
+             "scene": b.scene}
             for b in s.beats
         ],
+        "scenes": s.scenes,
         "estimate_duration": round(estimate_duration(s), 1),
     })
 
@@ -619,7 +678,14 @@ def api_lib_voice_audio(name):
 @app.get("/api/library/image/<path:image_id>")
 def api_lib_image(image_id):
     p = Path(image_id)
+    if not p.is_absolute() and Path("/" + image_id).is_absolute():
+        p = Path("/" + image_id)          # Linux/macOS: dấu '/' đầu bị bỏ khi ghép URL
     if p.is_absolute() and p.exists():
+        # chỉ trả ảnh nằm trong thư mục của tool (không cho đọc file khác trên máy)
+        try:
+            p.resolve().relative_to(config.ROOT.resolve())
+        except ValueError:
+            return _err("Không thấy ảnh.", 404)
         return send_file(str(p))
     found = assets.find_image(image_id)
     if not found:
@@ -656,7 +722,7 @@ def api_project_get(pid):
         return _err(str(e), 404)
     s = parse_script(data.get("script", ""))
     data["parse"] = {"errors": s.errors, "warnings": s.warnings,
-                     "cast": s.cast, "sides": s.sides}
+                     "cast": s.cast, "sides": s.sides, "scenes": s.scenes}
     data["estimate_duration"] = round(estimate_duration(s), 1)
     data["status"] = _status(pid)
     return jsonify(data)
@@ -854,6 +920,27 @@ def api_project_assets(pid):
     return jsonify({"assets": data["assets"], "warnings": warnings})
 
 
+@app.post("/api/project/<pid>/scene-bg")
+def api_project_scene_bg(pid):
+    """Tải ảnh nền cho một cảnh (form: scene = mô tả cảnh, file = ảnh)."""
+    try:
+        data = _load_project(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return _err("Chưa chọn ảnh.")
+    desc = (request.form.get("scene") or "").strip()
+    adir = config.project_dir(pid) / "assets"
+    adir.mkdir(parents=True, exist_ok=True)
+    p = adir / ("bg_" + uuid.uuid4().hex[:6] + "_" + Path(f.filename).name)
+    f.save(str(p))
+    rec = assets.save_background(p, Path(f.filename).stem)
+    _set_scene_bg(data, desc, rec)
+    _save_project(pid, data)
+    return jsonify({"assets": data["assets"]})
+
+
 @app.post("/api/project/<pid>/generate")
 def api_project_generate(pid):
     """Claude tạo phần còn thiếu: bộ ghép nhân vật, bối cảnh, mô tả giọng."""
@@ -883,9 +970,11 @@ def api_project_generate(pid):
         except Exception as e:  # noqa: BLE001
             warnings.append(f"Claude chọn bộ ghép lỗi ({e}); dùng mặc định.")
             specs = {}
+        style = config.load_settings().get("char_style") or "stick"
         for i, name in enumerate(want_chars):
             spec_d = specs.get(name) or {}
             spec_d["name"] = name
+            spec_d["style"] = style
             spec = character_kit.CharSpec.from_dict(spec_d)
             exprs = sorted({b.expression for b in s.beats
                             if b.speaker == name} | {"neutral"})
@@ -909,18 +998,21 @@ def api_project_generate(pid):
             existing[c["name"]] = c
         data["assets"]["characters"] = list(existing.values())
 
-    # --- bối cảnh ---
-    if body.get("background") or not data["assets"].get("background"):
-        desc = body.get("background") if isinstance(body.get("background"), str) else ""
-        try:
-            bg = claude_cli.design_background(data.get("script", ""), language, desc)
-        except Exception as e:  # noqa: BLE001
-            warnings.append(f"Claude vẽ bối cảnh lỗi ({e}); dùng nền mặc định.")
-            bg = {}
-        p = character_kit_background(bg, pdir)
-        rec = assets.save_background(p, bg.get("name", "boi_canh"))
-        rec["desc"] = bg.get("desc", desc)
-        data["assets"]["background"] = rec
+    # --- bối cảnh: mỗi cảnh ('## canh:') một ảnh ---
+    # body.scenes: danh sách mô tả cảnh cần vẽ (lại); không có thì vẽ các
+    # cảnh còn thiếu ảnh. body.background (chuỗi): gợi ý cho bối cảnh chung.
+    hint = body.get("background") if isinstance(body.get("background"), str) else ""
+    scenes = s.scenes or [""]
+    if isinstance(body.get("scenes"), list):
+        targets = [str(x) for x in body["scenes"]]
+    else:
+        targets = [d for d in scenes if not _scene_bg(data, d)]
+        # kịch bản nhiều cảnh mà cảnh nào cũng có ảnh riêng: không cần nền chung
+    for desc in targets:
+        rec, warn = _draw_scene_bg(data, pdir, desc, hint)
+        if warn:
+            warnings.append(warn)
+        _set_scene_bg(data, desc, rec)
 
     # --- mô tả giọng ---
     if body.get("voices"):
@@ -944,27 +1036,6 @@ def api_project_generate(pid):
 
     _save_project(pid, data)
     return jsonify({"assets": data["assets"], "warnings": warnings})
-
-
-def character_kit_background(bg: dict, pdir: Path) -> Path:
-    """Vẽ bối cảnh phẳng theo mô tả màu của Claude."""
-    from PIL import Image, ImageDraw
-    w, h = config.WIDTH, config.HEIGHT
-    sky = tuple(bg.get("sky", (214, 232, 246)))[:3]
-    floor = tuple(bg.get("floor", (226, 206, 180)))[:3]
-    accent = tuple(bg.get("accent", (168, 196, 170)))[:3]
-    img = Image.new("RGB", (w, h), sky)
-    d = ImageDraw.Draw(img)
-    horizon = int(h * 0.62)
-    d.rectangle([0, horizon, w, h], fill=floor)
-    # vài khối trang trí, chừa chỗ giữa cho nhân vật
-    d.rectangle([0, horizon - 180, int(w * 0.22), horizon], fill=accent)
-    d.rectangle([int(w * 0.78), horizon - 240, w, horizon], fill=accent)
-    d.line([0, horizon, w, horizon], fill=(120, 110, 100), width=6)
-    out = pdir / "assets" / "bg_generated.png"
-    out.parent.mkdir(parents=True, exist_ok=True)
-    img.save(out)
-    return out
 
 
 # ------------------------------------------------------------------- render
@@ -1024,6 +1095,7 @@ def api_project_render(pid):
             result = pipeline.render_episode(
                 pdir, s, chars_cfg, Path(bg) if bg else None,
                 voices, settings, progress=prog,
+                scene_bgs=_scene_bg_paths(data, s),
             )
             data["result"] = result
             data["state"] = "done"

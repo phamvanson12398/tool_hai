@@ -69,6 +69,9 @@ ACCESSORIES = ["none", "glasses", "sunglasses", "earrings", "cap", "headband", "
 
 BODIES = ["adult", "child"]
 
+# Kiểu vẽ: "stick" = người que đầu to (hài), "flat" = hoạt hình phẳng có áo
+STYLES = ["stick", "flat"]
+
 
 @dataclass
 class CharSpec:
@@ -81,13 +84,14 @@ class CharSpec:
     shirt: str = "blue"
     accessory: str = "none"
     blush: bool = False
+    style: str = "flat"             # stick | flat
 
     def to_dict(self) -> dict:
         return {
             "name": self.name, "body": self.body, "skin": self.skin,
             "hair_style": self.hair_style, "hair_color": self.hair_color,
             "shirt": self.shirt, "accessory": self.accessory,
-            "blush": self.blush,
+            "blush": self.blush, "style": self.style,
         }
 
     @staticmethod
@@ -101,6 +105,8 @@ class CharSpec:
             shirt=d.get("shirt", "blue"),
             accessory=d.get("accessory", "none"),
             blush=bool(d.get("blush", False)),
+            # nhân vật lưu từ trước chưa có style -> giữ kiểu phẳng như cũ
+            style=d.get("style") if d.get("style") in STYLES else "flat",
         )
 
 
@@ -443,6 +449,10 @@ def _draw_extras(d: ImageDraw.ImageDraw, spec: CharSpec, g: dict,
 def render_character(spec: CharSpec, expression: str = "neutral",
                      mouth_open: bool = False) -> Image.Image:
     """Vẽ một nhân vật với biểu cảm và trạng thái miệng cho trước."""
+    if spec.style == "stick":
+        # người que dựng từ bộ xương (cùng bộ phận với chế độ cử động)
+        from .rig import render_still
+        return render_still(spec, expression, mouth_open)
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)
     g = _geom(spec.body)

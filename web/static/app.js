@@ -416,6 +416,12 @@
         if (seq !== state.parseSeq) return; // bỏ kết quả cũ
         renderIssues($("script-errors"), data && data.errors, true);
         renderIssues($("script-warnings"), data && data.warnings, false);
+        if (state.project && state.project.id && data && data.scenes) {
+          state.project.parse = state.project.parse || {};
+          state.project.parse.scenes = data.scenes;
+          renderScenes();
+          updateStageFromProject();
+        }
         if (data && typeof data.estimate_duration === "number" &&
             !$("p-script").dataset.localEst) {
           // Ước lượng server nếu có — hiển thị cho khớp backend
@@ -842,15 +848,15 @@
     withBusy($("btn-generate"), function () {
       return api("/api/project/" + encodeURIComponent(state.project.id) + "/generate", {
         method: "POST",
-        body: {
-          characters: characters || scriptCharacterNames(),
-          background: background || $("p-title").value + " / " + $("p-hints").value,
-          voices: true
-        }
+        body: background
+          ? { characters: characters || [], scenes: [""], background: background, voices: true }
+          : { characters: characters || scriptCharacterNames(),
+              background: $("p-title").value + " / " + $("p-hints").value, voices: true }
       }).then(function (data) {
+        (data && data.warnings || []).forEach(function (w) { toast("warn", "Lưu ý", w); });
         renderGeneratePreview(data || {});
         toast("ok", "AI đã tạo phần còn thiếu");
-        if (state.projectTouched) return refreshProject();
+        return refreshProject();
       }).catch(function (e) { errToast("Tạo phần còn thiếu thất bại", e); });
     });
   }
@@ -878,12 +884,132 @@
     return names;
   }
 
+  /* --------------------- Bối cảnh từng cảnh ------------------------ */
+
+  function sceneKey(desc) { return (desc || "").trim().toLowerCase(); }
+
+  function sceneBg(assets, desc) {
+    assets = assets || {};
+    if (!sceneKey(desc)) return assets.background || null;
+    return (assets.backgrounds || {})[sceneKey(desc)] || null;
+  }
+
+  function currentScenes() {
+    var p = state.project || {};
+    var sc = (p.parse && p.parse.scenes) || [];
+    return sc.length ? sc : [""];
+  }
+
+  function renderScenes() {
+    var box = $("scene-list");
+    if (!box) return;
+    box.innerHTML = "";
+    var p = state.project || {};
+    if (!p.id) {
+      emptyState(box, "🏞️", "Tạo tập và viết kịch bản trước");
+      return;
+    }
+    var assets = p.assets || {};
+    var scenes = currentScenes();
+    if (state.sceneIdx == null || state.sceneIdx >= scenes.length) state.sceneIdx = 0;
+    scenes.forEach(function (desc, i) {
+      var rec = sceneBg(assets, desc);
+      // cảnh chưa có ảnh riêng dùng bối cảnh chung (nếu có)
+      var shown = rec || (sceneKey(desc) ? assets.background : null);
+      var row = el("div", "scene-row" + (i === state.sceneIdx ? " active" : ""));
+      var th = el("div", "scene-thumb", shown ? "" : "Chưa có ảnh");
+      if (shown && shown.image) th.style.backgroundImage = "url('" + assetUrl(shown.image) + "')";
+      th.title = "Xem trước cảnh này";
+      th.addEventListener("click", function () {
+        state.sceneIdx = i;
+        renderScenes();
+        updateStageFromProject();
+      });
+      row.appendChild(th);
+
+      var body = el("div", "scene-body");
+      body.appendChild(el("div", "scene-title",
+        (scenes.length > 1 ? "Cảnh " + (i + 1) + ": " : "") + (desc || "Bối cảnh chung của tập")));
+      body.appendChild(el("div", "scene-meta", rec
+        ? ("Ảnh: " + (rec.name || "") + (rec.kind ? " · mẫu " + rec.kind : "") + (rec.time === "dem" ? " · đêm" : ""))
+        : (shown ? "Đang dùng bối cảnh chung" : "Chưa có ảnh — bấm AI vẽ hoặc tải ảnh lên")));
+
+      var act = el("div", "scene-actions");
+      var up = el("button", "btn btn-sm", "Tải ảnh lên");
+      up.type = "button";
+      up.addEventListener("click", function () {
+        state.sceneUpload = desc;
+        $("in-scene-bg").value = "";
+        $("in-scene-bg").click();
+      });
+      var ai = el("button", "btn btn-sm", rec ? "AI vẽ lại" : "AI vẽ");
+      ai.type = "button";
+      ai.appendChild(el("span", "spinner"));
+      ai.lastChild.hidden = true;
+      ai.addEventListener("click", function () {
+        withBusy(ai, function () {
+          return api("/api/project/" + encodeURIComponent(p.id) + "/generate", {
+            method: "POST",
+            body: { characters: [], scenes: [desc], background: $("p-hints").value }
+          }).then(function (data) {
+            (data.warnings || []).forEach(function (w) { toast("warn", "Lưu ý", w); });
+            toast("ok", "Đã vẽ bối cảnh", desc || "bối cảnh chung");
+            state.sceneIdx = i;
+            return refreshProject();
+          }).catch(function (e) { errToast("Vẽ bối cảnh thất bại", e); });
+        });
+      });
+      act.appendChild(up);
+      act.appendChild(ai);
+      body.appendChild(act);
+      row.appendChild(body);
+      box.appendChild(row);
+    });
+  }
+
+  function uploadSceneBg(file) {
+    var p = state.project || {};
+    if (!file || !p.id) return;
+    var fd = new FormData();
+    fd.append("scene", state.sceneUpload || "");
+    fd.append("file", file);
+    api("/api/project/" + encodeURIComponent(p.id) + "/scene-bg", { method: "POST", body: fd })
+      .then(function () {
+        toast("ok", "Đã đổi ảnh nền", state.sceneUpload || "bối cảnh chung");
+        return refreshProject();
+      })
+      .catch(function (e) { errToast("Tải ảnh nền thất bại", e); });
+  }
+
+  /** Tải lại dữ liệu tập từ server rồi vẽ lại các phần liên quan. */
+  function refreshProject() {
+    var p = state.project || {};
+    if (!p.id) return Promise.resolve(null);
+    // lưu kịch bản đang soạn (lặng lẽ) để server tính đúng danh sách cảnh
+    var text = $("p-script").value;
+    var save = (state.projectTouched && text.trim())
+      ? api("/api/project/" + encodeURIComponent(p.id) + "/script",
+            { method: "POST", body: { script: text } }).catch(function () {})
+      : Promise.resolve();
+    return save.then(function () {
+      return api("/api/project/" + encodeURIComponent(p.id));
+    }).then(function (data) {
+      state.project = data;
+      renderProjectKv();
+      renderParsedCharacters((data.assets || {}).characters || []);
+      renderScenes();
+      updateStageFromProject();
+      return data;
+    });
+  }
+
   /* ------------------------- Preview stage ------------------------- */
 
   function assetUrl(value) {
     if (!value) return "";
     if (/^(https?:|data:|blob:)/.test(value)) return value;
-    if (value.indexOf("/") === 0) return value;
+    if (/^\/(api|static)\//.test(value)) return value;
+    // đường dẫn file trên máy (C:\... hoặc /home/...) -> server trả ảnh
     return "/api/library/image/" + encodeURIComponent(value);
   }
 
@@ -896,9 +1022,12 @@
     var stageTitle = $("stage-title");
     var empty = $("stage-empty");
 
-    // bối cảnh
-    if (assets.background && (assets.background.image || assets.background.id)) {
-      bg.style.backgroundImage = "url('" + assetUrl(assets.background.image || assets.background.id) + "')";
+    // bối cảnh: cảnh đang chọn ở mục 8b (không có ảnh riêng thì dùng nền chung)
+    var scenes = currentScenes();
+    var sdesc = scenes[Math.min(state.sceneIdx || 0, scenes.length - 1)];
+    var brec = sceneBg(assets, sdesc) || assets.background;
+    if (brec && (brec.image || brec.id)) {
+      bg.style.backgroundImage = "url('" + assetUrl(brec.image || brec.id) + "')";
     } else {
       bg.style.backgroundImage = "";
     }
@@ -1642,6 +1771,7 @@
     $("s-claude-bin").value = s.claude_bin || "";
     $("s-ffmpeg-bin").value = s.ffmpeg_bin || "";
     $("s-enable-rig").value = s.enable_rig ? "1" : "0";
+    $("s-char-style").value = s.char_style === "flat" ? "flat" : "stick";
     $("bgm-current").textContent = s.bgm_file ? (s.bgm_file) : "Chưa chọn file";
     $("s-capcut-root").value = s.capcut_drafts_root || "";
     $("capcut-root-hint").textContent =
@@ -1699,6 +1829,7 @@
       claude_bin: $("s-claude-bin").value.trim(),
       ffmpeg_bin: $("s-ffmpeg-bin").value.trim(),
       enable_rig: $("s-enable-rig").value === "1",
+      char_style: $("s-char-style").value,
       capcut_drafts_root: $("s-capcut-root").value.trim(),
       capcut_template_draft: $("s-capcut-template")
         ? $("s-capcut-template").value : ""
@@ -1823,6 +1954,7 @@
           state.project = p;
           state.projectTouched = false;
           renderProjectKv();
+          renderScenes();
           saveTitleLocal();
           toast("ok", "Đã tạo tập", "Mã: " + p.id);
         }).catch(function (e) { errToast("Tạo tập thất bại", e); });
@@ -1897,6 +2029,9 @@
 
     $("btn-apply").addEventListener("click", applyReview);
     $("btn-generate").addEventListener("click", function () { doGenerate(); });
+    $("in-scene-bg").addEventListener("change", function () {
+      uploadSceneBg(this.files && this.files[0]);
+    });
   }
 
   function wireUploads() {
@@ -2158,6 +2293,7 @@
 
     // nếu tab library được chọn, switchTab đã gọi loadLibrary
     updateStageFromProject();
+    renderScenes();
   }
 
   if (document.readyState === "loading") {

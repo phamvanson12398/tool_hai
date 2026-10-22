@@ -96,7 +96,7 @@ def build_timeline(script: Script, segments: list[dict],
             dur = b.duration or config.DEFAULT_REACT_SECONDS
             tl.beats.append(video.Beat(
                 idx=idx, actor=b.speaker, expression=b.expression, zoom=b.zoom,
-                sfx=_sfx_file(b.sfx), start=t, duration=dur,
+                sfx=_sfx_file(b.sfx), start=t, duration=dur, scene=b.scene,
             ))
             # nhịp phản ứng: giữ nguyên độ dài, không cộng thêm gap
             t += dur
@@ -109,6 +109,7 @@ def build_timeline(script: Script, segments: list[dict],
                 audio=seg["audio"],
                 gestures=list(b.gestures),
                 effects=list(b.effects),
+                scene=b.scene,
             )
             ln.words = _phrase_times(b.text, t, dur)
             # tuỳ chọn thay đổi biểu cảm người nghe ngay khi câu bắt đầu
@@ -216,27 +217,21 @@ def _attach_rig_animator(char: video.Character, c: dict, name: str) -> None:
 
     if mode == "kit" or c.get("spec"):
         # Nhân vật vẽ bằng bộ ghép: dựng RigRenderer từ spec + thư mục parts
-        spec_d = c.get("spec") or {}
+        spec_d = dict(c.get("spec") or {})
+        spec_d.setdefault("name", name)
         spec = CharSpec.from_dict(spec_d)
-        # base_dir là thư mục chứa rig.json và parts/ (cha của thư mục parts)
+        # Mỗi nhân vật một thư mục rig riêng cạnh bộ ảnh của nó (trước đây
+        # dùng thư mục cha chung nên mọi nhân vật ăn chung một rig.json).
         if img_path and img_path.exists():
-            base_dir = img_path.parent.parent  # .../rig_jieun
+            base_dir = img_path.parent / "_rig"
         else:
-            base_dir = Path(".")
+            base_dir = config.DATA / "tmp" / "rig_kit" / assets.config_slug(name)
         rig_path = base_dir / "rig.json"
-        parts_dir = base_dir / "parts"
-
-        if rig_path.exists():
-            rig = rig_mod.load_rig(rig_path)
-            renderer = rig_mod.RigRenderer(rig, base_dir)
-            animator = rig_mod.CharacterAnimator(renderer.rig, base_dir, name)
-            char.rig_animator = animator
-        else:
-            # Không có rig.json -> dựng rig ngay từ spec (lần đầu)
+        rig = rig_mod.load_rig(rig_path) if rig_path.exists() else None
+        if rig is None or rig.spec != spec.to_dict():
+            # chưa có, hoặc ngoại hình đã đổi -> dựng lại từ spec
             rig = rig_mod.build_rig(spec, base_dir)
-            renderer = rig_mod.RigRenderer(rig, base_dir)
-            animator = rig_mod.CharacterAnimator(renderer.rig, base_dir, name)
-            char.rig_animator = animator
+        char.rig_animator = rig_mod.CharacterAnimator(rig, base_dir, name)
     else:
         # Nhân vật tải lên 1 ảnh: dùng PhotoCharacter (tách nền + ước khớp)
         src = c.get("image") or (str(img_path) if img_path else None)
@@ -283,7 +278,8 @@ class _PhotoRigAnimator:
                 angles = gmod.merge_angles(angles, pose)
         return angles
 
-    def render_frame(self, t: float, speaking: bool, mouth_open: bool) -> Image.Image:
+    def render_frame(self, t: float, speaking: bool, mouth_open: bool,
+                     expression: str | None = None) -> Image.Image:
         angles = self._angles_at(t, speaking)
         self.last_angles = angles
         # có lề để tay giơ ra ngoài ảnh không bị cắt; frame_origin/frame_size
@@ -298,8 +294,12 @@ class _PhotoRigAnimator:
 
 def render_episode(pdir: Path, script: Script, chars_cfg: list[dict],
                    bg_path: Path | None, voices: dict, settings: dict,
-                   progress=None) -> dict:
-    """Chạy toàn bộ: giọng -> timeline -> video -> bộ file rời."""
+                   progress=None, scene_bgs: dict[int, Path] | None = None) -> dict:
+    """Chạy toàn bộ: giọng -> timeline -> video -> bộ file rời.
+
+    bg_path: ảnh nền chung; scene_bgs: {chỉ số cảnh: ảnh nền} cho kịch bản
+    nhiều bối cảnh (cảnh không có ảnh riêng thì dùng bg_path).
+    """
     _say(progress, 0.02, "chuẩn bị")
     segments = synth_lines(script, pdir, voices, progress)
     gap = float(settings.get("gap_between_lines", config.GAP_BETWEEN_LINES))
@@ -314,6 +314,8 @@ def render_episode(pdir: Path, script: Script, chars_cfg: list[dict],
     stage = video.Stage()
     if bg_path and Path(bg_path).exists():
         stage.set_background(Path(bg_path))
+    if scene_bgs:
+        stage.set_scene_backgrounds(scene_bgs)
     stage.title = settings.get("title_text") or script.title
     stage.subtitle_style = config.SUBTITLE_STYLES.get(
         settings.get("subtitle_style", "yellow"), config.SUBTITLE_STYLES["yellow"]
@@ -330,7 +332,9 @@ def render_episode(pdir: Path, script: Script, chars_cfg: list[dict],
     srt = video.write_srt(tl, out_dir / "phude.srt")
 
     _say(progress, 0.97, "đóng gói file rời")
-    pack = _make_pack(pdir, tl, chars, bg_path, mp4, srt, script)
+    all_bgs = [Path(bg_path)] if bg_path else []
+    all_bgs += [Path(p) for p in (scene_bgs or {}).values() if p]
+    pack = _make_pack(pdir, tl, chars, all_bgs, mp4, srt, script)
     _say(progress, 1.0, "xong")
 
     return {
@@ -344,7 +348,7 @@ def render_episode(pdir: Path, script: Script, chars_cfg: list[dict],
 
 
 def _make_pack(pdir: Path, tl: video.Timeline, chars: list[video.Character],
-               bg_path: Path | None, mp4: Path, srt: Path, script: Script) -> Path:
+               bg_paths: list[Path], mp4: Path, srt: Path, script: Script) -> Path:
     """Bộ file rời để chỉnh trong CapCut + xuất file đầy đủ ra thư mục out."""
     out_dir = pdir / "out"
 
@@ -368,6 +372,7 @@ def _make_pack(pdir: Path, tl: video.Timeline, chars: list[video.Character],
                 "start": ln.start,
                 "duration": ln.duration,
                 "audio": str(ln.audio) if ln.audio else None,
+                "scene": ln.scene,
                 "words": [(w, s, e) for w, s, e in ln.words],
                 "other_expr": dict(ln.other_expr),
             }
@@ -382,9 +387,11 @@ def _make_pack(pdir: Path, tl: video.Timeline, chars: list[video.Character],
                 "sfx": b.sfx or "",
                 "start": b.start,
                 "duration": b.duration,
+                "scene": b.scene,
             }
             for b in tl.beats
         ],
+        "scenes": list(script.scenes),
     }
     timeline_json.write_text(json.dumps(tl_data, ensure_ascii=False, indent=2),
                             encoding="utf-8")
@@ -400,10 +407,11 @@ def _make_pack(pdir: Path, tl: video.Timeline, chars: list[video.Character],
                 dst = asset_dir / Path(p).name
                 if not dst.exists():
                     shutil.copy2(p, dst)
-    if bg_path and Path(bg_path).exists():
-        dst = asset_dir / Path(bg_path).name
-        if not dst.exists():
-            shutil.copy2(bg_path, dst)
+    for bg_path in bg_paths:
+        if Path(bg_path).exists():
+            dst = asset_dir / Path(bg_path).name
+            if not dst.exists():
+                shutil.copy2(bg_path, dst)
 
     # 3b. Giọng từng câu, đánh số theo thứ tự: 01_<tên>.wav, 02_<tên>.wav ...
     voice_dir = out_dir / "giong"
@@ -440,6 +448,9 @@ def _make_pack(pdir: Path, tl: video.Timeline, chars: list[video.Character],
                     if arc not in zipped:
                         zipped.add(arc)
                         z.write(p, arc)
-        if bg_path and Path(bg_path).exists():
-            z.write(bg_path, f"boi_canh/{Path(bg_path).name}")
+        for bg_path in bg_paths:
+            arc = f"boi_canh/{Path(bg_path).name}"
+            if Path(bg_path).exists() and arc not in zipped:
+                zipped.add(arc)
+                z.write(bg_path, arc)
     return pack

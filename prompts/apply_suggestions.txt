@@ -1,5 +1,5 @@
 Áp dụng các góp ý dưới đây vào kịch bản. Chỉ sửa đúng những chỗ có góp ý,
-giữ nguyên cấu trúc, nhân vật, ngôn ngữ và quy cách ghi. Không thêm ý mới ngoài các góp ý đã cho.
+giữ nguyên cấu trúc, nhân vật, ngôn ngữ và quy cách ghi (kể cả các dòng `## canh:` chuyển bối cảnh). Không thêm ý mới ngoài các góp ý đã cho.
 
 ### Góp ý
 {{items}}

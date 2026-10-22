@@ -88,6 +88,8 @@ Nhân vật hoặc giọng nào chị không tải lên thì tool tự chuyển 
 - `# ngon_ngu`: `ko` (tiếng Hàn) hoặc `en` (tiếng Anh). Kịch bản, giọng và phụ
   đề đều theo ngôn ngữ đó.
 - `# nhan_vat`: `tên=trai`, `tên=phai`, `tên=giua`.
+- **Dòng `## canh: <mô tả>`**: chuyển sang bối cảnh khác. Các câu phía sau
+  thuộc cảnh đó (xem mục 6b).
 
 ### Biểu cảm dùng được
 `neutral` `happy` `sad` `angry` `shocked` `surprised` `proud` `smug`
@@ -128,7 +130,47 @@ trừ khi chị chỉ định.
 
 ---
 
+## 6b. Nhiều bối cảnh trong một tập
+
+Truyện diễn ra ở nhiều nơi thì thêm dòng `## canh:` vào kịch bản, mỗi lần đổi
+chỗ một dòng:
+
+```
+# tieu_de: Hẹn hò lần đầu
+# ngon_ngu: ko
+# nhan_vat: 지은=trai, 수아=phai
+
+## canh: phòng khách, buổi sáng
+수아 (happy): 오늘 소개팅이야!
+## canh: quán cà phê, buổi chiều
+지은 (shocked, zoom): 어? 너야?
+## canh: phòng khách, buổi sáng
+수아 (crying): 망했어...
+```
+
+- Viết lại **đúng mô tả cũ** là quay về chỗ cũ, dùng lại cùng ảnh nền.
+- Kịch bản không có dòng `## canh:` thì cả tập dùng một bối cảnh như trước.
+- Claude tự thêm `## canh:` khi viết kịch bản nếu câu chuyện cần (tối đa 3 cảnh).
+- Mục **8b. Bối cảnh từng cảnh** liệt kê các cảnh. Mỗi cảnh chị **tải ảnh lên**
+  hoặc bấm **AI vẽ**; bấm vào ảnh nhỏ để xem trước cảnh đó. Cảnh chưa có ảnh
+  riêng thì dùng bối cảnh chung của tập.
+- AI vẽ theo các mẫu có sẵn: phòng khách, nhà bếp, phòng ngủ, văn phòng, lớp
+  học, quán cà phê, cửa hàng, đường phố, công viên, bãi biển, nền sân khấu —
+  có cả ban ngày và ban đêm, màu chọn theo không khí từng cảnh.
+- Trong video, đổi cảnh có chuyển mờ ngắn (khoảng 0,35 giây).
+
+---
+
 ## 7. Nhân vật
+
+### Kiểu nhân vật AI vẽ
+Ở **Cài đặt → Cử động nhân vật → Kiểu nhân vật AI vẽ**:
+
+- **Người que hài** (mặc định): đầu tròn to, mặt biểu cảm rõ, tay chân là nét
+  đen, tóc vẽ nguệch ngoạc, cà vạt màu áo để phân biệt từng người.
+- **Hoạt hình phẳng**: kiểu cũ, người đầy đặn có áo.
+
+Đổi kiểu xong, bấm **Vẽ lại** ở nhân vật đã có để vẽ theo kiểu mới.
 
 ### Chị tải lên
 Tên file = tên nhân vật trong kịch bản.
@@ -256,8 +298,9 @@ viết kịch bản (gửi kèm trong prompt).
 Trong màn **Cài đặt**, mục **Cử động nhân vật** có công tắc:
 
 - **Tắt** (mặc định): dựng theo cách cũ — ảnh tĩnh, nhép miệng, nhún nhẹ.
-- **Bật**: nhân vật vẽ bằng bộ ghép dùng cử chỉ theo kịch bản (vẫy tay, ôm đầu…)
-  và thở nhẹ; nhân vật tải lên 1 ảnh uốn lưới tam giác theo khung xương.
+- **Bật**: nhân vật vẽ bằng bộ ghép dùng cử chỉ theo kịch bản (vẫy tay, ôm đầu…),
+  thở nhẹ và đổi mặt theo biểu cảm; nhân vật tải lên 1 ảnh cử động theo khung
+  xương chị đã kéo ở tab Dựng xương.
 
 Nếu phần cử động lỗi (thiếu rig.json, ảnh không đạt, lỗi render…) tool tự quay
 về cách dựng cũ, ghi vào `data/logs/capcut_export.log` (hoặc log render) và tiếp

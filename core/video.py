@@ -120,6 +120,7 @@ class Line:
     # --- cử động (Bước D) ---
     gestures: list[str] = field(default_factory=list)   # cử chỉ: vaytay, omdau...
     effects: list[str] = field(default_factory=list)    # hiệu ứng cả người
+    scene: int = 0                  # bối cảnh của câu (chỉ số Script.scenes)
 
 
 @dataclass
@@ -132,6 +133,7 @@ class Beat:
     sfx: str | None = None
     start: float = 0.0
     duration: float = 0.8
+    scene: int = 0
 
 
 @dataclass
@@ -149,6 +151,9 @@ class Stage:
     def __init__(self, width: int = config.WIDTH, height: int = config.HEIGHT):
         self.w, self.h = width, height
         self.bg: Image.Image | None = None
+        # nhiều bối cảnh: chỉ số cảnh -> ảnh nền (cảnh không có thì dùng self.bg)
+        self.scene_bgs: dict[int, Image.Image] = {}
+        self.scene = 0
         self.title = ""
         self.subtitle_style = config.SUBTITLE_STYLES["yellow"]
         self.font = find_font(bold=True)
@@ -156,6 +161,17 @@ class Stage:
         self._char_cache: dict[tuple, Image.Image] = {}
 
     def set_background(self, path: Path) -> None:
+        self.bg = self._fit(path)
+
+    def set_scene_backgrounds(self, paths: dict[int, Path]) -> None:
+        """Ảnh nền cho từng bối cảnh (theo chỉ số cảnh trong kịch bản)."""
+        self.scene_bgs = {i: self._fit(Path(p)) for i, p in paths.items()
+                          if p and Path(p).exists()}
+
+    def background_for(self, scene: int) -> Image.Image | None:
+        return self.scene_bgs.get(scene) or self.bg
+
+    def _fit(self, path: Path) -> Image.Image:
         img = Image.open(path).convert("RGB")
         # cắt và căn cho đầy khung 9:16
         tw, th = self.w, self.h
@@ -169,12 +185,18 @@ class Stage:
             nh = int(img.width / tr)
             y = (img.height - nh) // 2
             img = img.crop((0, y, img.width, y + nh))
-        self.bg = img.resize((tw, th), Image.LANCZOS)
+        return img.resize((tw, th), Image.LANCZOS)
 
-    def blank(self) -> Image.Image:
-        if self.bg:
-            return self.bg.copy()
-        img = Image.new("RGB", (self.w, self.h), (30, 30, 40))
+    def blank(self, scene: int | None = None, prev_scene: int | None = None,
+              mix: float = 1.0) -> Image.Image:
+        """Nền của khung: ảnh của cảnh hiện tại, chuyển mờ từ cảnh trước
+        nếu mix < 1."""
+        cur = self.background_for(self.scene if scene is None else scene)
+        img = cur.copy() if cur else Image.new("RGB", (self.w, self.h), (30, 30, 40))
+        if prev_scene is not None and mix < 1.0:
+            prev = self.background_for(prev_scene)
+            if prev is not None and prev is not cur:
+                img = Image.blend(prev, img, max(0.0, min(1.0, mix)))
         return img
 
     def place_characters(self, img: Image.Image, chars: list[Character],
@@ -199,7 +221,8 @@ class Stage:
             if ch.rig_animator is not None:
                 try:
                     im = ch.rig_animator.render_frame(
-                        t, speaking=speaking, mouth_open=bool(speaking and mouth_open)
+                        t, speaking=speaking, mouth_open=bool(speaking and mouth_open),
+                        expression=expressions.get(ch.name, "neutral"),
                     )
                     im = im.convert("RGBA")
                     anim = ch.rig_animator
@@ -367,6 +390,8 @@ def _ffmpeg_path() -> str:
 
 # ---------------------------------------------------------------- render
 
+SCENE_FADE = 0.35   # giây chuyển mờ khi đổi bối cảnh
+
 def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
                  stage: Stage, settings: dict, progress=None) -> Path:
     """Render timeline thành mp4 1080x1920, ghi thẳng RGB vào ffmpeg qua stdin."""
@@ -403,7 +428,10 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
     events.sort(key=lambda e: e[0])
 
     # Cache khung hình theo trạng thái: (biểu cảm, miệng mở/ngậm, camera)
-    frame_cache: dict[tuple, Image.Image] = {}
+    # bối cảnh đang hiện và cảnh trước đó (để chuyển mờ)
+    cur_scene: int | None = None
+    prev_scene: int | None = None
+    scene_since = 0.0
 
     # --- CỬ ĐỘNG (Bước D): gom rig animator theo tên nhân vật để áp cử chỉ
     # theo từng câu trong kịch bản.
@@ -474,6 +502,14 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
             past = [e for e in events if e[0] <= t]
             cur = past[-1][2] if past else None
 
+        # bối cảnh: theo câu/nhịp hiện tại; trước câu đầu dùng cảnh của câu đầu
+        scene = getattr(cur, "scene", None)
+        if scene is None:
+            scene = getattr(events[0][2], "scene", 0) if events else 0
+        if scene != cur_scene:
+            prev_scene, cur_scene, scene_since = cur_scene, scene, t
+        mix = min(1.0, (t - scene_since) / SCENE_FADE) if prev_scene is not None else 1.0
+
         speaking = None
         mouth_open = False
         zoom = False
@@ -512,26 +548,18 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
             if cur.actor and cur.start <= t < cur.start + cur.duration:
                 speaking = None
 
-        # Tạo cache key: (biểu cảm từng nhân vật, người đang nói + miệng, zoom)
-        char_state = tuple((c.name, held.get(c.name, "neutral"), c.name == speaking and mouth_open) for c in chars)
-        cache_key = (char_state, zoom, zoom_focus)
+        # Dựng khung mới mỗi lần: nhân vật thở, nhún, làm cử chỉ theo thời
+        # gian nên không dùng lại khung cũ được (trước đây cache theo biểu
+        # cảm làm cử động bị đứng hình).
+        img = stage.blank(cur_scene, prev_scene, mix)
+        img = stage.place_characters(img, chars, held, speaking, mouth_open, t)
 
-        if cache_key in frame_cache:
-            # dùng lại khung đã render
-            img = frame_cache[cache_key].copy()
-        else:
-            # render khung mới
-            img = stage.blank()
-            img = stage.place_characters(img, chars, held, speaking, mouth_open, t)
-
-            if zoom:
-                focus = zoom_focus or speaking
-                if focus is None and isinstance(cur, Beat):
-                    focus = cur.actor
-                if focus:
-                    img = _zoom_speaker(img, chars, focus)
-
-            frame_cache[cache_key] = img.copy()
+        if zoom:
+            focus = zoom_focus or speaking
+            if focus is None and isinstance(cur, Beat):
+                focus = cur.actor
+            if focus:
+                img = _zoom_speaker(img, chars, focus)
 
         # Vẽ phụ đề và tiêu đề (không cache được vì text thay đổi mỗi khung)
         stage.draw_subtitle(img, sub)
@@ -544,8 +572,9 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
 
     ffmpeg_proc.stdin.close()
     if ffmpeg_proc.wait() != 0:
-        err = ffmpeg_proc.stderr.read().decode("utf-8", errors="replace")
-        raise RuntimeError("ffmpeg lỗi khi ghi video:\n" + err[-500:])
+        # stderr đã chuyển vào DEVNULL (tránh treo) nên không đọc được chi tiết
+        raise RuntimeError("ffmpeg lỗi khi ghi video (mã "
+                           f"{ffmpeg_proc.returncode}). Kiểm tra lại ffmpeg trong Cài đặt.")
 
     # ghép âm thanh vào
     _assemble(raw_video, timeline, out_path, settings, progress)

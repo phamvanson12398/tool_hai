@@ -1,11 +1,20 @@
-Chọn bối cảnh cho video hài ngắn sau. Quy chuẩn: màu đơn giản, nét phẳng,
-chừa chỗ ở giữa cho nhân vật đứng.
+Chọn bối cảnh cho MỘT cảnh trong video hài ngắn. Bối cảnh vẽ phẳng, màu đơn
+giản, giữa khung chừa chỗ cho nhân vật đứng.
 
-### Kịch bản
+### Cảnh cần vẽ
+{{desc}}
+
+### Kịch bản (để hiểu không khí)
 {{script}}
 
-Gợi ý thêm: {{desc}}
+### Mẫu bối cảnh có sẵn (chỉ được chọn trong đây)
+{{kinds}}
 
-Output JSON đúng dạng này (màu RGB 0–255), không có gì khác:
-{"name":"tên ngắn của bối cảnh","desc":"mô tả một câu",
-  "sky":[214,232,246],"floor":[226,206,180],"accent":[168,196,170]}
+Chọn mẫu gần nhất với cảnh. "time" là "ngay" hoặc "dem" (đêm nếu cảnh là
+ban đêm). Màu RGB 0–255: "wall" là tường (hoặc bầu trời với cảnh ngoài
+trời), "floor" là sàn/mặt đất, "accent" là màu điểm nhấn (rèm, ghế, bảng...).
+Chọn màu hợp không khí cảnh, các cảnh khác nhau nên khác màu.
+
+Output JSON đúng dạng này, không có gì khác:
+{"name":"tên ngắn","desc":"mô tả một câu","kind":"phong_khach","time":"ngay",
+  "wall":[236,222,200],"floor":[190,146,108],"accent":[120,160,196]}

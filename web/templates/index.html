@@ -169,7 +169,7 @@
           <div class="dropzone" id="dz-background" data-kind="background">
             <div class="dz-icon">🏞️</div>
             <div class="dz-title">Bối cảnh</div>
-            <div class="dz-sub">Một ảnh bối cảnh.</div>
+            <div class="dz-sub">Một ảnh bối cảnh chung cho cả tập (nhiều cảnh: dùng mục 8b).</div>
             <input type="file" id="in-background" accept="image/*" hidden>
           </div>
 
@@ -201,6 +201,18 @@
             </button>
           </div>
           <div class="asset-preview" id="generate-preview"></div>
+        </section>
+
+        <!-- 8b. Bối cảnh từng cảnh -->
+        <section class="card" id="sec-scenes">
+          <h2 class="card-title"><span class="step">8b</span> Bối cảnh từng cảnh</h2>
+          <p class="hint">
+            Muốn đổi cảnh giữa tập, thêm dòng <code>## canh: mô tả</code> vào kịch bản
+            (vd <code>## canh: quán cà phê, buổi tối</code>). Mỗi cảnh một ảnh nền:
+            chị tải ảnh lên hoặc để AI vẽ. Bấm vào ảnh để xem trước.
+          </p>
+          <div class="scene-list" id="scene-list"></div>
+          <input type="file" id="in-scene-bg" accept="image/*" hidden>
         </section>
 
         <!-- 10. Xác nhận & dựng -->
@@ -437,6 +449,14 @@
     <section class="card">
       <h2 class="card-title">Cử động nhân vật</h2>
       <div class="field">
+        <label for="s-char-style">Kiểu nhân vật AI vẽ</label>
+        <select id="s-char-style">
+          <option value="stick">Người que hài (đầu to, tay chân nét đen)</option>
+          <option value="flat">Hoạt hình phẳng (có áo, người đầy đặn)</option>
+        </select>
+        <p class="hint">Áp dụng cho nhân vật AI vẽ từ lần bấm “AI tạo” tiếp theo. Bấm “Vẽ lại” để đổi kiểu cho nhân vật đã có.</p>
+      </div>
+      <div class="field">
         <label for="s-enable-rig">Bật cử động nhân vật (khung xương, cử chỉ, thở)</label>
         <div class="field-row">
           <select id="s-enable-rig">
@@ -446,7 +466,7 @@
         </div>
         <p class="hint">
           Khi bật: nhân vật vẽ bằng bộ ghép dùng cử chỉ theo kịch bản (vẫy tay, ôm đầu,…)
-          và thở nhẹ khi đứng yên. Nhân vật tải lên 1 ảnh uốn lưới tam giác theo khung xương.
+          và thở nhẹ khi đứng yên, mặt đổi theo biểu cảm. Nhân vật tải lên 1 ảnh được cử động theo khung xương chị kéo ở tab Dựng xương.
           Nếu phần cử động lỗi (thiếu rig, ảnh không đạt…) tool tự quay lại cách dựng cũ
           và ghi vào file log.
         </p>

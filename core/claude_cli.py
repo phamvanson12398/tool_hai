@@ -234,13 +234,15 @@ def write_script(title: str, language: str, kind: str | None = None,
     lang_name = "Korean" if language == "ko" else "English"
     if language == "ko":
         cast_hint = "Nhân vật nên có tên tiếng Hàn (ví dụ 지은, 수아)."
-        sample = ("수아 (happy, vaytay): 와, 아기 진짜 귀엽다! 이름 정했어?\n"
+        sample = ("## canh: phòng khách, buổi sáng\n"
+                  "수아 (happy, vaytay): 와, 아기 진짜 귀엽다! 이름 정했어?\n"
                   "지은 (proud, khoanhtay): 우리 아기 이름은… \"와이파이\"야.\n"
                   "> 수아 (shocked, zoom, boing) 0.8\n"
                   "수아 (angry, chitay, rung): 왜?!")
     else:
         cast_hint = "Characters should have natural English names."
-        sample = ('Sarah (happy, vaytay): Oh, the baby is so cute! Did we pick a name yet?\n'
+        sample = ('## canh: phòng khách, buổi sáng\n'
+                  'Sarah (happy, vaytay): Oh, the baby is so cute! Did we pick a name yet?\n'
                   'Mike (proud, khoanhtay): We named the baby... "WiFi".\n'
                   '> Sarah (shocked, zoom, boing) 0.8\n'
                   'Sarah (angry, chitay, rung): WHAT?!')
@@ -371,30 +373,39 @@ def pick_character_specs(names: list[str], script: str,
 
 
 def design_background(script: str, language: str, desc: str = "") -> dict:
-    """Claude mô tả bối cảnh theo nội dung: màu trời, màu sàn, màu điểm nhấn."""
+    """Claude chọn mẫu bối cảnh (phòng khách, bếp, đường phố...), ngày/đêm
+    và màu chủ đạo cho một cảnh. desc: mô tả cảnh (dòng '## canh:')."""
+    from .scene_art import KINDS, TIMES, kinds_catalog
+
     prompt = _load_prompt(
         "design_background",
         script=script[:2000],
-        desc=desc or "(không có)",
+        desc=desc or "(cả tập dùng một bối cảnh — chọn theo nội dung kịch bản)",
+        kinds=kinds_catalog(),
     )
     data = _run_json(prompt, timeout=150)
     if not isinstance(data, dict):
         return {}
 
-    def rgb(v, default):
+    def rgb(v):
         if isinstance(v, list) and len(v) >= 3:
             try:
                 return [max(0, min(255, int(x))) for x in v[:3]]
             except (TypeError, ValueError):
-                return default
-        return default
+                return None
+        return None
 
+    kind = str(data.get("kind", "")).strip().lower()
+    time = str(data.get("time", "ngay")).strip().lower()
     return {
         "name": str(data.get("name", "boi_canh"))[:40],
         "desc": str(data.get("desc", ""))[:200],
-        "sky": rgb(data.get("sky"), [214, 232, 246]),
-        "floor": rgb(data.get("floor"), [226, 206, 180]),
-        "accent": rgb(data.get("accent"), [168, 196, 170]),
+        "kind": kind if kind in KINDS else "phong_khach",
+        "time": time if time in TIMES else "ngay",
+        # tương thích bản cũ (sky = màu tường/trời)
+        "wall": rgb(data.get("wall")) or rgb(data.get("sky")),
+        "floor": rgb(data.get("floor")),
+        "accent": rgb(data.get("accent")),
     }
 
 
