@@ -13,6 +13,8 @@ Yêu cầu:
 - Các nhân vật phải trông khác nhau rõ (tóc, màu áo khác nhau) để khán giả phân biệt được.
 - Phù hợp vai trong truyện (ví dụ người lớn tuổi, trẻ con thì body="child").
 - Cùng một phong cách để ráp lại trông đồng bộ.
+- "outfit" là trang phục, "pants" là màu quần — chọn theo nghề/vai của nhân vật.
+{{market_hint}}
 
 Output JSON đúng dạng này, không có gì khác:
 {{example}}

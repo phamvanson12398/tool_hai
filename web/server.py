@@ -146,10 +146,33 @@ def _history() -> list[dict]:
     if p.exists():
         try:
             d = json.loads(p.read_text(encoding="utf-8"))
-            return d if isinstance(d, list) else []
+            return _dedupe_history(d) if isinstance(d, list) else []
         except Exception:
             return []
     return []
+
+
+def _dedupe_history(items: list[dict]) -> list[dict]:
+    """Gộp các bản ghi trùng tập (bản cũ bị ghi lặp khi trang tải lại liên
+    tục): giữ một bản mỗi tập, đủ trường nhất, ở vị trí lần ghi cuối."""
+    merged: dict[str, dict] = {}
+    order: list[str] = []
+    out_noid: list[dict] = []
+    for h in items:
+        if not isinstance(h, dict):
+            continue
+        pid = h.get("id")
+        if not pid:
+            out_noid.append(h)
+            continue
+        cur = merged.setdefault(pid, {})
+        for k, v in h.items():
+            if v or k not in cur:
+                cur[k] = v
+        if pid in order:
+            order.remove(pid)
+        order.append(pid)
+    return out_noid + [merged[i] for i in order]
 
 
 def _save_history(items: list[dict]) -> None:
@@ -970,7 +993,9 @@ def api_project_generate(pid):
         except Exception as e:  # noqa: BLE001
             warnings.append(f"Claude chọn bộ ghép lỗi ({e}); dùng mặc định.")
             specs = {}
-        style = config.load_settings().get("char_style") or "stick"
+        style = config.load_settings().get("char_style") or "auto"
+        if style not in character_kit.STYLES:      # "auto": theo ngôn ngữ của tập
+            style = "kchibi" if language == "ko" else "box"
         for i, name in enumerate(want_chars):
             spec_d = specs.get(name) or {}
             spec_d["name"] = name
@@ -1102,7 +1127,7 @@ def api_project_render(pid):
             _save_project(pid, data)
 
             # lưu lịch sử chống lặp khuôn
-            hist = _history()
+            hist = [h for h in _history() if h.get("id") != pid]   # dựng lại: thay bản cũ
             hist.append({
                 "id": pid, "title": data.get("title", ""),
                 "language": data.get("language", "ko"),
@@ -1242,8 +1267,17 @@ def api_history_get():
 def api_history_post():
     body = request.get_json(silent=True) or {}
     hist = _history()
-    hist.append({**body,
-                 "created_at": datetime.now().isoformat(timespec="seconds")})
+    # mỗi tập một bản ghi: server đã ghi khi dựng xong (kèm câu mở/chốt),
+    # bản giao diện gửi lên chỉ bổ sung trường còn thiếu
+    pid = body.get("id")
+    same = [h for h in hist if pid and h.get("id") == pid]
+    if same:
+        for k, v in body.items():
+            if v and not same[-1].get(k):
+                same[-1][k] = v
+    else:
+        hist.append({**body,
+                     "created_at": datetime.now().isoformat(timespec="seconds")})
     _save_history(hist[-200:])
     return jsonify({"ok": True})
 

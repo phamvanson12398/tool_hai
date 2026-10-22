@@ -337,6 +337,21 @@ def apply_suggestions(script: str, suggestions: list[dict]) -> str:
 
 # ------------------------------------------------------------------- trend
 
+# Gợi ý phối đồ theo vai quen thuộc của hài Hàn (dùng khi tập tiếng Hàn)
+KOREAN_CAST_HINT = """- Tập tiếng Hàn: phối theo các vai quen thuộc của hài Hàn để khán giả nhận ra ngay:
+  · học sinh (학생): outfit=school_uniform, tóc bowl/short/ponytail, body="child" nếu nhỏ tuổi
+  · nhân viên văn phòng (직장인 / 신입 / 부장님): outfit=suit, thêm glasses cho sếp
+  · ajumma (아줌마): outfit=apron hoặc cardigan, hair_style=curly, accessory=curlers hoặc visor
+  · ajeossi (아저씨): outfit=hiking, hair_style=buzz, accessory=sunglasses hoặc cap
+  · bà cụ (할머니): outfit=hanbok hoặc cardigan, hair_style=bun, accessory=glasses
+  · giới trẻ MZ: outfit=hoodie hoặc padding (áo phao dài), tóc sidepart/long
+  · người yêu / bạn gái: outfit=dress hoặc cardigan
+  Chọn vai đúng với nhân vật trong truyện, mỗi người một màu áo khác nhau."""
+
+US_CAST_HINT = """- Phối outfit theo vai trong truyện (suit cho dân văn phòng, hoodie cho sinh viên,
+  apron cho người nấu ăn, dress/cardigan cho buổi hẹn...), mỗi người một màu áo khác nhau."""
+
+
 def pick_character_specs(names: list[str], script: str,
                          language: str) -> dict[str, dict]:
     """Claude chọn phần ghép cho từng vai từ bộ phận có sẵn."""
@@ -346,14 +361,18 @@ def pick_character_specs(names: list[str], script: str,
     catalog = "\n".join(
         f"- {k}: {', '.join(v)}" for k, v in opt.items() if k != "expressions"
     )
+    first = names[0] if names else "A"
+    example = json.dumps({first: {
+        "body": "adult", "skin": "light", "hair_style": "short", "hair_color": "black",
+        "shirt": "blue", "accessory": "none", "outfit": "suit", "pants": "navy",
+    }}, ensure_ascii=False)
     prompt = _load_prompt(
         "pick_character_specs",
         catalog=catalog,
         script=script[:3000],
         names=", ".join(names),
-        example='{{"{first_name}": {{"body":"adult","skin":"light","hair_style":"short","hair_color":"black","shirt":"blue","accessory":"none"}}}}'.replace(
-            "{first_name}", names[0] if names else "A"
-        ),
+        example=example,
+        market_hint=(KOREAN_CAST_HINT if language == "ko" else US_CAST_HINT),
     )
     data = _run_json(prompt, timeout=180)
     if not isinstance(data, dict):
@@ -364,7 +383,8 @@ def pick_character_specs(names: list[str], script: str,
         if not isinstance(spec, dict):
             continue
         c = {}
-        for key in ("body", "skin", "hair_style", "hair_color", "shirt", "accessory"):
+        for key in ("body", "skin", "hair_style", "hair_color", "shirt", "accessory",
+                    "outfit", "pants"):
             val = str(spec.get(key, "")).strip().lower()
             if val in opt.get(key, []):
                 c[key] = val

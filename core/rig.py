@@ -100,6 +100,34 @@ def geometry(body: str = "adult", style: str = "flat") -> Geometry:
 
     style="stick": người que đầu to — tay, chân mọc từ một đường thân.
     """
+    if style == "kchibi":
+        # webtoon Hàn: đầu rất to (gần nửa người), thân ngắn mũm mĩm
+        if body == "child":
+            cy, rx, ry, sy, bh, bw = 300, 185, 170, 480, 170, 180
+            up, fo, th, sh = 80.0, 72.0, 95.0, 90.0
+        else:
+            cy, rx, ry, sy, bh, bw = 290, 180, 165, 470, 210, 200
+            up, fo, th, sh = 95.0, 85.0, 110.0, 100.0
+        return Geometry(
+            head_cx=300, head_cy=cy, head_rx=rx, head_ry=ry,
+            shoulder_y=sy, body_w=bw, body_h=bh, shoulder_dx=bw / 2 - 14,
+            arm_w=44, upper_len=up, fore_len=fo, hand_r=26,
+            hip_dx=bw * 0.22, thigh_w=54, thigh_len=th, shin_len=sh, foot_w=78,
+        )
+    if style == "box":
+        # người que mặc áo: đầu tròn to như người que, thân hình hộp
+        if body == "child":
+            cy, r, sy, bh, bw = 280, 150, 470, 190, 140
+            up, fo, th, sh = 100.0, 90.0, 135.0, 125.0
+        else:
+            cy, r, sy, bh, bw = 215, 125, 390, 250, 150
+            up, fo, th, sh = 120.0, 110.0, 150.0, 140.0
+        return Geometry(
+            head_cx=300, head_cy=cy, head_rx=r, head_ry=r,
+            shoulder_y=sy, body_w=bw, body_h=bh, shoulder_dx=bw / 2 - 9,
+            arm_w=34, upper_len=up, fore_len=fo, hand_r=20,
+            hip_dx=bw * 0.2, thigh_w=40, thigh_len=th, shin_len=sh, foot_w=60,
+        )
     if style == "stick":
         if body == "child":
             head_cy, r, shoulder_y, body_h = 280, 155, 480, 190
@@ -205,7 +233,7 @@ def draw_neck(spec: CharSpec, g: Geometry) -> Image.Image:
 
 
 def draw_head(spec: CharSpec, g: Geometry, mouth_open: bool,
-              expression: str = "neutral") -> Image.Image:
+              expression: str = "neutral", face: bool = True) -> Image.Image:
     """Đầu (tóc + mặt + phụ kiện). Pivot ở chỗ cổ bám vào.
 
     Tóc dài vẽ SAU mặt, mũ tóc vẽ trên trán — không che mắt, miệng.
@@ -241,8 +269,10 @@ def draw_head(spec: CharSpec, g: Geometry, mouth_open: bool,
 
     # 1. tóc sau đầu (vẽ trước để mặt đè lên)
     if st in ("long", "wavy"):
+        # webtoon đầu to: tóc dài tới vai thôi, không che hết thân
+        hair_end = cy + ry * (1.15 if spec.style == "kchibi" else 1.8)
         d.rounded_rectangle(rect(cx - rx - 12, cy - ry * 0.5,
-                                 cx + rx + 12, cy + ry * 1.8),
+                                 cx + rx + 12, hair_end),
                             radius=70, fill=col, outline=OUTLINE, width=LW)
     elif st == "ponytail":
         d.ellipse(ell(cx + rx - 14, cy - ry * 0.2, cx + rx + 86, cy + ry * 1.1),
@@ -265,6 +295,10 @@ def draw_head(spec: CharSpec, g: Geometry, mouth_open: bool,
     if st == "buzz":
         d.pieslice(pie(cx - rx, cy - ry, cx + rx, cy + ry * 0.2),
                    180, 360, fill=col, outline=OUTLINE, width=LW)
+    elif st == "bowl":
+        d.pieslice(pie(cx - rx - 10, cy - ry - 14, cx + rx + 10, cy + ry * 0.36),
+                   180, 360, fill=col, outline=OUTLINE, width=LW)
+        d.rectangle(rect(cx - rx - 10, cy - ry * 0.32, cx + rx + 10, cy - ry * 0.22), fill=col)
     elif st == "curly":
         d.pieslice(pie(cx - rx - 6, cy - ry - 10, cx + rx + 6, cy - ry * 0.25),
                    180, 360, fill=col, outline=OUTLINE, width=LW)
@@ -274,6 +308,31 @@ def draw_head(spec: CharSpec, g: Geometry, mouth_open: bool,
             y = cy - math.sin(a) * (ry + 6)
             d.ellipse(ell(x - 34, y - 34, x + 34, y + 34), fill=col,
                       outline=OUTLINE, width=max(2, LW - 3))
+    elif spec.style == "kchibi":
+        # tóc webtoon: mái dày phủ tới gần lông mày, mái cắt răng cưa, tóc mai hai bên
+        edge = cy - ry * 0.3
+        bottom = 2 * edge - (cy - ry - 14)
+        d.pieslice(pie(cx - rx - 10, cy - ry - 14, cx + rx + 10, bottom),
+                   180, 360, fill=col, outline=OUTLINE, width=LW)
+        n = 6
+        for i in range(n):
+            x0 = cx - rx * 0.8 + i * rx * 1.6 / n
+            x1 = x0 + rx * 1.6 / n
+            d.polygon([S(x0, edge - 2), S(x1, edge - 2), S((x0 + x1) / 2, edge + ry * 0.12)],
+                      fill=col)
+        for sgn in (-1, 1):
+            x = cx + sgn * (rx - 6)
+            d.rounded_rectangle(rect(x - 20, edge - 20, x + 20, cy + ry * 0.3),
+                                radius=16, fill=col, outline=OUTLINE, width=LW - 2)
+        if st == "sidepart":
+            d.polygon([S(cx - rx * 0.9, edge), S(cx + rx * 0.3, cy - ry - 8),
+                       S(cx + rx * 0.9, edge - ry * 0.25), S(cx - rx * 0.2, edge + ry * 0.05)],
+                      fill=col, outline=OUTLINE)
+        if st == "bob":
+            for sgn in (-1, 1):
+                x = cx + sgn * rx
+                d.rounded_rectangle(rect(x - 50, cy - ry * 0.5, x + 46, cy + ry * 0.55),
+                                    radius=24, fill=col, outline=OUTLINE, width=LW)
     else:
         d.pieslice(pie(cx - rx - 6, cy - ry - 10, cx + rx + 6, cy - ry * 0.30),
                    180, 360, fill=col, outline=OUTLINE, width=LW)
@@ -287,55 +346,10 @@ def draw_head(spec: CharSpec, g: Geometry, mouth_open: bool,
                 d.rounded_rectangle(rect(x - 46, cy - ry * 0.5, x + 46, cy + ry * 0.6),
                                     radius=24, fill=col, outline=OUTLINE, width=LW)
 
-    # 4. chi tiết mặt theo biểu cảm + phụ kiện
-    _draw_face(img, spec, g, expression, mouth_open, accessories=False)
-    _accessories(d, spec, cg, S, rect, ell, pie)
+    # 4. chi tiết mặt theo biểu cảm + phụ kiện (cùng bộ vẽ với ảnh tĩnh)
+    if face:
+        _draw_face(img, spec, g, expression, mouth_open, accessories=True)
     return img
-
-
-def _accessories(d, spec, cg, S, rect, ell, pie) -> None:
-    """Kính, mũ, khăn, vòng tai — vẽ bằng toạ độ đã lề."""
-    cx, ey, dx = cg["head_cx"], cg["eye_y"], cg["eye_dx"]
-    rx, ry = cg["head_rx"], cg["head_ry"]
-    cy = cg["head_cy"]
-    acc = spec.accessory
-    if acc == "glasses":
-        r = cg["eye_r"] + 16
-        for sgn in (-1, 1):
-            x = cx + sgn * dx
-            d.ellipse(ell(x - r, ey - r, x + r, ey + r), outline=OUTLINE, width=6)
-        a, b = S(cx - dx + r, ey)
-        c, e = S(cx + dx - r, ey)
-        d.line([a, b, c, e], fill=OUTLINE, width=5)
-    elif acc == "sunglasses":
-        r = cg["eye_r"] + 16
-        for sgn in (-1, 1):
-            x = cx + sgn * dx
-            d.ellipse(ell(x - r, ey - r, x + r, ey + r),
-                      fill=(44, 44, 54, 255), outline=OUTLINE, width=5)
-        a, b = S(cx - dx + r, ey)
-        c, e = S(cx + dx - r, ey)
-        d.line([a, b, c, e], fill=OUTLINE, width=6)
-    elif acc == "earrings":
-        for sgn in (-1, 1):
-            x = cx + sgn * rx
-            d.ellipse(ell(x - 12, cy + 40, x + 12, cy + 64),
-                      fill=(238, 198, 86, 255), outline=OUTLINE, width=3)
-    elif acc == "cap":
-        d.pieslice(pie(cx - rx - 8, cy - ry - 24, cx + rx + 8, cy - ry * 0.1),
-                   180, 360, fill=(84, 124, 200, 255), outline=OUTLINE, width=LW)
-        d.rounded_rectangle(rect(cx - 10, cy - ry * 0.35, cx + rx + 90, cy - ry * 0.05),
-                            radius=14, fill=(84, 124, 200, 255),
-                            outline=OUTLINE, width=LW)
-    elif acc == "headband":
-        a, b = S(cx - rx - 6, cy - ry - 6)
-        c, e = S(cx + rx + 6, cy + ry * 0.3)
-        d.arc([a, b, c, e], 190, 350, fill=(226, 134, 168, 255), width=18)
-    elif acc == "mask":
-        my = cg["mouth_y"]
-        d.rounded_rectangle(rect(cx - 76, my - 46, cx + 76, my + 56),
-                            radius=24, fill=(240, 244, 250, 255),
-                            outline=OUTLINE, width=LW)
 
 
 def draw_upper_arm(spec: CharSpec, g: Geometry, side: str) -> Image.Image:
@@ -436,7 +450,16 @@ def _stick_line(d: ImageDraw.ImageDraw, a, b, width: int = STICK_LW,
 
 def _face_geom(g: Geometry, spec: CharSpec) -> dict:
     """dict hình học cho các hàm vẽ mặt của character_kit."""
-    if spec.style == "stick":
+    if spec.style == "kchibi":
+        rx, ry, cy = g.head_rx, g.head_ry, g.head_cy
+        return {
+            "head_cx": g.head_cx, "head_cy": cy, "head_rx": rx, "head_ry": ry,
+            "neck_w": 36, "shoulder_y": g.shoulder_y, "body_w": g.body_w,
+            "body_h": g.body_h, "eye_dx": int(rx * 0.36), "eye_y": int(cy + ry * 0.12),
+            "eye_r": int(rx * 0.09), "mouth_y": int(cy + ry * 0.45),
+            "brow_y": int(cy - ry * 0.12),
+        }
+    if spec.style in ("stick", "box"):
         r = g.head_rx
         return {
             "head_cx": g.head_cx, "head_cy": g.head_cy,
@@ -541,6 +564,9 @@ def _stick_head(spec: CharSpec, g: Geometry, mouth_open: bool,
         top_arc(185, 355, 34)
         if st in ("long", "wavy"):
             strand([on_head(95, 1.0), on_head(115, 0.72), on_head(140, 0.62)], 14)
+    elif st == "bowl":
+        top_arc(150, 390, 44, 0.93)
+        strand([on_head(160, 0.86), on_head(20, 0.86)], 16)
     elif st == "curly":
         for deg in range(30, 160, 18):
             x, y = on_head(deg, 1.05)
@@ -605,8 +631,378 @@ def _stick_foot(spec: CharSpec, g: Geometry, side: str) -> Image.Image:
     return img
 
 
+# ------------------------------------------------------- người que mặc áo / webtoon Hàn
+
+OUTFIT_COLORS = {
+    # (màu áo chính lấy từ spec.shirt; đây là màu phụ cố định của từng bộ)
+    "school_uniform": {"jacket": (44, 58, 104), "shirt": (250, 250, 252), "tie": (196, 54, 64)},
+    "suit": {"jacket": (58, 62, 74), "shirt": (250, 250, 252), "tie": None},
+    "apron": {"apron": (248, 200, 210)},
+    "hiking": {"trim": (40, 40, 48)},
+}
+
+
+def _sleeve_color(spec: CharSpec) -> tuple:
+    """Màu tay áo theo trang phục."""
+    main = ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
+    if spec.outfit == "school_uniform":
+        return OUTFIT_COLORS["school_uniform"]["jacket"] + (255,)
+    if spec.outfit == "suit":
+        return OUTFIT_COLORS["suit"]["jacket"] + (255,)
+    return main
+
+
+def _short_sleeve(spec: CharSpec) -> bool:
+    return spec.outfit in ("tshirt", "dress")
+
+
+def _legs_bare(spec: CharSpec) -> bool:
+    """Váy/hanbok: chân không mặc quần (váy vẽ ở thân)."""
+    return spec.outfit in ("dress", "hanbok")
+
+
+def _box_torso(spec: CharSpec, g: Geometry) -> Image.Image:
+    """Thân hình hộp mặc trang phục. Pivot ở hông."""
+    img = _new_canvas()
+    d = ImageDraw.Draw(img)
+    main = ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
+    cx = g.head_cx
+    hw = g.body_w / 2
+    top = g.shoulder_y - 12
+    bot = g.hip[1] + 26
+    rad = 34 if spec.style == "kchibi" else 22
+    lw = LW + 1
+
+    def R(x0, y0, x1, y1, fill, r=rad, outline=OUTLINE, width=lw):
+        d.rounded_rectangle([*_p((x0, y0)), *_p((x1, y1))], radius=r, fill=fill,
+                            outline=outline, width=width)
+
+    def L(pts, fill=OUTLINE, width=lw):
+        d.line([_p(q) for q in pts], fill=fill, width=width)
+
+    def poly(pts, fill, outline=OUTLINE):
+        d.polygon([_p(q) for q in pts], fill=fill, outline=outline)
+
+    o = spec.outfit
+    if o == "dress":
+        poly([(cx - hw, top + 10), (cx + hw, top + 10), (cx + hw * 1.45, bot + 70),
+              (cx - hw * 1.45, bot + 70)], main)
+        R(cx - hw, top, cx + hw, top + (bot - top) * 0.45, main)
+        L([(cx - hw * 0.4, top + 4), (cx, top + 30), (cx + hw * 0.4, top + 4)], width=5)
+        return img
+    if o == "hanbok":
+        skirt = _shade4(main, 0.8)
+        poly([(cx - hw * 0.9, top + (bot - top) * 0.35), (cx + hw * 0.9, top + (bot - top) * 0.35),
+              (cx + hw * 1.6, bot + 90), (cx - hw * 1.6, bot + 90)], skirt)
+        R(cx - hw, top, cx + hw, top + (bot - top) * 0.42, (250, 246, 236, 255))   # áo jeogori
+        poly([(cx - 8, top + 30), (cx + 40, top + 60), (cx + 10, top + 64)], (210, 60, 90, 255))  # dải nơ
+        L([(cx - hw * 0.5, top + 2), (cx + 6, top + 56)], width=6)
+        return img
+
+    jacket_like = o in ("school_uniform", "suit", "cardigan", "hiking", "padding")
+    base = main
+    if o in ("school_uniform", "suit"):
+        base = OUTFIT_COLORS[o]["jacket"] + (255,)
+    R(cx - hw, top, cx + hw, bot, base)
+    if o == "padding":                                   # áo phao dài: vạch chần ngang
+        R(cx - hw - 6, top, cx + hw + 6, bot + 70, base)
+        for i in range(1, 6):
+            y = top + (bot + 70 - top) * i / 6
+            L([(cx - hw - 4, y), (cx + hw + 4, y)], fill=_shade4(base, 0.75), width=5)
+        L([(cx, top + 8), (cx, bot + 66)], width=4)
+        R(cx - hw * 0.7, top - 18, cx + hw * 0.7, top + 22, _shade4(base, 0.9), r=18)   # cổ áo
+        return img
+    if o in ("school_uniform", "suit"):
+        oc = OUTFIT_COLORS[o]
+        poly([(cx - hw * 0.42, top + 2), (cx + hw * 0.42, top + 2), (cx, top + (bot - top) * 0.55)],
+             oc["shirt"] + (255,))
+        tie = oc["tie"] + (255,) if oc["tie"] else main
+        poly([(cx, top + 10), (cx - 14, top + 30), (cx, top + (bot - top) * 0.5),
+              (cx + 14, top + 30)], tie)
+        L([(cx - hw * 0.42, top + 2), (cx - 6, top + (bot - top) * 0.56)], width=5)
+        L([(cx + hw * 0.42, top + 2), (cx + 6, top + (bot - top) * 0.56)], width=5)
+        for k in (0.66, 0.8):
+            d.ellipse([*_p((cx - 7, top + (bot - top) * k - 7)), *_p((cx + 7, top + (bot - top) * k + 7))],
+                      fill=(230, 210, 120, 255))
+        if o == "school_uniform":                          # phù hiệu túi ngực
+            R(cx + hw * 0.35, top + (bot - top) * 0.32, cx + hw * 0.7, top + (bot - top) * 0.42,
+              (230, 210, 120, 255), r=4, width=3)
+    elif o == "hoodie":
+        R(cx - hw * 0.75, top - 26, cx + hw * 0.75, top + 28, _shade4(main, 0.85), r=24)  # mũ trùm
+        R(cx - hw * 0.55, top + (bot - top) * 0.55, cx + hw * 0.55, top + (bot - top) * 0.82,
+          _shade4(main, 0.9), r=16, width=5)                                            # túi trước
+        for sgn in (-1, 1):
+            L([(cx + sgn * 18, top + 20), (cx + sgn * 22, top + 70)], fill=(250, 250, 250, 255), width=5)
+    elif o == "apron":
+        ac = OUTFIT_COLORS["apron"]["apron"] + (255,)
+        R(cx - hw * 0.72, top + 22, cx + hw * 0.72, bot + 40, ac, r=18, width=5)
+        L([(cx - hw * 0.5, top + 24), (cx - hw * 0.2, top - 6)], width=5)
+        L([(cx + hw * 0.5, top + 24), (cx + hw * 0.2, top - 6)], width=5)
+        R(cx - hw * 0.35, top + (bot - top) * 0.55, cx + hw * 0.35, top + (bot - top) * 0.8,
+          _shade4(ac, 0.9), r=8, width=4)
+        for k in range(5):                                 # hoa nhỏ
+            x = cx - hw * 0.5 + k * hw * 0.25
+            y = top + 50 + (k % 2) * 34
+            d.ellipse([*_p((x - 7, y - 7)), *_p((x + 7, y + 7))], fill=(236, 110, 140, 255))
+    elif o == "hiking":
+        trim = OUTFIT_COLORS["hiking"]["trim"] + (255,)
+        R(cx - hw, top + (bot - top) * 0.45, cx + hw, top + (bot - top) * 0.6, trim, r=6, width=4)
+        L([(cx, top + 6), (cx, bot - 4)], fill=trim, width=6)                           # khoá kéo
+        R(cx - hw * 0.5, top - 16, cx + hw * 0.5, top + 18, _shade4(main, 0.85), r=10)  # cổ đứng
+    elif o == "cardigan":
+        inner = (250, 248, 240, 255)
+        R(cx - hw * 0.3, top + 4, cx + hw * 0.3, bot - 2, inner, r=10, width=4)
+        for k in (0.3, 0.5, 0.7):
+            d.ellipse([*_p((cx + hw * 0.36 - 6, top + (bot - top) * k - 6)),
+                       *_p((cx + hw * 0.36 + 6, top + (bot - top) * k + 6))], fill=OUTLINE)
+    else:  # tshirt
+        L([(cx - hw * 0.35, top + 2), (cx, top + 28), (cx + hw * 0.35, top + 2)], width=5)
+    if not jacket_like and o != "apron":
+        pass
+    return img
+
+
+def _shade4(c, k: float) -> tuple:
+    return tuple(max(0, min(255, int(v * k))) for v in c[:3]) + (255,)
+
+
+def _box_neck(spec: CharSpec, g: Geometry) -> Image.Image:
+    img = _new_canvas()
+    d = ImageDraw.Draw(img)
+    skin = ck.SKIN_TONES.get(spec.skin, ck.SKIN_TONES["light"]) + (255,)
+    cx = g.head_cx
+    d.rounded_rectangle([*_p((cx - 18, g.chin[1] - 20)), *_p((cx + 18, g.shoulder_y + 6))],
+                        radius=10, fill=skin, outline=OUTLINE, width=LW)
+    return img
+
+
+def _box_limb(g: Geometry, a, b, w: float, fill) -> Image.Image:
+    """Tay/chân dày: thanh bo tròn từ a tới b (khung gốc, thẳng đứng)."""
+    img = _new_canvas()
+    d = ImageDraw.Draw(img)
+    x = a[0]
+    d.rounded_rectangle([*_p((x - w / 2, a[1] - w * 0.3)), *_p((x + w / 2, b[1] + w * 0.3))],
+                        radius=int(w / 2), fill=fill, outline=OUTLINE, width=LW)
+    return img
+
+
+def _box_parts(spec: CharSpec, g: Geometry) -> dict:
+    skin = ck.SKIN_TONES.get(spec.skin, ck.SKIN_TONES["light"]) + (255,)
+    sleeve = _sleeve_color(spec)
+    pants = ck.PANTS_COLORS.get(spec.pants, ck.PANTS_COLORS["navy"]) + (255,)
+    leg_fill = skin if _legs_bare(spec) else pants
+    leg_w = g.thigh_w * (0.55 if _legs_bare(spec) else 1.0)
+
+    def sx(gg, side):
+        return gg.head_cx + (gg.shoulder_dx if side == "right" else -gg.shoulder_dx)
+
+    def hx(gg, side):
+        return gg.head_cx + (gg.hip_dx if side == "right" else -gg.hip_dx)
+
+    def upper(sp, gg, side):
+        x = sx(gg, side)
+        return _box_limb(gg, (x, gg.shoulder_y), (x, gg.shoulder_y + gg.upper_len), gg.arm_w, sleeve)
+
+    def fore(sp, gg, side):
+        x = sx(gg, side)
+        ey = gg.shoulder_y + gg.upper_len
+        fill = skin if _short_sleeve(sp) else sleeve
+        return _box_limb(gg, (x, ey), (x, ey + gg.fore_len), gg.arm_w * 0.9, fill)
+
+    def hand(sp, gg, side):
+        img = _new_canvas()
+        d = ImageDraw.Draw(img)
+        x = sx(gg, side)
+        wy = gg.shoulder_y + gg.upper_len + gg.fore_len
+        r = gg.hand_r
+        d.ellipse([*_p((x - r, wy - r * 0.4)), *_p((x + r, wy + r * 1.5))], fill=skin,
+                  outline=OUTLINE, width=LW)
+        return img
+
+    def thigh(sp, gg, side):
+        x = hx(gg, side)
+        return _box_limb(gg, (x, gg.hip[1]), (x, gg.hip[1] + gg.thigh_len), leg_w, leg_fill)
+
+    def shin(sp, gg, side):
+        x = hx(gg, side)
+        ky = gg.hip[1] + gg.thigh_len
+        return _box_limb(gg, (x, ky), (x, ky + gg.shin_len), leg_w * 0.92, leg_fill)
+
+    def foot(sp, gg, side):
+        img = _new_canvas()
+        d = ImageDraw.Draw(img)
+        sgn = 1 if side == "right" else -1
+        x = hx(gg, side)
+        ay = gg.hip[1] + gg.thigh_len + gg.shin_len
+        x0, x1 = (x - gg.foot_w * 0.45, x + gg.foot_w * 0.75) if sgn > 0 else \
+            (x - gg.foot_w * 0.75, x + gg.foot_w * 0.45)
+        shoe = (250, 250, 250, 255) if spec.outfit in ("hoodie", "padding") else SHOE
+        d.rounded_rectangle([*_p((x0, ay - 10)), *_p((x1, ay + 26))], radius=14, fill=shoe,
+                            outline=OUTLINE, width=LW)
+        return img
+
+    head = _stick_head if spec.style == "box" else _kchibi_head
+    return {"torso": _box_torso, "neck": _box_neck, "head": head,
+            "upper": upper, "fore": fore, "hand": hand,
+            "thigh": thigh, "shin": shin, "foot": foot}
+
+
+# ---------- mặt kiểu webtoon Hàn: ^^  ㅠㅠ  -_-  mắt trắng dã, nổi gân 💢, ///
+
+KCHIBI_FACE = {
+    # biểu cảm -> (mắt, mày, thêm)
+    "neutral": ("dot", "flat", ""),
+    "happy": ("arc_up", "up", ""),
+    "laughing": ("x_squint", "up", ""),
+    "proud": ("half", "up", ""),
+    "smug": ("half", "slant", ""),
+    "sad": ("dot_down", "worry", "tear"),
+    "crying": ("tt", "worry", "rivers"),
+    "angry": ("dot", "angry", "vein"),
+    "annoyed": ("line", "angry", "sweat"),
+    "shocked": ("blank", "up", "shock"),
+    "surprised": ("big", "up", ""),
+    "scared": ("blank", "worry", "shock_sweat"),
+    "worried": ("dot", "worry", "sweat"),
+    "confused": ("odd", "slant", "question"),
+    "thinking": ("dot_up", "flat", ""),
+    "suspicious": ("line", "slant", ""),
+    "disgusted": ("line", "angry", "gloom"),
+    "embarrassed": ("x_squint", "worry", "lines"),
+    "shy": ("arc_up", "worry", "lines"),
+    "love": ("heart", "up", ""),
+    "determined": ("dot", "angry", "fire"),
+    "tired": ("line", "down", "gloom"),
+    "bored": ("line", "flat", ""),
+}
+
+
+def _kchibi_face(d: ImageDraw.ImageDraw, spec: CharSpec, fg: dict, expression: str,
+                 mouth_open: bool) -> None:
+    eye, brow, extra = KCHIBI_FACE.get(expression, KCHIBI_FACE["neutral"])
+    cx, ey, dx, r = fg["head_cx"], fg["eye_y"], fg["eye_dx"], fg["eye_r"]
+    ink = OUTLINE
+    white = (255, 255, 255, 255)
+    blue = (120, 190, 240, 235)
+    w = LW + 1
+    # má hồng luôn có (dễ thương kiểu webtoon), đậm hơn khi ngượng/yêu
+    blush = (245, 150, 160, 190 if expression in ("embarrassed", "shy", "love", "happy") else 110)
+    for sgn in (-1, 1):
+        x = cx + sgn * (dx + r * 1.6)
+        d.ellipse([x - r * 1.3, ey + r * 1.3, x + r * 1.3, ey + r * 2.3], fill=blush)
+        if extra == "lines":
+            for k in (-1, 0, 1):
+                d.line([x + k * 12 - 8, ey + r * 2.1, x + k * 12 + 4, ey + r * 1.4], fill=(220, 90, 110, 255), width=4)
+    for sgn in (-1, 1):
+        x = cx + sgn * dx
+        if eye == "dot":
+            d.ellipse([x - r * 0.55, ey - r * 0.8, x + r * 0.55, ey + r * 0.8], fill=ink)
+        elif eye == "dot_down":
+            d.ellipse([x - r * 0.5, ey - r * 0.4, x + r * 0.5, ey + r * 0.9], fill=ink)
+        elif eye == "dot_up":
+            d.ellipse([x - r * 0.5, ey - r * 1.0, x + r * 0.5, ey + r * 0.3], fill=ink)
+        elif eye == "arc_up":                                  # ^ ^
+            d.arc([x - r * 1.1, ey - r * 0.6, x + r * 1.1, ey + r * 1.4], 200, 340, fill=ink, width=w)
+        elif eye == "x_squint":                                # > <
+            k = -sgn
+            d.line([x - r * k, ey - r * 0.8, x + r * k, ey, x - r * k, ey + r * 0.8], fill=ink, width=w)
+        elif eye == "half":
+            d.line([x - r, ey, x + r, ey], fill=ink, width=w)
+            d.chord([x - r * 0.8, ey - r * 0.4, x + r * 0.8, ey + r * 1.0], 0, 180, fill=ink)
+        elif eye == "line":                                    # - -
+            d.line([x - r * 1.1, ey, x + r * 1.1, ey], fill=ink, width=w)
+        elif eye == "tt":                                      # ㅠ ㅠ
+            d.line([x - r * 1.2, ey - r * 0.5, x + r * 1.2, ey - r * 0.5], fill=ink, width=w)
+            for k in (-0.5, 0.5):
+                d.line([x + r * k, ey - r * 0.4, x + r * k, ey + r * 0.9], fill=ink, width=w)
+        elif eye in ("blank", "big"):
+            rr = r * (1.45 if eye == "blank" else 1.25)
+            d.ellipse([x - rr, ey - rr, x + rr, ey + rr], fill=white, outline=ink, width=5)
+            pr = r * (0.22 if eye == "blank" else 0.55)
+            d.ellipse([x - pr, ey - pr, x + pr, ey + pr], fill=ink)
+        elif eye == "odd":
+            rr = r * (1.2 if sgn < 0 else 0.7)
+            d.ellipse([x - rr * 0.6, ey - rr, x + rr * 0.6, ey + rr], fill=ink)
+        elif eye == "heart":
+            hc = (230, 70, 110, 255)
+            for off in (-1, 1):
+                d.ellipse([x + off * r * 0.45 - r * 0.6, ey - r * 0.7, x + off * r * 0.45 + r * 0.6, ey + r * 0.4], fill=hc)
+            d.polygon([(x - r * 1.0, ey - r * 0.05), (x + r * 1.0, ey - r * 0.05), (x, ey + r * 1.1)], fill=hc)
+    # lông mày
+    by = fg["brow_y"]
+    span = r * 1.3
+    for sgn in (-1, 1):
+        x = cx + sgn * dx
+        if brow == "up":
+            d.arc([x - span, by - 6, x + span, by + 24], 200, 340, fill=ink, width=w - 2)
+        elif brow == "angry":
+            d.line([x - span * sgn, by - 12, x + span * sgn, by + 14], fill=ink, width=w)
+        elif brow == "worry":
+            d.line([x - span * sgn, by + 12, x + span * sgn, by - 8], fill=ink, width=w - 1)
+        elif brow == "down":
+            d.line([x - span, by + 4, x + span, by + 12], fill=ink, width=w - 2)
+        elif brow == "slant":
+            d.line([x - span, by + (6 if sgn < 0 else -6), x + span, by + (-6 if sgn < 0 else 6)],
+                   fill=ink, width=w - 2)
+        else:
+            d.line([x - span * 0.8, by + 4, x + span * 0.8, by + 4], fill=ink, width=w - 2)
+    # miệng (bộ vẽ chung)
+    mood = ck.EXPRESSION_MAP.get(expression, ck.EXPRESSION_MAP["neutral"])
+    ck._draw_mouth(d, fg, mood["mouth"], mouth_open)
+    # thêm thắt
+    rx, ry, hcy = fg["head_rx"], fg["head_ry"], fg["head_cy"]
+    if extra == "rivers":                                      # dòng nước mắt dài
+        for sgn in (-1, 1):
+            x = cx + sgn * dx
+            d.rounded_rectangle([x - 10, ey + r * 0.8, x + 10, ey + r * 6.5], radius=10, fill=blue)
+    if extra == "tear":
+        x = cx + dx
+        d.ellipse([x - 9, ey + r, x + 9, ey + r * 2.4], fill=blue)
+    if extra in ("sweat", "shock_sweat"):
+        x, y = cx + rx * 0.78, hcy - ry * 0.55
+        d.polygon([(x, y), (x + 20, y + 36), (x - 20, y + 36)], fill=blue, outline=ink)
+        d.ellipse([x - 20, y + 22, x + 20, y + 56], fill=blue, outline=ink, width=3)
+    if extra in ("shock", "shock_sweat"):                     # vạch tím trên trán
+        for k in range(-3, 4):
+            x = cx + k * rx * 0.16
+            d.line([x, hcy - ry * 0.95, x, hcy - ry * 0.55], fill=(110, 90, 170, 200), width=6)
+    if extra == "gloom":
+        for k in range(-3, 4):
+            x = cx + k * rx * 0.16
+            d.line([x, hcy - ry * 0.9, x, hcy - ry * 0.6], fill=(90, 90, 120, 160), width=4)
+    if extra == "vein":                                        # dấu nổi gân 💢
+        x, y = cx + rx * 0.58, hcy - ry * 0.55
+        vc = (220, 50, 60, 255)
+        for a0 in (0, 90, 180, 270):
+            d.arc([x - 34, y - 34, x + 34, y + 34], a0 + 20, a0 + 70, fill=vc, width=11)
+    if extra == "question":
+        x, y = cx + rx * 0.95, hcy - ry * 0.95
+        d.arc([x - 22, y - 24, x + 22, y + 16], 180, 90, fill=ink, width=8)
+        d.line([x, y + 16, x, y + 30], fill=ink, width=8)
+        d.ellipse([x - 5, y + 40, x + 5, y + 50], fill=ink)
+    if extra == "fire":
+        x, y = cx - rx * 0.8, hcy - ry * 0.8
+        d.polygon([(x, y - 40), (x + 20, y), (x, y + 10), (x - 20, y)], fill=(250, 140, 60, 230))
+
+
+def _kchibi_head(spec: CharSpec, g: Geometry, mouth_open: bool,
+                 expression: str = "neutral") -> Image.Image:
+    """Đầu webtoon Hàn: tóc khối như kiểu phẳng, mặt kiểu meme Hàn."""
+    img = draw_head(spec, g, mouth_open, "neutral", face=False)
+    fg = _face_geom(g, spec)
+    layer = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    _kchibi_face(d, spec, fg, expression, mouth_open)
+    # phụ kiện (kính, mũ, lô cuốn…) dùng chung bộ vẽ, không vẽ lại cảm xúc
+    ck._draw_extras(d, spec, fg, {})
+    img.alpha_composite(layer, (PAD_X, PAD_Y))
+    return img
+
+
 def _parts_for(spec: CharSpec, g: Geometry):
     """Bảng hàm vẽ bộ phận theo kiểu nhân vật."""
+    if spec.style in ("box", "kchibi"):
+        return _box_parts(spec, g)
     if spec.style == "stick":
         def arm_up(sp, gg, side):
             sx = gg.head_cx + (gg.shoulder_dx if side == "right" else -gg.shoulder_dx)
@@ -661,6 +1057,13 @@ def stick_arm_limits(angles: dict[str, float]) -> dict[str, float]:
 # (góc thực, tay/chân trái đã lật dấu).
 STICK_REST = {"vai_right": math.radians(-24), "vai_left": math.radians(24),
               "dui_right": math.radians(-8), "dui_left": math.radians(8)}
+REST_POSES = {
+    "stick": STICK_REST,
+    "box": {"vai_right": math.radians(-12), "vai_left": math.radians(12)},
+    "kchibi": {"vai_right": math.radians(-16), "vai_left": math.radians(16)},
+}
+# kiểu đầu to: tay vẽ sau đầu và giới hạn góc giơ tay để không che mặt
+BIG_HEAD = ("stick", "box", "kchibi")
 
 
 # ------------------------------------------------------------------ xương
@@ -806,7 +1209,7 @@ def build_parts(spec: CharSpec, expression: str = "neutral"
     """Vẽ mọi bộ phận (trong bộ nhớ). Trả về (danh sách xương, {tên file: ảnh})."""
     g = geometry(spec.body, spec.style)
     fn = _parts_for(spec, g)
-    rest = STICK_REST if spec.style == "stick" else {}
+    rest = REST_POSES.get(spec.style, {})
     bones: list[Bone] = []
     images: dict[str, Image.Image] = {}
 
@@ -838,7 +1241,7 @@ def build_parts(spec: CharSpec, expression: str = "neutral"
                       part="dau_dong.png", pivot=hpivot, layer=LAYER_DAU))
 
     # --- tay --- (người que: cả hai tay nằm sau đầu để không che mặt)
-    arm_layers = (("left", LAYER_THAN), ("right", LAYER_THAN)) if spec.style == "stick" \
+    arm_layers = (("left", LAYER_THAN), ("right", LAYER_THAN)) if spec.style in BIG_HEAD \
         else (("left", LAYER_TAY_SAU), ("right", LAYER_TAY_TRUOC))
     for side, layer in arm_layers:
         sgn = 1 if side == "right" else -1
@@ -1224,7 +1627,7 @@ class CharacterAnimator:
         canvas_size neu co). Goc vua dung luu o self.last_angles (gom ca
         dich_x/dich_y de dat vi tri nhan vat)."""
         angles = self.angles_at(t, speaking, mouth_open)
-        if self.rig.spec.get("style") == "stick":
+        if self.rig.spec.get("style") in BIG_HEAD:
             angles = stick_arm_limits(angles)
         self.last_angles = angles
         if canvas_size is None:

@@ -1094,7 +1094,9 @@
       state.project.state = st.state;
       renderProjectKv();
     }
-    if (st.video_ready || st.state === "done") {
+    // Chỉ coi là xong khi job báo "done" — lúc đang dựng lại, file video cũ
+    // vẫn còn nên video_ready có thể đúng dù video mới chưa xong.
+    if (st.state === "done") {
       stopPolling();
       showVideoOutput();
       toast("ok", "Video đã xong!", "Bấm “Tải mp4” hoặc xem ngay ở bên dưới.");
@@ -1125,9 +1127,14 @@
         });
       }).then(function () {
         $("render-output").hidden = true;
+        $("render-progress-bar").style.width = "0%";
+        $("render-pct").textContent = "0%";
+        $("render-state").textContent = "bắt đầu dựng…";
+        $("render-log").textContent = "";
         setProgressVisible(true);
         setBusyRender(true);
         toast("ok", "Bắt đầu dựng video", "Quá trình có thể mất vài phút.");
+        state.pollDraftTries = 0;
         schedulePoll(0);
       }).catch(function (e) { errToast("Không dựng được video", e); });
     });
@@ -1152,12 +1159,17 @@
     if (!state.project || !state.project.id) return;
     api("/api/project/" + encodeURIComponent(state.project.id) + "/status")
       .then(function (st) {
-        updateRenderStatus(st || {});
-        if (st && ["draft", "review"].indexOf(st.state) < 0 || st.video_ready) {
+        st = st || {};
+        updateRenderStatus(st);
+        // dừng hẳn khi xong hoặc lỗi (trước đây vẫn hẹn lần sau nên video
+        // bị gán lại nguồn và tải lại mỗi 2 giây)
+        if (st.state === "rendering") {
           schedulePoll(2000);
-        } else if (st && st.state === "draft") {
-          // job chưa bắt đầu / chưa có — vẫn poll vài lần
+        } else if (st.state === "draft" && (state.pollDraftTries = (state.pollDraftTries || 0) + 1) < 5) {
+          // job vừa gửi mà server chưa kịp ghi trạng thái — thử thêm vài lần
           schedulePoll(2000);
+        } else if (st.state !== "done" && st.state !== "error") {
+          stopPolling();
         }
       })
       .catch(function (e) {
@@ -1771,7 +1783,8 @@
     $("s-claude-bin").value = s.claude_bin || "";
     $("s-ffmpeg-bin").value = s.ffmpeg_bin || "";
     $("s-enable-rig").value = s.enable_rig ? "1" : "0";
-    $("s-char-style").value = s.char_style === "flat" ? "flat" : "stick";
+    var cs = s.char_style || "auto";
+    $("s-char-style").value = ["auto", "kchibi", "box", "stick", "flat"].indexOf(cs) >= 0 ? cs : "auto";
     $("bgm-current").textContent = s.bgm_file ? (s.bgm_file) : "Chưa chọn file";
     $("s-capcut-root").value = s.capcut_drafts_root || "";
     $("capcut-root-hint").textContent =

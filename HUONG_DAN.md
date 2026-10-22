@@ -166,9 +166,21 @@ chỗ một dòng:
 ### Kiểu nhân vật AI vẽ
 Ở **Cài đặt → Cử động nhân vật → Kiểu nhân vật AI vẽ**:
 
-- **Người que hài** (mặc định): đầu tròn to, mặt biểu cảm rõ, tay chân là nét
-  đen, tóc vẽ nguệch ngoạc, cà vạt màu áo để phân biệt từng người.
-- **Hoạt hình phẳng**: kiểu cũ, người đầy đặn có áo.
+| Kiểu | Trông thế nào |
+|---|---|
+| **Tự chọn theo ngôn ngữ** (mặc định) | Tập tiếng Hàn → webtoon Hàn, tập tiếng Anh → người que mặc áo |
+| **Webtoon Hàn** | Đầu rất to, người ngắn; mặt kiểu meme Hàn: `^^` vui, `ㅠㅠ` khóc có dòng nước mắt, `-_-` chán, mắt trắng dã + vạch tím khi sốc, dấu nổi gân 💢 khi giận, `///` khi ngượng |
+| **Người que mặc áo** | Đầu tròn to như người que, thân vuông có quần áo, tay áo, quần, giày |
+| **Người que nét đen** | Tay chân là nét kẻ, cà vạt màu áo |
+| **Hoạt hình phẳng** | Kiểu cũ |
+
+**Trang phục** (webtoon Hàn và người que mặc áo): áo phông, hoodie, đồng phục
+học sinh (교복), vest công sở (직장인), tạp dề ajumma (앞치마), áo leo núi
+ajeossi (등산복), áo phao dài (롱패딩), cardigan, váy, hanbok. Thêm phụ kiện
+**lô cuốn tóc** và **mũ lưỡi trai nửa đầu** (선캡), kiểu tóc **bát úp**.
+
+Với tập tiếng Hàn, Claude phối đồ theo các vai quen thuộc: học sinh, nhân viên
+văn phòng / sếp, ajumma, ajeossi, bà cụ, giới trẻ MZ, người yêu.
 
 Đổi kiểu xong, bấm **Vẽ lại** ở nhân vật đã có để vẽ theo kiểu mới.
 

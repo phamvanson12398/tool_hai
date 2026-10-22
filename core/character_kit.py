@@ -47,7 +47,7 @@ HAIR_COLORS = {
 
 HAIR_STYLES = [
     "short", "bob", "long", "ponytail", "twintails", "bun",
-    "curly", "buzz", "wavy", "sidepart",
+    "curly", "buzz", "wavy", "sidepart", "bowl",
 ]
 
 SHIRT_COLORS = {
@@ -65,12 +65,33 @@ SHIRT_COLORS = {
     "mint": (148, 212, 196),
 }
 
-ACCESSORIES = ["none", "glasses", "sunglasses", "earrings", "cap", "headband", "mask"]
+ACCESSORIES = ["none", "glasses", "sunglasses", "earrings", "cap", "headband", "mask",
+               "curlers", "visor"]
 
 BODIES = ["adult", "child"]
 
-# Kiểu vẽ: "stick" = người que đầu to (hài), "flat" = hoạt hình phẳng có áo
-STYLES = ["stick", "flat"]
+# Kiểu vẽ:
+#   stick  = người que đầu to, tay chân nét đen
+#   box    = người que thân vuông mặc quần áo (đầu tròn to như người que)
+#   kchibi = webtoon Hàn: đầu rất to, người ngắn, mặt kiểu meme Hàn (^^, ㅠㅠ, -_-)
+#   flat   = hoạt hình phẳng kiểu cũ
+STYLES = ["stick", "box", "kchibi", "flat"]
+
+# Trang phục (dùng cho box và kchibi) — nhiều kiểu quen thuộc trong hài Hàn
+OUTFITS = [
+    "tshirt", "hoodie", "school_uniform", "suit", "apron", "hiking",
+    "padding", "cardigan", "dress", "hanbok",
+]
+
+PANTS_COLORS = {
+    "navy": (52, 62, 100),
+    "black": (50, 50, 58),
+    "gray": (128, 130, 140),
+    "denim": (86, 120, 172),
+    "beige": (210, 190, 150),
+    "brown": (120, 86, 60),
+    "green": (84, 120, 84),
+}
 
 
 @dataclass
@@ -84,7 +105,9 @@ class CharSpec:
     shirt: str = "blue"
     accessory: str = "none"
     blush: bool = False
-    style: str = "flat"             # stick | flat
+    style: str = "flat"             # stick | box | kchibi | flat
+    outfit: str = "tshirt"          # trang phục (box, kchibi)
+    pants: str = "navy"             # màu quần (box, kchibi)
 
     def to_dict(self) -> dict:
         return {
@@ -92,6 +115,7 @@ class CharSpec:
             "hair_style": self.hair_style, "hair_color": self.hair_color,
             "shirt": self.shirt, "accessory": self.accessory,
             "blush": self.blush, "style": self.style,
+            "outfit": self.outfit, "pants": self.pants,
         }
 
     @staticmethod
@@ -107,6 +131,8 @@ class CharSpec:
             blush=bool(d.get("blush", False)),
             # nhân vật lưu từ trước chưa có style -> giữ kiểu phẳng như cũ
             style=d.get("style") if d.get("style") in STYLES else "flat",
+            outfit=d.get("outfit") if d.get("outfit") in OUTFITS else "tshirt",
+            pants=d.get("pants") if d.get("pants") in PANTS_COLORS else "navy",
         )
 
 
@@ -119,6 +145,8 @@ def options() -> dict:
         "hair_color": list(HAIR_COLORS),
         "shirt": list(SHIRT_COLORS),
         "accessory": ACCESSORIES,
+        "outfit": OUTFITS,
+        "pants": list(PANTS_COLORS),
         "expressions": sorted(VALID_EXPRESSIONS),
     }
 
@@ -242,9 +270,7 @@ def _draw_hair(d: ImageDraw.ImageDraw, spec: CharSpec, g: dict) -> None:
                  cy + ry * 0.9],
                 radius=24, fill=col, outline=OUTLINE, width=LW)
     elif st in ("long", "wavy"):
-        d.rounded_rectangle([cx - rx - 10, cy - ry * 0.4, cx + rx + 10, cy + ry * 2.0],
-                            radius=70, fill=col, outline=OUTLINE, width=LW)
-        cap()
+        cap()                       # phần tóc dài phía sau vẽ ở _draw_back_hair
     elif st == "ponytail":
         cap()
         d.ellipse([cx + rx - 14, cy - ry * 0.2, cx + rx + 86, cy + ry * 1.1],
@@ -259,6 +285,11 @@ def _draw_hair(d: ImageDraw.ImageDraw, spec: CharSpec, g: dict) -> None:
         cap()
         d.ellipse([cx - 52, cy - ry - 78, cx + 52, cy - ry + 20],
                   fill=col, outline=OUTLINE, width=LW)
+    elif st == "bowl":
+        # tóc bát úp: phủ kín tới lông mày, mái cắt thẳng
+        d.pieslice([cx - rx - 10, cy - ry - 14, cx + rx + 10, cy + ry * 0.36],
+                   180, 360, fill=col, outline=OUTLINE, width=LW)
+        d.rectangle([cx - rx - 10, cy - ry * 0.32, cx + rx + 10, cy - ry * 0.22], fill=col)
     elif st == "curly":
         cap()
         for i in range(7):
@@ -269,6 +300,16 @@ def _draw_hair(d: ImageDraw.ImageDraw, spec: CharSpec, g: dict) -> None:
                       outline=OUTLINE, width=max(2, LW - 3))
     else:
         cap()
+
+
+def _draw_back_hair(d: ImageDraw.ImageDraw, spec: CharSpec, g: dict) -> None:
+    """Tóc dài phía sau đầu — vẽ trước mặt để không che mặt."""
+    if spec.hair_style not in ("long", "wavy"):
+        return
+    col = HAIR_COLORS.get(spec.hair_color, HAIR_COLORS["black"]) + (255,)
+    cx, cy, rx, ry = g["head_cx"], g["head_cy"], g["head_rx"], g["head_ry"]
+    d.rounded_rectangle([cx - rx - 10, cy - ry * 0.4, cx + rx + 10, cy + ry * 2.0],
+                        radius=70, fill=col, outline=OUTLINE, width=LW)
 
 
 def _draw_eyes(d: ImageDraw.ImageDraw, spec: CharSpec, g: dict, kind: str) -> None:
@@ -444,13 +485,32 @@ def _draw_extras(d: ImageDraw.ImageDraw, spec: CharSpec, g: dict,
         d.rounded_rectangle([cx - 76, g["mouth_y"] - 46, cx + 76, g["mouth_y"] + 56],
                             radius=24, fill=(240, 244, 250, 255),
                             outline=OUTLINE, width=LW)
+    elif acc == "curlers":
+        # lô cuốn tóc kiểu ajumma (헤어롤)
+        top = g["head_cy"] - g["head_ry"]
+        for i, dx in enumerate((-0.55, 0.0, 0.55)):
+            x = cx + dx * g["head_rx"]
+            y = top + (26 if i != 1 else 4)
+            d.rounded_rectangle([x - 30, y - 26, x + 30, y + 26], radius=14,
+                                fill=(236, 140, 172, 255), outline=OUTLINE, width=5)
+            for k in (-12, 0, 12):
+                d.line([x + k, y - 22, x + k, y + 22], fill=(200, 96, 132, 255), width=3)
+    elif acc == "visor":
+        # mũ lưỡi trai nửa đầu (선캡): quai trắng quanh đầu, vành xanh ngay trên mắt
+        rx, ry, cy = g["head_rx"], g["head_ry"], g["head_cy"]
+        eb = g["eye_y"] - g["eye_r"] * 1.7           # mép dưới vành, trên mắt
+        bt = eb - ry * 0.55
+        d.arc([cx - rx - 6, cy - ry - 6, cx + rx + 6, cy + ry * 0.2], 190, 350,
+              fill=(250, 250, 250, 255), width=16)
+        d.chord([cx - rx * 0.95, bt, cx + rx * 0.95, eb], 0, 180,
+                fill=(120, 190, 220, 230), outline=OUTLINE, width=5)
 
 
 def render_character(spec: CharSpec, expression: str = "neutral",
                      mouth_open: bool = False) -> Image.Image:
     """Vẽ một nhân vật với biểu cảm và trạng thái miệng cho trước."""
-    if spec.style == "stick":
-        # người que dựng từ bộ xương (cùng bộ phận với chế độ cử động)
+    if spec.style in ("stick", "box", "kchibi"):
+        # dựng từ bộ xương (cùng bộ phận với chế độ cử động)
         from .rig import render_still
         return render_still(spec, expression, mouth_open)
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -459,6 +519,7 @@ def render_character(spec: CharSpec, expression: str = "neutral",
     mood = EXPRESSION_MAP.get(expression, EXPRESSION_MAP["neutral"])
 
     _draw_body(d, spec, g)
+    _draw_back_hair(d, spec, g)
     _draw_head(d, spec, g)
     _draw_hair(d, spec, g)
     _draw_brows(d, g, mood["brow"])

@@ -89,7 +89,8 @@ DEFAULT_SETTINGS = {
     "tts_engine": "",           # rỗng = dùng mặc định "omnivoice"
     # --- Cử động nhân vật (Bước D) ---
     "enable_rig": False,        # True = bật cử động bằng khung xương + cử chỉ
-    "char_style": "stick",      # kiểu nhân vật AI vẽ: stick (người que) | flat (hoạt hình phẳng)
+    # kiểu nhân vật AI vẽ: auto (tiếng Hàn -> kchibi, tiếng Anh -> box) | stick | box | kchibi | flat
+    "char_style": "auto",
     # --- Xuất dự án CapCut (thử nghiệm) ---
     "capcut_drafts_root": "",   # rỗng = mặc định %LOCALAPPDATA%\\CapCut\\User Data\\Projects\\com.lveditor.draft
     "capcut_template_draft": "",  # tên dự án mẫu dùng để học cấu trúc
