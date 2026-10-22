@@ -1313,20 +1313,26 @@ def api_rig_preview():
     duration = gesture.duration if gesture is not None else 2.0
     if gesture is not None and gesture.loop:
         duration *= 2   # cử chỉ lặp: cho chạy hai vòng
-    duration = min(max(duration + 0.4, 1.5), 4.0)
+    duration = min(max(duration + gmod.RETURN_TIME + 0.4, 1.5), 4.0)
     n = int(duration * fps)
-    w, h = char.rgba.size
+    w0, h0 = char.rgba.size
+    m = int(max(w0, h0) * 0.25)        # lề quanh ảnh cho tay giơ ra ngoài
+    w, h = w0 + 2 * m, h0 + 2 * m
     scale = min(1.0, 640 / h)
     out_size = (max(1, int(w * scale)), max(1, int(h * scale)))
     frames = []
     for i in range(n):
         t = i / fps
         angles = gmod.breathe_angles(t, 0)
-        if gesture is not None:
-            angles = gmod.merge_angles(angles, gmod.gesture_angles(gesture, t))
-        img = char.render(angles, size=(w, h))
+        pose = gmod.gesture_pose(gesture, t)
+        if pose:
+            angles = gmod.merge_angles(angles, pose)
+        img, (ox, oy) = char.render_padded(angles, margin=0.25)
         bg = Image.new("RGB", (w, h), (30, 41, 59))
-        bg.paste(img, mask=img.getchannel("A"))
+        # dịch cả người (vào/ra khung, nhảy lên) theo cỡ ảnh gốc
+        off = (m - ox + int(angles.get("dich_x", 0.0) * w0),
+               m - oy - int(angles.get("dich_y", 0.0) * h0))
+        bg.paste(img, off, mask=img.getchannel("A"))
         if scale < 1.0:
             bg = bg.resize(out_size, Image.LANCZOS)
         buf = io.BytesIO()

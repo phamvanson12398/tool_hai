@@ -204,6 +204,13 @@ def _bone_labels(h: int, w: int, j: PhotoJoints) -> np.ndarray:
         segs.append((mid, _extend(mid, end, 0.35)))
     dist = np.stack([_seg_dist(xx, yy, a, b) for a, b in segs])
     labels = np.argmin(dist, axis=0).astype(np.uint8)
+    # Phần nằm phía sau khớp vai/hông (xương đòn, hông) thuộc về thân,
+    # không xoay theo cánh tay/đùi.
+    for i in range(4):
+        root, mid = segs[2 + 2 * i]
+        behind = ((xx - root[0]) * (mid[0] - root[0])
+                  + (yy - root[1]) * (mid[1] - root[1])) < 0
+        labels[behind & (labels == 2 + 2 * i)] = 0
     if len(_LABEL_CACHE) > 8:
         _LABEL_CACHE.clear()
     _LABEL_CACHE[key] = labels
@@ -213,6 +220,20 @@ def _bone_labels(h: int, w: int, j: PhotoJoints) -> np.ndarray:
 def _extend(p0, p1, k: float) -> tuple[float, float]:
     """Kéo dài đoạn p0→p1 thêm k lần độ dài (để ăn cả bàn tay, bàn chân)."""
     return (p1[0] + (p1[0] - p0[0]) * k, p1[1] + (p1[1] - p0[1]) * k)
+
+
+def _down_angle(p0, p1) -> float:
+    """Góc của đoạn p0→p1 so với hướng thẳng xuống (cùng chiều với _rot_mat)."""
+    dx, dy = p1[0] - p0[0], p1[1] - p0[1]
+    if abs(dx) + abs(dy) < 1e-6:
+        return 0.0
+    return math.atan2(-dx, dy)
+
+
+def _blend(a: float) -> float:
+    """0 khi góc nhỏ (giữ dáng ảnh gốc), 1 khi góc từ 40° trở lên."""
+    u = min(1.0, abs(a) / math.radians(40))
+    return u * u * (3 - 2 * u)
 
 
 def _over(dst: np.ndarray, src: np.ndarray) -> np.ndarray:
@@ -266,9 +287,19 @@ def warp_by_bones(img_rgba: np.ndarray, joints: PhotoJoints,
                                      borderMode=cv2.BORDER_CONSTANT,
                                      borderValue=(0, 0, 0, 0)))
 
+    ends = {0: j.ankle_l, 1: j.ankle_r, 2: j.wrist_l, 3: j.wrist_r}
     for i, (root, mid, up_key, low_key) in moving:
-        m_up = _rot_mat(root[0], root[1], angles.get(up_key, 0.0))
-        m_low = m_up @ _rot_mat(mid[0], mid[1], angles.get(low_key, 0.0))
+        # Góc cử chỉ tính từ tư thế tay/chân buông thẳng (như nhân vật bộ ghép).
+        # Ảnh vẽ thường để tay chếch ra ngoài, nên với cử chỉ lớn ta bù độ
+        # chếch đó để ra đúng tư thế; cử động nhỏ (thở, nói) giữ dáng gốc.
+        end = ends[i]
+        rest_up = _down_angle(root, mid)
+        rest_low = _down_angle(mid, end) - rest_up
+        a_up, a_low = angles.get(up_key, 0.0), angles.get(low_key, 0.0)
+        a_up -= rest_up * _blend(a_up)
+        a_low -= rest_low * _blend(a_low)
+        m_up = _rot_mat(root[0], root[1], a_up)
+        m_low = m_up @ _rot_mat(mid[0], mid[1], a_low)
         take(2 + 2 * i, m_up)
         take(3 + 2 * i, m_low)
     if head_moves:
@@ -298,6 +329,22 @@ class PhotoCharacter:
         # Ảnh không đạt nếu ít hơn 5% pixel là vẽ (nửa người, lờ, v.v.)
         valid = float((mask > 0).mean()) > 0.005
         return cls(name, img_path, rgba, joints, source, valid)
+
+    def render_padded(self, angles: dict[str, float], margin: float = 0.35
+                      ) -> tuple[Image.Image, tuple[int, int]]:
+        """Render có lề quanh ảnh để tay/chân giơ ra ngoài không bị cắt.
+
+        Trả về (ảnh đã cắt sát nội dung, vị trí góc trái trên của ảnh gốc
+        trong ảnh trả về).
+        """
+        w, h = self.rgba.size
+        m = int(max(w, h) * margin)
+        arr = np.zeros((h + 2 * m, w + 2 * m, 4), dtype=np.uint8)
+        arr[m:m + h, m:m + w] = np.array(self.rgba.convert("RGBA"))
+        j = PhotoJoints(**{k: (v[0] + m, v[1] + m) for k, v in self.joints.as_dict().items()})
+        img = Image.fromarray(warp_by_bones(arr, j, angles), "RGBA")
+        bbox = img.getbbox() or (m, m, m + w, m + h)
+        return img.crop(bbox), (m - bbox[0], m - bbox[1])
 
     def render(self, angles: dict[str, float],
                mouth_open: bool = False,

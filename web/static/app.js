@@ -268,6 +268,8 @@
     wrap.hidden = true;
   }
 
+  var SUBTITLE_LABELS = {yellow: "Vàng", white: "Trắng", green: "Xanh lá", pink: "Hồng"};
+
   function populateSubtitleStyles() {
     var sel = $("s-subtitle");
     if (!sel) return;
@@ -275,7 +277,7 @@
     (state.meta.subtitle_styles || []).forEach(function (s) {
       var o = document.createElement("option");
       o.value = s;
-      o.textContent = s;
+      o.textContent = SUBTITLE_LABELS[s] || s;
       sel.appendChild(o);
     });
     if (state.meta.target_duration) {

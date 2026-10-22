@@ -202,15 +202,22 @@ class Stage:
                         t, speaking=speaking, mouth_open=bool(speaking and mouth_open)
                     )
                     im = im.convert("RGBA")
-                    # Scale theo quy ước cũ: cao ~50-58% khung
+                    anim = ch.rig_animator
+                    # Khung gốc của nhân vật (không tính phần tay/chân giơ ra
+                    # ngoài) cao ~50% khung hình, chân đứng ở base_y.
+                    fw, fh = getattr(anim, "frame_size", None) or im.size
+                    ox, oy = getattr(anim, "frame_origin", None) or (0, 0)
                     target_h = int(self.h * (0.50 if n < 3 else 0.42) * ch.scale)
-                    im = im.resize(
-                        (max(1, int(im.width * target_h / im.height)), target_h),
-                        Image.LANCZOS,
-                    )
+                    sc = target_h / fh
+                    im = im.resize((max(1, int(im.width * sc)), max(1, int(im.height * sc))),
+                                   Image.LANCZOS)
                     bounce = int(2 * math.sin(t * 1.6))
-                    x = cx - im.width // 2
-                    y = base_y - im.height - bounce
+                    # dịch cả người theo cử chỉ (vào/ra khung, nhảy lên...)
+                    last = getattr(anim, "last_angles", None) or {}
+                    x = (cx - int(fw * sc) // 2 - int(ox * sc)
+                         + int(last.get("dich_x", 0.0) * self.w))
+                    y = (base_y - target_h - int(oy * sc) - bounce
+                         - int(last.get("dich_y", 0.0) * self.h))
                     img.paste(im, (x, y), im)
                     continue
                 except Exception as e:  # lỗi cử động -> quay về ảnh tĩnh
@@ -406,14 +413,24 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
             rig_animators[ch.name] = ch.rig_animator
 
     def _apply_gestures(line: Line) -> None:
-        """Áp cử chỉ + hiệu ứng cả người của câu vào các rig animator."""
+        """Áp cử chỉ + hiệu ứng cả người của câu cho NGƯỜI NÓI câu đó.
+
+        Người khác thôi cử chỉ đang làm, trừ khi họ vừa ra khỏi khung hình
+        (ra_trai / ra_phai) thì vẫn đứng ngoài khung.
+        """
         if not rig_animators:
             return
         gesture = line.gestures[0] if line.gestures else None
         effect = line.effects[0] if line.effects else None
-        for anim in rig_animators.values():
+        for name, anim in rig_animators.items():
             try:
-                anim.set_gesture(gesture, effect, line.start)
+                if name == line.speaker:
+                    anim.set_gesture(gesture, effect, line.start)
+                else:
+                    cur = getattr(anim, "current_gesture", None)
+                    if cur is not None and cur.name in ("ra_trai", "ra_phai"):
+                        continue
+                    anim.set_gesture(None, None, line.start)
             except Exception:  # pragma: no cover - cố gắng thay thế
                 pass
 

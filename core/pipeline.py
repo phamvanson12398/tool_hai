@@ -278,15 +278,19 @@ class _PhotoRigAnimator:
                                        gmod.effect_angles(self.current_effect,
                                                           t, gmod.stable_seed(self.name)))
         if self.current_gesture is not None and self.gesture_start is not None:
-            elapsed = t - self.gesture_start
-            if self.current_gesture.loop or elapsed < self.current_gesture.duration:
-                angles = gmod.merge_angles(angles,
-                                           gmod.gesture_angles(self.current_gesture, elapsed))
+            pose = gmod.gesture_pose(self.current_gesture, t - self.gesture_start)
+            if pose:
+                angles = gmod.merge_angles(angles, pose)
         return angles
 
     def render_frame(self, t: float, speaking: bool, mouth_open: bool) -> Image.Image:
         angles = self._angles_at(t, speaking)
-        return self.pchar.render(angles, mouth_open=mouth_open)
+        self.last_angles = angles
+        # có lề để tay giơ ra ngoài ảnh không bị cắt; frame_origin/frame_size
+        # cho biết ảnh gốc nằm đâu để đặt nhân vật đúng chỗ
+        img, self.frame_origin = self.pchar.render_padded(angles)
+        self.frame_size = self.pchar.rgba.size
+        return img
 
 
 # ================================================================== render

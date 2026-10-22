@@ -23,10 +23,9 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 
 from . import character_kit as ck
-from . import config
 from .character_kit import CharSpec
 from .gestures import (Gesture, breathe_angles, effect_angles,  # noqa: E402
-                       ensure_library, gesture_angles, idle_arm_angles,
+                       ensure_library, gesture_pose, idle_arm_angles,
                        stable_seed)
 
 # Khung vẽ bộ phận. Bộ phận được vẽ trên canvas 2x cho rộng rãi, khi
@@ -686,8 +685,16 @@ class RigRenderer:
 
             # Xoay quanh khớp (PIL xoay ngược chiều kim đồng hồ)
             if abs(angle) > 1e-6:
-                img = img.rotate(-math.degrees(angle), resample=Image.BICUBIC,
-                                 center=pivot_img)
+                # đặt vào khung vuông tâm ở khớp rồi xoay, để không bị cắt
+                r = int(math.ceil(max(math.hypot(cx - pivot_img[0], cy - pivot_img[1])
+                                      for cx in (0, img.width)
+                                      for cy in (0, img.height)))) + 2
+                ox, oy = int(round(r - pivot_img[0])), int(round(r - pivot_img[1]))
+                padded = Image.new("RGBA", (2 * r + 1, 2 * r + 1), (0, 0, 0, 0))
+                padded.paste(img, (ox, oy))
+                pivot_img = (pivot_img[0] + ox, pivot_img[1] + oy)
+                img = padded.rotate(-math.degrees(angle), resample=Image.BICUBIC,
+                                    center=pivot_img)
 
             # Khớp thế giới (khung 600x1000) -> khung canvas có lề
             wp = world[b.name]["pivot"]
@@ -726,10 +733,13 @@ class RigRenderer:
             filename = b.part
             if b.name == "dau":
                 filename = "dau_mo.png" if mouth_open else "dau_dong.png"
-            part = self._part_np(filename)      # (H, W, 4) uint8
-            ph, pw = part.shape[:2]
             angle = world[b.name]["angle"]
-            pivot_img = b.pivot
+            if abs(angle) > 1e-6:
+                # khung vuông tâm ở khớp: xoay góc nào cũng không bị cắt
+                part, pivot_img = self._padded_np(filename, b.pivot)
+            else:
+                part, pivot_img = self._part_np(filename), b.pivot
+            ph, pw = part.shape[:2]
 
             if abs(angle) > 1e-6:
                 # PIL xoay ngược chiều kim đồng hồ -> cv2 dùng góc âm
@@ -777,6 +787,28 @@ class RigRenderer:
         out = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
         out.alpha_composite(cropped, (-ox, -oy))
         return out
+
+    def _padded_np(self, filename: str, pivot: tuple[float, float]):
+        """Bộ phận đặt giữa khung vuông có tâm ở khớp (cache).
+
+        Trả về (mảng, pivot mới). Bán kính khung = khoảng cách xa nhất từ
+        khớp tới góc ảnh, nên xoay quanh khớp không mất phần nào.
+        """
+        key = (filename, round(pivot[0], 2), round(pivot[1], 2))
+        hit = self._np_cache.get(key)
+        if hit is None:
+            np = self._np
+            part = self._part_np(filename)
+            ph, pw = part.shape[:2]
+            px, py = float(pivot[0]), float(pivot[1])
+            r = int(math.ceil(max(math.hypot(cx - px, cy - py)
+                                  for cx in (0, pw) for cy in (0, ph)))) + 2
+            out = np.zeros((2 * r + 1, 2 * r + 1, 4), dtype=np.uint8)
+            ox, oy = int(round(r - px)), int(round(r - py))
+            out[oy:oy + ph, ox:ox + pw] = part
+            hit = (out, (px + ox, py + oy))
+            self._np_cache[key] = hit
+        return hit
 
     def _part_np(self, filename: str):
         """Bộ phận dạng mảng numpy (cache)."""
@@ -867,22 +899,31 @@ class CharacterAnimator:
         if self.current_effect:
             angles = merge(angles, effect_angles(self.current_effect, t, self.seed))
 
-        # 4. Cu chi (chi khi dang trong khoang thoi gian cua cu chi)
+        # 4. Cu chi (lap / giu tu the cuoi / ve tu tu, xem gesture_pose)
         if self.current_gesture is not None and self.gesture_start is not None:
-            elapsed = t - self.gesture_start
-            if self.current_gesture.loop or elapsed < self.current_gesture.duration:
-                angles = merge(angles,
-                               gesture_angles(self.current_gesture, elapsed))
+            pose = gesture_pose(self.current_gesture, t - self.gesture_start)
+            if pose:
+                angles = merge(angles, pose)
 
         return angles
 
     def render_frame(self, t: float, speaking: bool, mouth_open: bool,
-                     canvas_size: tuple[int, int] = (config.WIDTH,
-                                                     config.HEIGHT)
+                     canvas_size: tuple[int, int] | None = None
                      ) -> Image.Image:
-        """Render mot khung hinh nhan vat (trong khung goc 600x1000, da scale
-        ve canvas_size neu can)."""
+        """Render mot khung hinh nhan vat (trong khung goc 600x1000, scale ve
+        canvas_size neu co). Goc vua dung luu o self.last_angles (gom ca
+        dich_x/dich_y de dat vi tri nhan vat)."""
         angles = self.angles_at(t, speaking, mouth_open)
+        self.last_angles = angles
+        if canvas_size is None:
+            # Không cắt về khung 600x1000 (tay giơ cao/dang rộng sẽ bị mất):
+            # trả về ảnh sát nội dung, kèm vị trí khung gốc trong ảnh để
+            # người đặt nhân vật giữ đúng chỗ đứng (frame_origin, frame_size).
+            img = self.renderer.render(angles, mouth_open=mouth_open, crop=False)
+            bbox = img.getbbox() or (PAD_X, PAD_Y, PAD_X + CW, PAD_Y + CH)
+            self.frame_origin = (PAD_X - bbox[0], PAD_Y - bbox[1])
+            self.frame_size = (CW, CH)
+            return img.crop(bbox)
         img = self.renderer.render(angles, mouth_open=mouth_open)
         if img.size != canvas_size:
             img = img.resize(canvas_size, Image.LANCZOS)

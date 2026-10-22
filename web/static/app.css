@@ -721,12 +721,24 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 /* ---------------- Subtitle swatch ---------------- */
 
 .subtitle-swatch {
-  display: inline-block;
-  width: 20px; height: 20px;
-  border-radius: 5px;
+  flex: 1 1 100%;
+  padding: 14px 12px;
+  border-radius: 8px;
   border: 1px solid var(--line);
-  vertical-align: middle;
+  background: linear-gradient(180deg, #3B4A63, #1E2634);
+  text-align: center;
+  font-size: 22px;
+  font-weight: 800;
+  line-height: 1.3;
+  color: #FFE500;
+  text-shadow: 2px 0 0 #000, -2px 0 0 #000, 0 2px 0 #000, 0 -2px 0 #000,
+               1px 1px 0 #000, -1px -1px 0 #000, 1px -1px 0 #000, -1px 1px 0 #000;
+  word-break: keep-all;
 }
+.subtitle-swatch.style-yellow { color: #FFE500; }
+.subtitle-swatch.style-white  { color: #FFFFFF; }
+.subtitle-swatch.style-green  { color: #7CFC00; }
+.subtitle-swatch.style-pink   { color: #FF6EC7; }
 
 /* ---------------- Toast ---------------- */
 
