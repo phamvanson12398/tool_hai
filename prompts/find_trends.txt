@@ -1,0 +1,14 @@
+Tìm các format và chủ đề hài (comedy) đang lên gần đây cho khán giả {{market_label}}.
+
+Nguồn cần tra: {{sources}}
+
+{{topic}}
+Yêu cầu:
+- Mỗi ý tưởng ghi rõ ngày tìm thấy (định dạng YYYY-MM-DD) để biết nó còn "nóng" không.
+- Chỉ mượn ý tưởng và FORMAT. KHÔNG chép nguyên câu thoại, nhân vật hay âm thanh có bản quyền.
+- Ưu tiên mẫu format đang phổ biến trên TikTok/Reels/Shorts.
+
+Output JSON đúng dạng này, không có gì khác:
+[{"title":"tên ý tưởng/format","format":"mô tả format kịch bản","why":"vì sao đang lên",
+  "sources":["https://..."],"found_at":"YYYY-MM-DD"}]
+Nếu không tìm được nguồn xác thực thì trả về mảng rỗng [].

@@ -1,0 +1,13 @@
+# tieu_de: 테스트
+# ngon_ngu: ko
+# nhan_vat: 지은=trai, 수아=phai
+
+지은 (happy, zoom): 안녕! 오늘 날씨 좋다!
+// Xin chào! Hôm nay thời tiết đẹp!
+수아 (happy, 지은=proud): 그래! 산책할까?
+// Ừ! Đi dạo không?
+> 지은 (shocked, zoom, boing) 0.8
+지은 (angry, zoom=수아, pause=0.5): 싫어!
+// Không thích!
+수아 (laughing): 장난이야!
+// Đùa thôi!

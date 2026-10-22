@@ -1,0 +1,63 @@
+# tieu_de: Tập chưa đặt tên
+# ngon_ngu: en
+# nhan_vat: Casey=left, Rose=right
+
+Rose (bored, khoanhtay): Hey, how's the fern?
+Casey (love, vaytay): Never better. We just had our anniversary.
+> Rose (confused, zoom, record_scratch) 0.7
+Rose (bored, lacdau): We.
+// Rê: Chúng ta? Chuyện gì vậy?
+Casey (proud, chitay): We, yes. Two years, Rose. She and I.
+// Chính xác. Hai năm rồi, Rose. Cô ấy với tôi.
+Rose (thinking, ngangua): You named a plant and you're keeping a count.
+// Bạn đặt tên cho cây và còn đếm ngày nữa.
+Casey (smug, ve_tu_the): Her name is Fernanda.
+// Tên cô ấy là Fernanda.
+> Rose (neutral, zoom, thud) 0.6
+Rose (bored, khoanhtay): Does she talk back?
+Casey (determined, chitay): She dozes. I talk, she dozes. That's a relationship, Rose.
+// Cô ấy ngủ gật. Tôi nói, cô ấy ngủ gật. Đó là một mối quan hệ, Rose.
+Rose (neutral, khoanhtay): I talk to my smoke detector.
+// Tôi cũng nói chuyện với máy báo khói.
+Casey (proud, chitay): I got her a doctor. Plant hospital. She had a root thing.
+// Tôi đưa cô ấy đi khám. Bệnh viện cây. Cô ấy có vấn đề ở rễ.
+Rose (bored, ngangua): You took a houseplant to a hospital.
+// Bạn đưa cây trong nhà đến bệnh viện.
+Casey (worried, omdau): It was serious, Rose. It was a whole root thing.
+// Nghiêm trọng lắm, Rose. Cả cái rễ ấy.
+Rose (bored, khoanhtay): Let me guess. Water twice a week, some light, don't overthink it.
+// Để tôi đoán. Tưới hai lần một tuần, có ánh sáng, đừng suy nghĩ nhiều.
+Casey (shocked, zoom, boing): You Googled it.
+// Bạn tra Google rồi.
+Rose (smug, khoanhtay): Last night.
+// Tối qua.
+Casey (angry, chitay): You mocked my fern.
+// Bạn chế giễu cây của tôi.
+Rose (bored, khoanhtay): I respect the fern. I just don't need a biography.
+// Tôi tôn trọng con cây. Tôi chỉ không cần tiểu sử ấy.
+Casey (determined, ve_tu_the): Okay, can I at least have the anniversary dinner?
+Casey (thinking, omdau): Actually hold on, I need to check her soil.
+// Khoan, để tôi kiểm tra đất của cô ấy đã.
+> Casey (confused, zoom, thud) 0.8
+Casey (shocked, zoom): Rose. Rose, there's no dirt.
+// Rose. Rose, không có đất.
+Rose (neutral, khoanhtay): Mm-hmm.
+Casey (shocked, zoom, record_scratch): There's a tag. Rose, there's a barcode on the pot.
+// Có cái tem. Rose, trên chậu có mã vạch.
+Rose (smug, ve_tu_the): Forty-nine cents.
+Casey (shocked, zoom): Forty-nine cents for what?
+Rose (bored, khoanhtay): Dollar aisle. That's where she lived.
+// Kệ một đô. Đó là nơi cô ấy sống.
+Casey (crying, nga): You let me plan a two-year anniversary for a dollar-aisle fern.
+// Bạn để tôi lên kế hoạch kỷ niệm hai năm cho một cây ở kệ một đô.
+Rose (neutral, khoanhtay): She died in a dollar aisle, Casey. Before she ever met you.
+// Cô ấy chết ở kệ một đô, Casey. Trước khi gặp cô ấy.
+> Casey (crying, zoom, sad_trombone) 1.0
+> Rose (neutral, vao_phai) 0.8
+Rose (neutral, khoanhtay): Her name's Linda. Eleven dollars. She's alive.
+// Tên cô ấy là Linda. Mười một đô. Cô ấy còn sống.
+Casey (crying, nga): Can I still have the dinner?
+Casey (love, vaytay): Thank you, Rose.
+// Cảm ơn, Rose.
+Rose (smug, ra_phai): And if you tell anyone about this, I will deny everything.
+// Và nếu bạn kể cho ai, tôi sẽ phủ nhận tất cả.

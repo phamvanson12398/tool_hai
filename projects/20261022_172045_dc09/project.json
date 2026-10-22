@@ -1,0 +1,200 @@
+{
+  "id": "20261022_172045_dc09",
+  "title": "Tập chưa đặt tên",
+  "language": "en",
+  "kind": "sarcasm",
+  "script": "# tieu_de: Tập chưa đặt tên\n# ngon_ngu: en\n# nhan_vat: Mike=left, Sarah=right\n# kieu: deadpan\n# mo_dau: None\n# chot: None\n\nMike (proud, khoanhtay): Oh, you're still drinking coffee? I've moved on to wellness.\nSarah (suspicious, nhunvai): Wellness. Right. What's in it?\nMike (proud, ve_tu_the): Kale, spirulina, acai... and just a little honey.\nSarah (neutral, lacdau): Mike, that's a milkshake with a leaf in it.\nMike (defensive, chitay): It's a superfood smoothie. It has antioxidants.\nSarah (neutral, chitay): It has 400 calories.\nMike (shocked, omdau): ...Those are healthy calories.\nSarah (laughing, vaytay): Calorie is calorie, Mike.\nMike (angry, khoanhtay): Says the one on their third espresso.\nSarah (proud, giohaitay): This is survival, not wellness.\n> Mike (suy_nghi, nhun) 0.3s\nMike (neutral, ve_tay): ...Want some of my smoothie?\nSarah (neutral, khoanhtay): Is it free?\nMike (sad, ngangua): ...No. Twelve dollars.\nSarah (laughing, ra_phai): Then I'll keep my coffee.\n> Mike (sad, ngangua) 0.3s",
+  "assets": {
+    "characters": [
+      {
+        "name": "Mike",
+        "side": "left",
+        "mode": "kit",
+        "spec": {
+          "name": "Mike",
+          "body": "adult",
+          "skin": "light",
+          "hair_style": "short",
+          "hair_color": "brown",
+          "shirt": "green",
+          "accessory": "glasses",
+          "blush": false
+        },
+        "images": {
+          "angry": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_angry_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_angry_mo.png"
+          },
+          "neutral": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_neutral_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_neutral_mo.png"
+          },
+          "proud": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_proud_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_proud_mo.png"
+          },
+          "sad": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_sad_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_sad_mo.png"
+          },
+          "shocked": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_shocked_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_shocked_mo.png"
+          },
+          "smug": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_smug_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_smug_mo.png"
+          },
+          "thinking": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_thinking_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_thinking_mo.png"
+          }
+        },
+        "expressions": [
+          "angry",
+          "neutral",
+          "proud",
+          "sad",
+          "shocked",
+          "smug",
+          "thinking"
+        ],
+        "image": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_neutral_dong.png",
+        "mouth_open": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_neutral_mo.png",
+        "mouth_closed": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Mike\\Mike_neutral_dong.png"
+      },
+      {
+        "name": "Sarah",
+        "side": "right",
+        "mode": "kit",
+        "spec": {
+          "name": "Sarah",
+          "body": "adult",
+          "skin": "fair",
+          "hair_style": "ponytail",
+          "hair_color": "black",
+          "shirt": "red",
+          "accessory": "none",
+          "blush": false
+        },
+        "images": {
+          "laughing": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Sarah\\Sarah_laughing_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Sarah\\Sarah_laughing_mo.png"
+          },
+          "neutral": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Sarah\\Sarah_neutral_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Sarah\\Sarah_neutral_mo.png"
+          },
+          "proud": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Sarah\\Sarah_proud_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Sarah\\Sarah_proud_mo.png"
+          },
+          "smug": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Sarah\\Sarah_smug_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Sarah\\Sarah_smug_mo.png"
+          },
+          "suspicious": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Sarah\\Sarah_suspicious_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Sarah\\Sarah_suspicious_mo.png"
+          }
+        },
+        "expressions": [
+          "laughing",
+          "neutral",
+          "proud",
+          "smug",
+          "suspicious"
+        ],
+        "image": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Sarah\\Sarah_neutral_dong.png",
+        "mouth_open": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Sarah\\Sarah_neutral_mo.png",
+        "mouth_closed": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_172045_dc09\\assets\\kit\\Sarah\\Sarah_neutral_dong.png"
+      }
+    ],
+    "background": {
+      "id": "d49ac7377f",
+      "name": "Coffee shop counter",
+      "image": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\data\\library\\backgrounds\\d49ac7377f.png",
+      "desc": "A flat, minimal café interior with a clear center area for the two characters."
+    },
+    "voices": {
+      "Mike": {
+        "ref": null,
+        "instruct": "male, young adult, low pitch, american accent",
+        "mode": "design"
+      },
+      "Sarah": {
+        "ref": null,
+        "instruct": "female, middle-aged, moderate pitch, british accent",
+        "mode": "design"
+      }
+    }
+  },
+  "state": "draft",
+  "created_at": "2026-10-22T17:20:45",
+  "suggestions": [
+    {
+      "category": "punchline",
+      "quote": "Sarah (laughing, ra_phai): Then no.",
+      "suggestion": "Câu chốt hiện tại là một cái 'không' phẳng và không callback lại mở đầu, trong khi tiếng cười mạnh nhất lại nằm ở giữa ('Those are healthy calories'). Để chốt bất ngờ hơn, hãy cho câu cuối của Sarah quay về ly cà phê mà cô ấy vẫn cầm (setup ở dòng đầu) hoặc để Mike dùng lại câu 'I've moved on to wellness' — thành một vòng khép kín thay vì một sự từ chối trần.",
+      "severity": "medium",
+      "id": 1
+    },
+    {
+      "category": "punchline",
+      "quote": "> Mike (thinking, nhun) 0.6",
+      "suggestion": "Nhịp dừng 0.6s đứng ngay sau tràng cười mạnh nhất làm nhịp bị lê thê và tạo một frame chết giữa video. Rút còn khoảng 0.2-0.3s, hoặc chuyển thành phản ứng của Sarah (liếc mắt) để không mất một khoảng trống chết.",
+      "severity": "medium",
+      "id": 2
+    },
+    {
+      "category": "character",
+      "quote": "Mike (neutral, nhunvai): ...Want some of my smoothie?",
+      "suggestion": "'nhunvai' (nhún vai) đọc ra là thờ ơ/kệ, trái với một câu mời đang cố níu chân. Nên đổi sang tư thế đưa tay ra (ve_tay) và giữ mặt 'neutral' để nhát 'Is it free?' đánh mạnh hơn.",
+      "severity": "medium",
+      "id": 3
+    },
+    {
+      "category": "character",
+      "quote": "Mike (defensive, khoanhtay): It's a superfood smoothie. It has antioxidants.",
+      "suggestion": "'khoanhtay' xuất hiện 3 lần với Mike (dòng 1, dòng 5, dòng 9) và nhãn 'smug' được dùng cho cả Mike lẫn Sarah, khiến hai nhân vật trông như hai bản sao của nhau. Nên giữ 'smug' cho một nhân vật duy nhất và đổi tư thế phòng thủ của Mike sang một dạng khác (ví dụ chitay + ve_tay) để mỗi nhân vật có một dấu ấn thể hiện riêng.",
+      "severity": "medium",
+      "id": 4
+    },
+    {
+      "category": "repeat",
+      "quote": "Mike (smug, khoanhtay): Oh, you're still drinking coffee? I've moved on to wellness.",
+      "suggestion": "Cả 5 tập gần đây đều ghi kiểu hài 'sarcasm', nên gắn thêm 'sarcasm' cho tập này là trùng kiểu và không tạo được sự đổi nhịp cho kênh. Bố cục hiện tại hợp hơn với 'observational' (châm biếm văn hóa wellness) hoặc 'deadpan' — nhịp 'Wellness. Right.' đã là một tức chết điển hình của deadpan. Lưu ý: log hiện ghi mở đầu/chốt đều là None nên chưa thể khẳng định trùng câu chữ cụ thể; nên bắt đầu ghi 2 trường này cho tập này để các lần so sánh sau chính xác.",
+      "severity": "medium",
+      "id": 5
+    },
+    {
+      "category": "naturalness",
+      "quote": "Sarah (laughing, vaytay): There's no such thing as a healthy calorie, Mike.",
+      "suggestion": "Cách diễn đạt hơi cứng so với cách nói khẩu nghiệm của khán giả Mỹ. Câu đáp lý tưởng là 'Calorie is calorie, Mike.' (hoặc 'There is no such thing as a healthy calorie.' nếu muốn giữ dạng đầy đủ) — cùng một punch nhưng nghe như người Mỹ thật sự nói.",
+      "severity": "low",
+      "id": 6
+    },
+    {
+      "category": "policy",
+      "quote": "Mike (angry, khoanhtay): Says the woman on her third espresso.",
+      "suggestion": "Mỉa mai việc 'đàn ông nói vậy' với một người phụ nữ là khuôn mẫu giới nhẹ, nên bớt nhắm vào giới tính: giữ lỗi 'caffeine' nhưng chuyển mũi tên từ Sarah sang chính thói quen uống cà phê (ví dụ 'Says the one on their third espresso.' hoặc 'Says the guy with the fourth espresso of the day.'), giữ nguyên ý đảo ngược mà không nhắm vào phụ nữ.",
+      "severity": "low",
+      "id": 7
+    },
+    {
+      "category": "length",
+      "quote": "Sarah (laughing, ra_phai): Then no.",
+      "suggestion": "Toàn bộ thoại khoảng 79 từ, đọc với nhịp TikTok (~3 từ/giây) cộng 0.6s beat và các nhịp cười chỉ đạt khoảng 30-35 giây, tức nằm sát mép dưới của khoảng 30-90 giây. Nếu muốn an toàn hơn, thêm một lượt đàm thoại nữa (ví dụ Mike định giá cái smoothie) và kết bằng một nút thị giác thay vì kết thuần bằng thoại.",
+      "severity": "low",
+      "id": 8
+    },
+    {
+      "category": "character",
+      "quote": "> Mike (thinking, nhun) 0.6",
+      "suggestion": "Mọi nhãn biểu cảm khác trong kịch bản đều dùng token tiếng Việt (khoanhtay, nhunvai, ve_tu_the...), riêng dòng này dùng 'thinking' bằng tiếng Anh, đồng thời '0.6' không ghi đơn vị nên không rõ là giây hay frame. Nên thống nhất token với phần còn lại (ví d suy_nghi/nghien_ngu) và ghi rõ '0.6s' để trình đọc hiểu và hai bên (nhân vật/giọng đọc) không lệch nhịp.",
+      "severity": "low",
+      "id": 9
+    }
+  ]
+}

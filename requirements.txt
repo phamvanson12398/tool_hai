@@ -1,0 +1,13 @@
+# Tool tạo video hoạt hình hài thoại
+# Cài: pip install -r requirements.txt
+#
+# LƯU Ý: torch phải cài riêng theo đúng phiên bản CUDA của máy, ví dụ:
+#   pip install torch==2.6.0 torchaudio==2.6.0 --index-url https://download.pytorch.org/whl/cu126
+
+omnivoice==0.2.1
+faster-whisper==1.2.1
+soundfile==0.13.1
+numpy>=2.0
+pillow>=11.0
+Flask==3.1.1
+flask-cors==6.0.1

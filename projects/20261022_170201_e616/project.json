@@ -1,0 +1,179 @@
+{
+  "id": "20261022_170201_e616",
+  "title": "Tập chưa đặt tên",
+  "language": "en",
+  "kind": "sarcasm",
+  "script": "# tieu_de: Tập chưa đặt tên\n# ngon_ngu: en\n# nhan_vat: Casey=left, Rose=right\n\nRose (bored, khoanhtay): Hey, how's the fern?\nCasey (love, vaytay): Never better. We just had our anniversary.\n> Rose (confused, zoom, record_scratch) 0.7\nRose (bored, lacdau): We.\n// Rê: Chúng ta? Chuyện gì vậy?\nCasey (proud, chitay): We, yes. Two years, Rose. She and I.\n// Chính xác. Hai năm rồi, Rose. Cô ấy với tôi.\nRose (thinking, ngangua): You named a plant and you're keeping a count.\n// Bạn đặt tên cho cây và còn đếm ngày nữa.\nCasey (smug, ve_tu_the): Her name is Fernanda.\n// Tên cô ấy là Fernanda.\n> Rose (neutral, zoom, thud) 0.6\nRose (bored, khoanhtay): Does she talk back?\nCasey (determined, chitay): She dozes. I talk, she dozes. That's a relationship, Rose.\n// Cô ấy ngủ gật. Tôi nói, cô ấy ngủ gật. Đó là một mối quan hệ, Rose.\nRose (neutral, khoanhtay): I talk to my smoke detector.\n// Tôi cũng nói chuyện với máy báo khói.\nCasey (proud, chitay): I got her a doctor. Plant hospital. She had a root thing.\n// Tôi đưa cô ấy đi khám. Bệnh viện cây. Cô ấy có vấn đề ở rễ.\nRose (bored, ngangua): You took a houseplant to a hospital.\n// Bạn đưa cây trong nhà đến bệnh viện.\nCasey (worried, omdau): It was serious, Rose. It was a whole root thing.\n// Nghiêm trọng lắm, Rose. Cả cái rễ ấy.\nRose (bored, khoanhtay): Let me guess. Water twice a week, some light, don't overthink it.\n// Để tôi đoán. Tưới hai lần một tuần, có ánh sáng, đừng suy nghĩ nhiều.\nCasey (shocked, zoom, boing): You Googled it.\n// Bạn tra Google rồi.\nRose (smug, khoanhtay): Last night.\n// Tối qua.\nCasey (angry, chitay): You mocked my fern.\n// Bạn chế giễu cây của tôi.\nRose (bored, khoanhtay): I respect the fern. I just don't need a biography.\n// Tôi tôn trọng con cây. Tôi chỉ không cần tiểu sử ấy.\nCasey (determined, ve_tu_the): Okay, can I at least have the anniversary dinner?\nCasey (thinking, omdau): Actually hold on, I need to check her soil.\n// Khoan, để tôi kiểm tra đất của cô ấy đã.\n> Casey (confused, zoom, thud) 0.8\nCasey (shocked, zoom): Rose. Rose, there's no dirt.\n// Rose. Rose, không có đất.\nRose (neutral, khoanhtay): Mm-hmm.\nCasey (shocked, zoom, record_scratch): There's a tag. Rose, there's a barcode on the pot.\n// Có cái tem. Rose, trên chậu có mã vạch.\nRose (smug, ve_tu_the): Forty-nine cents.\nCasey (shocked, zoom): Forty-nine cents for what?\nRose (bored, khoanhtay): Dollar aisle. That's where she lived.\n// Kệ một đô. Đó là nơi cô ấy sống.\nCasey (crying, nga): You let me plan a two-year anniversary for a dollar-aisle fern.\n// Bạn để tôi lên kế hoạch kỷ niệm hai năm cho một cây ở kệ một đô.\nRose (neutral, khoanhtay): She died in a dollar aisle, Casey. Before she ever met you.\n// Cô ấy chết ở kệ một đô, Casey. Trước khi gặp cô ấy.\n> Casey (crying, zoom, sad_trombone) 1.0\n> Rose (neutral, vao_phai) 0.8\nRose (neutral, khoanhtay): Her name's Linda. Eleven dollars. She's alive.\n// Tên cô ấy là Linda. Mười một đô. Cô ấy còn sống.\nCasey (crying, nga): Can I still have the dinner?\nCasey (love, vaytay): Thank you, Rose.\n// Cảm ơn, Rose.\nRose (smug, ra_phai): And if you tell anyone about this, I will deny everything.\n// Và nếu bạn kể cho ai, tôi sẽ phủ nhận tất cả.",
+  "assets": {
+    "characters": [
+      {
+        "name": "Casey",
+        "side": "left",
+        "mode": "kit",
+        "spec": {
+          "name": "Casey",
+          "body": "adult",
+          "skin": "light",
+          "hair_style": "curly",
+          "hair_color": "brown",
+          "shirt": "green",
+          "accessory": "glasses",
+          "blush": false
+        },
+        "images": {
+          "angry": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_angry_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_angry_mo.png"
+          },
+          "confused": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_confused_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_confused_mo.png"
+          },
+          "crying": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_crying_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_crying_mo.png"
+          },
+          "determined": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_determined_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_determined_mo.png"
+          },
+          "love": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_love_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_love_mo.png"
+          },
+          "neutral": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_neutral_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_neutral_mo.png"
+          },
+          "proud": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_proud_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_proud_mo.png"
+          },
+          "shocked": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_shocked_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_shocked_mo.png"
+          },
+          "smug": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_smug_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_smug_mo.png"
+          },
+          "thinking": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_thinking_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_thinking_mo.png"
+          },
+          "worried": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_worried_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_worried_mo.png"
+          }
+        },
+        "expressions": [
+          "angry",
+          "confused",
+          "crying",
+          "determined",
+          "love",
+          "neutral",
+          "proud",
+          "shocked",
+          "smug",
+          "thinking",
+          "worried"
+        ],
+        "image": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_neutral_dong.png",
+        "mouth_open": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_neutral_mo.png",
+        "mouth_closed": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Casey\\Casey_neutral_dong.png"
+      },
+      {
+        "name": "Rose",
+        "side": "right",
+        "mode": "kit",
+        "spec": {
+          "name": "Rose",
+          "body": "adult",
+          "skin": "medium",
+          "hair_style": "bob",
+          "hair_color": "black",
+          "shirt": "navy",
+          "accessory": "earrings",
+          "blush": false
+        },
+        "images": {
+          "bored": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Rose\\Rose_bored_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Rose\\Rose_bored_mo.png"
+          },
+          "confused": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Rose\\Rose_confused_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Rose\\Rose_confused_mo.png"
+          },
+          "neutral": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Rose\\Rose_neutral_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Rose\\Rose_neutral_mo.png"
+          },
+          "smug": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Rose\\Rose_smug_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Rose\\Rose_smug_mo.png"
+          },
+          "thinking": {
+            "dong": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Rose\\Rose_thinking_dong.png",
+            "mo": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Rose\\Rose_thinking_mo.png"
+          }
+        },
+        "expressions": [
+          "bored",
+          "confused",
+          "neutral",
+          "smug",
+          "thinking"
+        ],
+        "image": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Rose\\Rose_neutral_dong.png",
+        "mouth_open": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Rose\\Rose_neutral_mo.png",
+        "mouth_closed": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\assets\\kit\\Rose\\Rose_neutral_dong.png"
+      }
+    ],
+    "background": {
+      "id": "1fa5c9bded",
+      "name": "Living Room",
+      "image": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\data\\library\\backgrounds\\1fa5c9bded.png",
+      "desc": "A simple cozy living room with a small potted fern on a side table, leaving open floor space in the center for the two characters."
+    },
+    "voices": {
+      "Casey": {
+        "ref": null,
+        "instruct": "female, young adult, high pitch, american accent",
+        "mode": "design"
+      },
+      "Rose": {
+        "ref": null,
+        "instruct": "female, middle-aged, low pitch, american accent",
+        "mode": "design"
+      }
+    }
+  },
+  "state": "done",
+  "created_at": "2026-10-22T17:02:01",
+  "suggestions": [
+    {
+      "category": "punchline",
+      "quote": "Casey (crying, nga): Can I still have the dinner?",
+      "suggestion": "This beat slightly undercuts the emotional peak before Linda's reveal; consider cutting it or moving it after Rose introduces Linda.",
+      "severity": "low",
+      "id": 1
+    },
+    {
+      "category": "naturalness",
+      "quote": "Casey (shocked, zoom): Of what?",
+      "suggestion": "Say \"Forty-nine cents for what?\" or \"Of what?\" is slightly unclear; rephrase to make the question land more naturally.",
+      "severity": "low",
+      "id": 2
+    }
+  ],
+  "result": {
+    "video": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\out\\video.mp4",
+    "srt": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\out\\phude.srt",
+    "pack": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\out\\capcut_pack.zip",
+    "duration": 68.68804166666668,
+    "lines": 31,
+    "beats": 5
+  }
+}

@@ -1,0 +1,80 @@
+=====================================================================
+ĐẶC TẢ: CỬ ĐỘNG BẰNG KHUNG XƯƠNG CHO NHÂN VẬT
+=====================================================================
+
+GHI CHÚ CHO AI LẬP TRÌNH (đọc trước khi làm)
+- Chi tiết đầy đủ nằm ở MỤC 18 trong file đặc tả chính của tool (người
+  dùng đặt trong thư mục dự án). Đọc mục 18 trước; file này là phạm vi và
+  thứ tự làm.
+- Code hiện có: bộ ghép nhân vật vẽ bằng PIL ở core/character_kit.py,
+  dựng khung hình ở core/video.py, xếp thời gian ở core/pipeline.py,
+  parser kịch bản ở core/script_parser.py, danh sách biểu cảm hợp lệ ở
+  core/comedy_lib.py, gọi Claude ở core/claude_cli.py, giao diện ở
+  web/server.py + web/static/app.js + web/templates/index.html.
+- Viết phần cử động thành module RIÊNG (ví dụ core/rig.py, core/gestures.py,
+  core/mesh_warp.py). Chỉ sửa tối thiểu code cũ để gọi vào, và luôn có
+  đường lùi về cách dựng cũ khi tắt công tắc hoặc khi có lỗi.
+- Môi trường: Windows, Python 3.11, card NVIDIA GTX 1080 Ti. Ưu tiên thư
+  viện cài bằng pip chạy được trên Windows (ví dụ mediapipe hoặc rtmlib
+  cho nhận dáng người). Animated Drawings của Meta chỉ dùng để THAM KHẢO
+  cách làm, không bắt cài Docker/TorchServe.
+- Thư mục data/library/characters/ đang có nhân vật jieun, sua (ảnh PNG
+  theo biểu cảm). Tập thử: projects/e2e_test.
+- KHÔNG đọc/xem ảnh hay từng khung hình trừ khi thật cần (tốn token).
+  Kiểm tra bằng số liệu và bằng video xuất ra cho người dùng xem.
+- Render chạy trong terminal (không chạy nền), in tiến độ theo %.
+
+---------------------------------------------------------------------
+Thêm tính năng CỬ ĐỘNG BẰNG KHUNG XƯƠNG cho nhân vật. Đọc kỹ mục 18 trong
+file đặc tả. KHÔNG làm hỏng các phần đang chạy (tạo giọng, dựng video,
+xuất mp4, xuất CapCut). Thêm công tắc "Bật cử động" trong Cài đặt; nếu
+phần cử động lỗi thì tự quay về cách dựng cũ.
+
+PHẠM VI (chỉ làm 2 phần này):
+1. Nhân vật AI vẽ bằng bộ ghép: vẽ từng bộ phận thành ảnh riêng có điểm
+   khớp (đầu, thân, cánh tay trên, cẳng tay, bàn tay, đùi, cẳng chân), ghép
+   bằng phép xoay quanh khớp. Thứ tự lớp: tay sau, chân, thân, đầu, tay trước.
+2. Nhân vật tải lên 1 ảnh: tự tách nền, tự đoán vị trí khớp (dùng mô hình
+   nhận dáng người; có thể tham khảo dự án mã nguồn mở Animated Drawings của
+   Meta), không đoán được thì đặt khung xương mặc định theo hình dạng ảnh.
+   Cử động bằng cách uốn lưới tam giác phủ hình theo khung xương (linear
+   blend skinning hoặc ARAP). Phần ĐẦU luôn giữ cứng để gắn biểu cảm và
+   miệng như cũ.
+KHÔNG làm tính năng tải nhân vật dạng tách sẵn từng bộ phận.
+
+YÊU CẦU CHUNG:
+- Mỗi nhân vật có file rig.json (xương: hong -> than -> co -> dau; than ->
+  vai -> khuyu -> co_tay hai bên; hong -> dui -> goi -> co_chan hai bên).
+- Màn hình "Dựng khung xương" cho nhân vật tải lên: hiện ảnh với các chấm
+  khớp có tên, người dùng kéo hoặc bấm để sửa MỘT LẦN rồi lưu. Có nút xem
+  thử vẫy tay và đi bộ ngay trên màn hình đó. Ảnh không đạt (nửa người, tay
+  khoanh) thì báo và chỉ dùng hiệu ứng cả người.
+- Thư viện cử chỉ dạng JSON (keyframe góc xương, kiểu mot_lan / giu / lap):
+  vaytay, chitay, omdau, khoanhtay, giohaitay, nhunvai, voratay, gatdau,
+  lacdau, dibo, vao_trai, vao_phai, ra_trai, ra_phai, nhaylen, ngangua,
+  ve_tu_the.
+- Hiệu ứng cả người cho mọi nhân vật: nhun, nhay, rung, nghieng, quay, nga.
+- Nhân vật đứng yên có chuyển động thở rất nhẹ; người đang nói có cử động
+  tay nhỏ (seed cố định) để không bị đơ.
+- Kịch bản ghi cử chỉ trong ngoặc như biểu cảm, ví dụ:
+    수아 (shocked, omdau, boing): 뭐라고?!
+    > 수아 (deadpan, khoanhtay) 0.8
+  Validator báo lỗi tiếng Việt nếu sai tên cử chỉ. Gửi danh sách cử chỉ
+  cho Claude khi viết kịch bản để AI dùng được.
+- Hiệu năng: video 60 giây dựng dưới khoảng 5 phút (dùng numpy/OpenCV, có
+  thể render song song).
+
+THỨ TỰ LÀM (mỗi bước một phiên làm việc riêng; xong bước nào chạy thử,
+cho người dùng xem rồi mới sang bước sau):
+  Bước A : Khung xương + ghép bộ phận cho 1 nhân vật AI vẽ, xuất video thử
+           5 giây vẫy tay + nhép miệng.
+  Bước B : Thư viện cử chỉ + hiệu ứng cả người + thở/cử động khi nói + cú
+           pháp trong kịch bản, xuất video thử từ 1 kịch bản ngắn có 2
+           nhân vật.
+  Bước C1: Ảnh tải lên: tách nền, tự đoán khớp (hoặc khung mặc định), uốn
+           lưới tam giác, đầu giữ cứng; xuất video thử vẫy tay với 1 ảnh.
+  Bước C2: Màn hình "Dựng khung xương" (kéo chấm khớp, lưu rig.json, nút
+           xem thử vẫy tay/đi bộ, cảnh báo ảnh không đạt).
+  Bước D : Gắn vào luồng dựng chính, công tắc "Bật cử động", lùi về cách
+           cũ khi lỗi, kiểm tra hiệu năng, cập nhật HUONG_DAN.md.
+=====================================================================

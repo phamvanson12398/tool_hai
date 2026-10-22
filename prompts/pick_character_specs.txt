@@ -1,0 +1,18 @@
+Chọn ngoại hình cho các nhân vật trong kịch bản sau, dùng ĐÚNG các giá trị có trong danh mục.
+
+### Danh mục bộ phận (chỉ được chọn trong đây)
+{{catalog}}
+
+### Kịch bản
+{{script}}
+
+### Nhân vật cần chọn
+{{names}}
+
+Yêu cầu:
+- Các nhân vật phải trông khác nhau rõ (tóc, màu áo khác nhau) để khán giả phân biệt được.
+- Phù hợp vai trong truyện (ví dụ người lớn tuổi, trẻ con thì body="child").
+- Cùng một phong cách để ráp lại trông đồng bộ.
+
+Output JSON đúng dạng này, không có gì khác:
+{{example}}

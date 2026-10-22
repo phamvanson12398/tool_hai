@@ -1,0 +1,459 @@
+{
+  "version": 1,
+  "gestures": [
+    {
+      "name": "vaytay",
+      "label": "Vẫy tay",
+      "mo_ta": "Vẫy tay chào bạn, tay giơ lên ngang vai.",
+      "loop": true,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -1.7453292519943295,
+            "khuyu_right": -0.5235987755982988
+          },
+          "thoi_luong": 0.25,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_right": -1.7453292519943295,
+            "khuyu_right": 0.5235987755982988
+          },
+          "thoi_luong": 0.25,
+          "kieu": "lap"
+        },
+        {
+          "goc": {
+            "vai_right": -1.7453292519943295,
+            "khuyu_right": -0.5235987755982988
+          },
+          "thoi_luong": 0.25,
+          "kieu": "lap"
+        }
+      ]
+    },
+    {
+      "name": "chitay",
+      "label": "Chỉ tay",
+      "mo_ta": "Chỉ ngón tay về phía trước, như ra lệnh.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -1.53588974175501,
+            "khuyu_right": -0.08726646259971647
+          },
+          "thoi_luong": 0.2,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_right": -1.53588974175501,
+            "khuyu_right": -0.08726646259971647,
+            "co_tay_right": -0.20943951023931956
+          },
+          "thoi_luong": 0.4,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "omdau",
+      "label": "Ôm đầu",
+      "mo_ta": "Ôm đầu bằng cả hai tay, vẻ hoang mang.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_left": -1.2217304763960306,
+            "vai_right": -1.2217304763960306,
+            "khuyu_left": -1.6580627893946132,
+            "khuyu_right": -1.6580627893946132,
+            "co_tay_left": -0.5235987755982988,
+            "co_tay_right": 0.5235987755982988
+          },
+          "thoi_luong": 0.35,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_left": -1.2566370614359172,
+            "vai_right": -1.2566370614359172,
+            "khuyu_left": -1.6580627893946132,
+            "khuyu_right": -1.6580627893946132,
+            "co_tay_left": -0.5235987755982988,
+            "co_tay_right": 0.5235987755982988
+          },
+          "thoi_luong": 0.5,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "khoanhtay",
+      "label": "Khoanh tay",
+      "mo_ta": "Khoanh tay trước ngực, vẻ bình thản.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_left": -1.0821041362364843,
+            "vai_right": -1.0821041362364843,
+            "khuyu_left": -1.53588974175501,
+            "khuyu_right": -1.53588974175501,
+            "co_tay_left": -0.6632251157578453,
+            "co_tay_right": 0.6632251157578453
+          },
+          "thoi_luong": 0.35,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_left": -1.0821041362364843,
+            "vai_right": -1.0821041362364843,
+            "khuyu_left": -1.53588974175501,
+            "khuyu_right": -1.53588974175501,
+            "co_tay_left": -0.6632251157578453,
+            "co_tay_right": 0.6632251157578453
+          },
+          "thoi_luong": 0.6,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "giohaitay",
+      "label": "Giơ hai tay",
+      "mo_ta": "Giơ cả hai tay lên cao, vẻ vui mừng.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_left": -1.8325957145940461,
+            "vai_right": -1.8325957145940461,
+            "khuyu_left": -0.20943951023931956,
+            "khuyu_right": -0.20943951023931956
+          },
+          "thoi_luong": 0.3,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_left": -1.8849555921538759,
+            "vai_right": -1.8849555921538759,
+            "khuyu_left": -0.20943951023931956,
+            "khuyu_right": -0.20943951023931956
+          },
+          "thoi_luong": 0.5,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "nhunvai",
+      "label": "Nhún vai",
+      "mo_ta": "Nhún vai lên xuống, vẻ không biết.",
+      "loop": true,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_left": -0.4537856055185257,
+            "vai_right": -0.4537856055185257,
+            "co": -0.06981317007977318
+          },
+          "thoi_luong": 0.18,
+          "kieu": "lap"
+        },
+        {
+          "goc": {
+            "vai_left": 0.06981317007977318,
+            "vai_right": 0.06981317007977318,
+            "co": 0.05235987755982989
+          },
+          "thoi_luong": 0.18,
+          "kieu": "lap"
+        }
+      ]
+    },
+    {
+      "name": "voratay",
+      "label": "Vỗ tay",
+      "mo_ta": "Vỗ tay như đang vỗ nhau.",
+      "loop": true,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_left": -1.0122909661567112,
+            "vai_right": -1.0122909661567112,
+            "khuyu_left": -1.2566370614359172,
+            "khuyu_right": -1.2566370614359172
+          },
+          "thoi_luong": 0.2,
+          "kieu": "lap"
+        },
+        {
+          "goc": {
+            "vai_left": -0.8377580409572782,
+            "vai_right": -0.8377580409572782,
+            "khuyu_left": -1.4660765716752369,
+            "khuyu_right": -1.4660765716752369
+          },
+          "thoi_luong": 0.2,
+          "kieu": "lap"
+        }
+      ]
+    },
+    {
+      "name": "gatdau",
+      "label": "Gật đầu",
+      "mo_ta": "Gật đầu đồng ý.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "dau": 0.15707963267948966
+          },
+          "thoi_luong": 0.16,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "dau": -0.12217304763960307
+          },
+          "thoi_luong": 0.16,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "dau": 0.06981317007977318
+          },
+          "thoi_luong": 0.18,
+          "kieu": "mot_lan"
+        }
+      ]
+    },
+    {
+      "name": "lacdau",
+      "label": "Lắc đầu",
+      "mo_ta": "Lắc đầu từ chối.",
+      "loop": true,
+      "keyframes": [
+        {
+          "goc": {
+            "dau": 0.0,
+            "co": -0.12217304763960307
+          },
+          "thoi_luong": 0.18,
+          "kieu": "lap"
+        },
+        {
+          "goc": {
+            "dau": 0.0,
+            "co": 0.12217304763960307
+          },
+          "thoi_luong": 0.18,
+          "kieu": "lap"
+        }
+      ]
+    },
+    {
+      "name": "dibo",
+      "label": "Đi bộ",
+      "mo_ta": "Bước chân tại chỗ, như đang đi bộ.",
+      "loop": true,
+      "keyframes": [
+        {
+          "goc": {
+            "dui_left": 0.2792526803190927,
+            "goi_left": -0.24434609527920614,
+            "dui_right": -0.2792526803190927,
+            "goi_right": 0.24434609527920614
+          },
+          "thoi_luong": 0.25,
+          "kieu": "lap"
+        },
+        {
+          "goc": {
+            "dui_left": -0.2792526803190927,
+            "goi_left": 0.24434609527920614,
+            "dui_right": 0.2792526803190927,
+            "goi_right": -0.24434609527920614
+          },
+          "thoi_luong": 0.25,
+          "kieu": "lap"
+        }
+      ]
+    },
+    {
+      "name": "vao_trai",
+      "label": "Vào từ trái",
+      "mo_ta": "Bước vào khung hình từ bên trái.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "than": 0.0
+          },
+          "thoi_luong": 0.6,
+          "kieu": "mot_lan"
+        }
+      ]
+    },
+    {
+      "name": "vao_phai",
+      "label": "Vào từ phải",
+      "mo_ta": "Bước vào khung hình từ bên phải.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "than": 0.0
+          },
+          "thoi_luong": 0.6,
+          "kieu": "mot_lan"
+        }
+      ]
+    },
+    {
+      "name": "ra_trai",
+      "label": "Ra trái",
+      "mo_ta": "Bước ra khỏi khung hình về bên trái.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "than": 0.0
+          },
+          "thoi_luong": 0.6,
+          "kieu": "mot_lan"
+        }
+      ]
+    },
+    {
+      "name": "ra_phai",
+      "label": "Ra phải",
+      "mo_ta": "Bước ra khỏi khung hình về bên phải.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "than": 0.0
+          },
+          "thoi_luong": 0.6,
+          "kieu": "mot_lan"
+        }
+      ]
+    },
+    {
+      "name": "nhaylen",
+      "label": "Nhảy lên",
+      "mo_ta": "Nhảy lên một cái, vẻ hào hứng.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "than": 0.0,
+            "dui_left": 0.17453292519943295,
+            "dui_right": -0.17453292519943295,
+            "goi_left": -0.3141592653589793,
+            "goi_right": 0.3141592653589793
+          },
+          "thoi_luong": 0.18,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "than": 0.0,
+            "dui_left": -0.10471975511965978,
+            "dui_right": 0.10471975511965978,
+            "goi_left": 0.24434609527920614,
+            "goi_right": -0.24434609527920614
+          },
+          "thoi_luong": 0.26,
+          "kieu": "mot_lan"
+        }
+      ]
+    },
+    {
+      "name": "ngangua",
+      "label": "Ngang vai",
+      "mo_ta": "Hạ vai xuống, vẻ chán nản.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_left": 0.2792526803190927,
+            "vai_right": 0.2792526803190927,
+            "co": 0.10471975511965978,
+            "dau": 0.06981317007977318
+          },
+          "thoi_luong": 0.3,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_left": 0.2792526803190927,
+            "vai_right": 0.2792526803190927,
+            "co": 0.10471975511965978,
+            "dau": 0.06981317007977318
+          },
+          "thoi_luong": 0.5,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "ve_tu_the",
+      "label": "Vẽ tư thế",
+      "mo_ta": "Tự nhiên tạo tư thế tay, linh hoạt.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -1.6580627893946132,
+            "khuyu_right": -0.4363323129985824,
+            "co_tay_right": 0.3141592653589793
+          },
+          "thoi_luong": 0.3,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_right": -1.53588974175501,
+            "khuyu_right": 0.3490658503988659,
+            "co_tay_right": -0.24434609527920614
+          },
+          "thoi_luong": 0.35,
+          "kieu": "mot_lan"
+        }
+      ]
+    }
+  ],
+  "effects": {
+    "nhun": {
+      "label": "Nhún",
+      "mo_ta": "Nhún nhẹ toàn thân."
+    },
+    "nhay": {
+      "label": "Nhảy",
+      "mo_ta": "Nhảy nhỏ tại chỗ."
+    },
+    "rung": {
+      "label": "Rung",
+      "mo_ta": "Rung nhẹ như đang sợ."
+    },
+    "nghieng": {
+      "label": "Nghiêng",
+      "mo_ta": "Nghiêng người sang bên."
+    },
+    "quay": {
+      "label": "Quay",
+      "mo_ta": "Xoay người nhìn quanh."
+    },
+    "nga": {
+      "label": "Ngả",
+      "mo_ta": "Ngả người, vẻ mệt."
+    }
+  }
+}

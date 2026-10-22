@@ -1,0 +1,62 @@
+{"parentUuid":"28c7 1ca0e645 EDIT   len=0      
+{"parentUuid":"29b8 ab9165cb EDIT   len=0      
+{"parentUuid":"2c86 ab9165cb WRITE  len=19617  /* ============================================================
+   Tool ho?t h?nh h?i tho?i ? app.cs
+{"parentUuid":"57d8 ab9165cb EDIT   len=0      
+{"parentUuid":"5c98 ab9165cb WRITE  len=16064  /* ---------------- Base / Reset ---------------- */
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  p
+{"parentUuid":"5fc3 ab9165cb EDIT   len=324    /* ---------------- Preview stage ---------------- */
+
+/* Stage xem th? ??ng c? ??ng: cho ph?p cao t
+{"parentUuid":"601a 1ca0e645 EDIT   len=1477   @media (max-width: 420px) {
+  .tab { font-size: 13px; }
+  .asset-card { width: calc(50% - 6px); }
+}
+
+{"parentUuid":"7375 ab9165cb EDIT   len=0      
+{"parentUuid":"7a10 ab9165cb EDIT   len=197    #rig-preview-stage {
+  aspect-ratio: auto;
+  max-width: none;
+  width: 100%;
+  overflow: visible;
+  
+{"parentUuid":"80a3 ab9165cb EDIT   len=0      
+{"parentUuid":"8263 1ca0e645 EDIT   len=0      
+{"parentUuid":"89e7 ab9165cb EDIT   len=0      
+{"parentUuid":"8a0b ab9165cb WRITE  len=19606  /* ============================================================
+   Tool ho?t h?nh h?i tho?i ? app.cs
+{"parentUuid":"8b21 ab9165cb EDIT   len=231    /* Stage xem th? ??ng c? ??ng: cho ph?p cao t? do ?? l??i 6 khung l? ra */
+.preview-stage {
+  width:
+{"parentUuid":"8b70 3dab1ae9 EDIT   len=0      
+{"parentUuid":"8ea8 ab9165cb EDIT   len=0      
+{"parentUuid":"9efd 3dab1ae9 EDIT   len=296    .claude-calls {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  font-size: 11px;
+  font-weight: 
+{"parentUuid":"a5aa ab9165cb EDIT   len=0      
+{"parentUuid":"a819 1ca0e645 EDIT   len=0      
+{"parentUuid":"ac0e ab9165cb EDIT   len=53     .preview-stage {
+  position: relative;
+  width: 100%;
+{"parentUuid":"be0a ab9165cb EDIT   len=0      
+{"parentUuid":"c8f8 ab9165cb EDIT   len=78     .preview-stage {
+  position: relative;
+  width: 100%;
+  background: var(--bg);
+{"parentUuid":"dd76 1ca0e645 EDIT   len=0      
+{"parentUuid":"f7b0 ab9165cb EDIT   len=421    @media (max-width: 760px) {
+  .rig-controls { flex-direction: column; align-items: stretch; }
+  .rig
+{"parentUuid":"fd86 3dab1ae9 EDIT   len=440    .topbar-inner {
+  max-width: var(--maxw);
+  margin: 0 auto;
+  padding: 10px var(--gutter);
+  display
+TOTAL 25

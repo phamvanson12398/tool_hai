@@ -1,0 +1,22 @@
+Rà soát kịch bản video hài ngắn sau. CHỈ đưa ra góp ý, TUYỆT ĐỐI không sửa lại kịch bản.
+
+{{comedy_block}}
+
+### Kịch bản
+{{script}}
+
+### Kiểm tra
+1. Câu chốt có đủ bất ngờ không, nhịp có lê thê không.
+2. Tiếng {{lang_name}} có tự nhiên không; kiểu hài có hợp với khán giả {{market_label}} không.
+3. Độ dài dự kiến có nằm trong 30–90 giây không.
+4. Có dùng nhân vật, biểu cảm hoặc tiếng động không tồn tại không.
+5. Có nội dung dễ vi phạm quy định của TikTok không.
+6. Có bị trùng kiểu hài hoặc cách chốt với các tập gần đây không:
+{{history_block}}
+
+Output JSON đúng dạng này, không có gì khác:
+[{"category":"punchline|naturalness|length|character|policy|repeat",
+  "quote":"trích nguyên văn một câu trong kịch bản bị vấn đề",
+  "suggestion":"đề xuất sửa cụ thể",
+  "severity":"low|medium|high"}]
+Nếu không có vấn đề gì thì output [].

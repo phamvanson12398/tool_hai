@@ -1,0 +1,118 @@
+{
+  "total": 7.525375,
+  "lines": [
+    {
+      "idx": 0,
+      "speaker": "지은",
+      "text": "안녕! 오늘 날씨 좋다!",
+      "expression": "happy",
+      "zoom": true,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 0.3,
+      "duration": 1.4192083333333334,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\e2e_test\\audio\\line_000.wav",
+      "words": [
+        [
+          "안녕!",
+          0.3,
+          0.7257625
+        ],
+        [
+          "오늘",
+          0.7257625,
+          1.0096041666666666
+        ],
+        [
+          "날씨",
+          1.0096041666666666,
+          1.2934458333333334
+        ],
+        [
+          "좋다!",
+          1.2934458333333334,
+          1.7192083333333334
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 1,
+      "speaker": "수아",
+      "text": "그래! 산책할까?",
+      "expression": "happy",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 1.8392083333333333,
+      "duration": 1.0854583333333334,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\e2e_test\\audio\\line_001.wav",
+      "words": [
+        [
+          "그래!",
+          1.8392083333333333,
+          2.2462552083333334
+        ],
+        [
+          "산책할까?",
+          2.2462552083333334,
+          2.924666666666667
+        ]
+      ],
+      "other_expr": {
+        "지은": "proud"
+      }
+    },
+    {
+      "idx": 3,
+      "speaker": "지은",
+      "text": "싫어!",
+      "expression": "angry",
+      "zoom": false,
+      "zoom_target": "수아",
+      "sfx": "",
+      "start": 3.844666666666667,
+      "duration": 1.21125,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\e2e_test\\audio\\line_003.wav",
+      "words": [
+        [
+          "싫어!",
+          3.844666666666667,
+          5.055916666666667
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 4,
+      "speaker": "수아",
+      "text": "장난이야!",
+      "expression": "laughing",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 5.675916666666667,
+      "duration": 0.7294583333333333,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\e2e_test\\audio\\line_004.wav",
+      "words": [
+        [
+          "장난이야!",
+          5.675916666666667,
+          6.405375
+        ]
+      ],
+      "other_expr": {}
+    }
+  ],
+  "beats": [
+    {
+      "idx": 2,
+      "actor": "지은",
+      "expression": "shocked",
+      "zoom": true,
+      "sfx": "boing.wav",
+      "start": 3.044666666666667,
+      "duration": 0.8
+    }
+  ]
+}

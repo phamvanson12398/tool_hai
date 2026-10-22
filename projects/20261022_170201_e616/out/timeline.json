@@ -1,0 +1,1562 @@
+{
+  "total": 68.68804166666668,
+  "lines": [
+    {
+      "idx": 0,
+      "speaker": "Rose",
+      "text": "Hey, how's the fern?",
+      "expression": "bored",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 0.3,
+      "duration": 1.5060833333333334,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_000.wav",
+      "words": [
+        [
+          "Hey,",
+          0.3,
+          0.6543725490196078
+        ],
+        [
+          "how's",
+          0.6543725490196078,
+          1.0973382352941177
+        ],
+        [
+          "the",
+          1.0973382352941177,
+          1.3631176470588235
+        ],
+        [
+          "fern?",
+          1.3631176470588235,
+          1.8060833333333335
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 1,
+      "speaker": "Casey",
+      "text": "Never better. We just had our anniversary.",
+      "expression": "love",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 1.9260833333333334,
+      "duration": 2.3260833333333335,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_001.wav",
+      "words": [
+        [
+          "Never",
+          1.9260833333333334,
+          2.2491504629629633
+        ],
+        [
+          "better.",
+          2.2491504629629633,
+          2.7014444444444448
+        ],
+        [
+          "We",
+          2.7014444444444448,
+          2.8306712962962965
+        ],
+        [
+          "just",
+          2.8306712962962965,
+          3.089125
+        ],
+        [
+          "had",
+          3.089125,
+          3.282965277777778
+        ],
+        [
+          "our",
+          3.282965277777778,
+          3.476805555555556
+        ],
+        [
+          "anniversary.",
+          3.476805555555556,
+          4.2521666666666675
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 3,
+      "speaker": "Rose",
+      "text": "We.",
+      "expression": "bored",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 5.072166666666667,
+      "duration": 0.92925,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_003.wav",
+      "words": [
+        [
+          "We.",
+          5.072166666666667,
+          6.001416666666667
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 4,
+      "speaker": "Casey",
+      "text": "We, yes. Two years, Rose. She and I.",
+      "expression": "proud",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 6.121416666666667,
+      "duration": 2.0515,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_004.wav",
+      "words": [
+        [
+          "We,",
+          6.121416666666667,
+          6.333640804597701
+        ],
+        [
+          "yes.",
+          6.333640804597701,
+          6.616606321839081
+        ],
+        [
+          "Two",
+          6.616606321839081,
+          6.828830459770115
+        ],
+        [
+          "years,",
+          6.828830459770115,
+          7.253278735632184
+        ],
+        [
+          "Rose.",
+          7.253278735632184,
+          7.606985632183909
+        ],
+        [
+          "She",
+          7.606985632183909,
+          7.819209770114943
+        ],
+        [
+          "and",
+          7.819209770114943,
+          8.031433908045978
+        ],
+        [
+          "I.",
+          8.031433908045978,
+          8.172916666666667
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 5,
+      "speaker": "Rose",
+      "text": "You named a plant and you're keeping a count.",
+      "expression": "thinking",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 8.292916666666667,
+      "duration": 1.69675,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_005.wav",
+      "words": [
+        [
+          "You",
+          8.292916666666667,
+          8.430490990990991
+        ],
+        [
+          "named",
+          8.430490990990991,
+          8.659781531531532
+        ],
+        [
+          "a",
+          8.659781531531532,
+          8.70563963963964
+        ],
+        [
+          "plant",
+          8.70563963963964,
+          8.934930180180181
+        ],
+        [
+          "and",
+          8.934930180180181,
+          9.072504504504506
+        ],
+        [
+          "you're",
+          9.072504504504506,
+          9.347653153153155
+        ],
+        [
+          "keeping",
+          9.347653153153155,
+          9.668659909909913
+        ],
+        [
+          "a",
+          9.668659909909913,
+          9.71451801801802
+        ],
+        [
+          "count.",
+          9.71451801801802,
+          9.98966666666667
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 6,
+      "speaker": "Casey",
+      "text": "Her name is Fernanda.",
+      "expression": "smug",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 10.109666666666666,
+      "duration": 1.4040833333333333,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_006.wav",
+      "words": [
+        [
+          "Her",
+          10.109666666666666,
+          10.343680555555554
+        ],
+        [
+          "name",
+          10.343680555555554,
+          10.655699074074073
+        ],
+        [
+          "is",
+          10.655699074074073,
+          10.811708333333332
+        ],
+        [
+          "Fernanda.",
+          10.811708333333332,
+          11.513749999999998
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 8,
+      "speaker": "Rose",
+      "text": "Does she talk back?",
+      "expression": "bored",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 12.233749999999999,
+      "duration": 1.2115416666666667,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_008.wav",
+      "words": [
+        [
+          "Does",
+          12.233749999999999,
+          12.536635416666666
+        ],
+        [
+          "she",
+          12.536635416666666,
+          12.763799479166666
+        ],
+        [
+          "talk",
+          12.763799479166666,
+          13.066684895833333
+        ],
+        [
+          "back?",
+          13.066684895833333,
+          13.445291666666666
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 9,
+      "speaker": "Casey",
+      "text": "She dozes. I talk, she dozes. That's a relationship, Rose.",
+      "expression": "determined",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 13.565291666666665,
+      "duration": 2.7122916666666668,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_009.wav",
+      "words": [
+        [
+          "She",
+          13.565291666666665,
+          13.731350340136053
+        ],
+        [
+          "dozes.",
+          13.731350340136053,
+          14.063467687074828
+        ],
+        [
+          "I",
+          14.063467687074828,
+          14.118820578231292
+        ],
+        [
+          "talk,",
+          14.118820578231292,
+          14.395585034013605
+        ],
+        [
+          "she",
+          14.395585034013605,
+          14.561643707482993
+        ],
+        [
+          "dozes.",
+          14.561643707482993,
+          14.893761054421768
+        ],
+        [
+          "That's",
+          14.893761054421768,
+          15.225878401360543
+        ],
+        [
+          "a",
+          15.225878401360543,
+          15.281231292517006
+        ],
+        [
+          "relationship,",
+          15.281231292517006,
+          16.00081887755102
+        ],
+        [
+          "Rose.",
+          16.00081887755102,
+          16.277583333333332
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 10,
+      "speaker": "Rose",
+      "text": "I talk to my smoke detector.",
+      "expression": "neutral",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 16.397583333333333,
+      "duration": 1.212125,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_010.wav",
+      "words": [
+        [
+          "I",
+          16.397583333333333,
+          16.450284420289854
+        ],
+        [
+          "talk",
+          16.450284420289854,
+          16.661088768115942
+        ],
+        [
+          "to",
+          16.661088768115942,
+          16.766490942028984
+        ],
+        [
+          "my",
+          16.766490942028984,
+          16.871893115942026
+        ],
+        [
+          "smoke",
+          16.871893115942026,
+          17.135398550724634
+        ],
+        [
+          "detector.",
+          17.135398550724634,
+          17.60970833333333
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 11,
+      "speaker": "Casey",
+      "text": "I got her a doctor. Plant hospital. She had a root thing.",
+      "expression": "proud",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 17.729708333333335,
+      "duration": 3.2537083333333334,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_011.wav",
+      "words": [
+        [
+          "I",
+          17.729708333333335,
+          17.800441123188406
+        ],
+        [
+          "got",
+          17.800441123188406,
+          18.012639492753625
+        ],
+        [
+          "her",
+          18.012639492753625,
+          18.224837862318843
+        ],
+        [
+          "a",
+          18.224837862318843,
+          18.295570652173915
+        ],
+        [
+          "doctor.",
+          18.295570652173915,
+          18.790700181159423
+        ],
+        [
+          "Plant",
+          18.790700181159423,
+          19.144364130434784
+        ],
+        [
+          "hospital.",
+          19.144364130434784,
+          19.780959239130436
+        ],
+        [
+          "She",
+          19.780959239130436,
+          19.993157608695654
+        ],
+        [
+          "had",
+          19.993157608695654,
+          20.205355978260872
+        ],
+        [
+          "a",
+          20.205355978260872,
+          20.276088768115944
+        ],
+        [
+          "root",
+          20.276088768115944,
+          20.559019927536234
+        ],
+        [
+          "thing.",
+          20.559019927536234,
+          20.983416666666667
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 12,
+      "speaker": "Rose",
+      "text": "You took a houseplant to a hospital.",
+      "expression": "bored",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 21.103416666666668,
+      "duration": 1.8251666666666666,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_012.wav",
+      "words": [
+        [
+          "You",
+          21.103416666666668,
+          21.285933333333336
+        ],
+        [
+          "took",
+          21.285933333333336,
+          21.529288888888892
+        ],
+        [
+          "a",
+          21.529288888888892,
+          21.59012777777778
+        ],
+        [
+          "houseplant",
+          21.59012777777778,
+          22.19851666666667
+        ],
+        [
+          "to",
+          22.19851666666667,
+          22.320194444444446
+        ],
+        [
+          "a",
+          22.320194444444446,
+          22.381033333333335
+        ],
+        [
+          "hospital.",
+          22.381033333333335,
+          22.928583333333336
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 13,
+      "speaker": "Casey",
+      "text": "It was serious, Rose. It was a whole root thing.",
+      "expression": "worried",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 23.048583333333333,
+      "duration": 2.1485416666666666,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_013.wav",
+      "words": [
+        [
+          "It",
+          23.048583333333333,
+          23.158764957264957
+        ],
+        [
+          "was",
+          23.158764957264957,
+          23.324037393162392
+        ],
+        [
+          "serious,",
+          23.324037393162392,
+          23.764763888888886
+        ],
+        [
+          "Rose.",
+          23.764763888888886,
+          24.040217948717945
+        ],
+        [
+          "It",
+          24.040217948717945,
+          24.15039957264957
+        ],
+        [
+          "was",
+          24.15039957264957,
+          24.315672008547004
+        ],
+        [
+          "a",
+          24.315672008547004,
+          24.370762820512816
+        ],
+        [
+          "whole",
+          24.370762820512816,
+          24.646216880341875
+        ],
+        [
+          "root",
+          24.646216880341875,
+          24.866580128205122
+        ],
+        [
+          "thing.",
+          24.866580128205122,
+          25.197124999999993
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 14,
+      "speaker": "Rose",
+      "text": "Let me guess. Water twice a week, some light, don't overthink it.",
+      "expression": "bored",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 25.317125,
+      "duration": 3.54275,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_014.wav",
+      "words": [
+        [
+          "Let",
+          25.317125,
+          25.513944444444444
+        ],
+        [
+          "me",
+          25.513944444444444,
+          25.645157407407407
+        ],
+        [
+          "guess.",
+          25.645157407407407,
+          26.038796296296297
+        ],
+        [
+          "Water",
+          26.038796296296297,
+          26.366828703703703
+        ],
+        [
+          "twice",
+          26.366828703703703,
+          26.69486111111111
+        ],
+        [
+          "a",
+          26.69486111111111,
+          26.76046759259259
+        ],
+        [
+          "week,",
+          26.76046759259259,
+          27.088499999999996
+        ],
+        [
+          "some",
+          27.088499999999996,
+          27.35092592592592
+        ],
+        [
+          "light,",
+          27.35092592592592,
+          27.744564814814808
+        ],
+        [
+          "don't",
+          27.744564814814808,
+          28.072597222222214
+        ],
+        [
+          "overthink",
+          28.072597222222214,
+          28.663055555555548
+        ],
+        [
+          "it.",
+          28.663055555555548,
+          28.85987499999999
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 15,
+      "speaker": "Casey",
+      "text": "You Googled it.",
+      "expression": "shocked",
+      "zoom": true,
+      "zoom_target": "",
+      "sfx": "boing.wav",
+      "start": 28.979875,
+      "duration": 1.630125,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_015.wav",
+      "words": [
+        [
+          "You",
+          28.979875,
+          29.356057692307694
+        ],
+        [
+          "Googled",
+          29.356057692307694,
+          30.23381730769231
+        ],
+        [
+          "it.",
+          30.23381730769231,
+          30.610000000000003
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 16,
+      "speaker": "Rose",
+      "text": "Last night.",
+      "expression": "smug",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 30.73,
+      "duration": 0.6967916666666667,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_016.wav",
+      "words": [
+        [
+          "Last",
+          30.73,
+          31.00871666666667
+        ],
+        [
+          "night.",
+          31.00871666666667,
+          31.42679166666667
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 17,
+      "speaker": "Casey",
+      "text": "You mocked my fern.",
+      "expression": "angry",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 31.546791666666667,
+      "duration": 1.2070833333333333,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_017.wav",
+      "words": [
+        [
+          "You",
+          31.546791666666667,
+          31.773119791666666
+        ],
+        [
+          "mocked",
+          31.773119791666666,
+          32.22577604166666
+        ],
+        [
+          "my",
+          32.22577604166666,
+          32.37666145833333
+        ],
+        [
+          "fern.",
+          32.37666145833333,
+          32.753875
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 18,
+      "speaker": "Rose",
+      "text": "I respect the fern. I just don't need a biography.",
+      "expression": "bored",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 32.873875,
+      "duration": 2.188833333333333,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_018.wav",
+      "words": [
+        [
+          "I",
+          32.873875,
+          32.927261178861784
+        ],
+        [
+          "respect",
+          32.927261178861784,
+          33.300964430894304
+        ],
+        [
+          "the",
+          33.300964430894304,
+          33.46112296747967
+        ],
+        [
+          "fern.",
+          33.46112296747967,
+          33.72805386178861
+        ],
+        [
+          "I",
+          33.72805386178861,
+          33.781440040650395
+        ],
+        [
+          "just",
+          33.781440040650395,
+          33.99498475609755
+        ],
+        [
+          "don't",
+          33.99498475609755,
+          34.26191565040649
+        ],
+        [
+          "need",
+          34.26191565040649,
+          34.47546036585365
+        ],
+        [
+          "a",
+          34.47546036585365,
+          34.528846544715435
+        ],
+        [
+          "biography.",
+          34.528846544715435,
+          35.06270833333332
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 19,
+      "speaker": "Casey",
+      "text": "Okay, can I at least have the anniversary dinner?",
+      "expression": "determined",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 35.18270833333333,
+      "duration": 2.7224166666666667,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_019.wav",
+      "words": [
+        [
+          "Okay,",
+          35.18270833333333,
+          35.51471036585365
+        ],
+        [
+          "can",
+          35.51471036585365,
+          35.71391158536585
+        ],
+        [
+          "I",
+          35.71391158536585,
+          35.780311991869915
+        ],
+        [
+          "at",
+          35.780311991869915,
+          35.91311280487805
+        ],
+        [
+          "least",
+          35.91311280487805,
+          36.24511483739837
+        ],
+        [
+          "have",
+          36.24511483739837,
+          36.51071646341463
+        ],
+        [
+          "the",
+          36.51071646341463,
+          36.70991768292683
+        ],
+        [
+          "anniversary",
+          36.70991768292683,
+          37.440322154471545
+        ],
+        [
+          "dinner?",
+          37.440322154471545,
+          37.905125
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 20,
+      "speaker": "Casey",
+      "text": "Actually hold on, I need to check her soil.",
+      "expression": "thinking",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 38.025124999999996,
+      "duration": 2.205,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_020.wav",
+      "words": [
+        [
+          "Actually",
+          38.025124999999996,
+          38.52912499999999
+        ],
+        [
+          "hold",
+          38.52912499999999,
+          38.781124999999996
+        ],
+        [
+          "on,",
+          38.781124999999996,
+          38.970124999999996
+        ],
+        [
+          "I",
+          38.970124999999996,
+          39.033125
+        ],
+        [
+          "need",
+          39.033125,
+          39.285125
+        ],
+        [
+          "to",
+          39.285125,
+          39.411125
+        ],
+        [
+          "check",
+          39.411125,
+          39.726124999999996
+        ],
+        [
+          "her",
+          39.726124999999996,
+          39.915124999999996
+        ],
+        [
+          "soil.",
+          39.915124999999996,
+          40.230124999999994
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 22,
+      "speaker": "Casey",
+      "text": "Rose. Rose, there's no dirt.",
+      "expression": "shocked",
+      "zoom": true,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 41.150124999999996,
+      "duration": 1.6012916666666666,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_022.wav",
+      "words": [
+        [
+          "Rose.",
+          41.150124999999996,
+          41.483727430555554
+        ],
+        [
+          "Rose,",
+          41.483727430555554,
+          41.81732986111111
+        ],
+        [
+          "there's",
+          41.81732986111111,
+          42.28437326388889
+        ],
+        [
+          "no",
+          42.28437326388889,
+          42.41781423611111
+        ],
+        [
+          "dirt.",
+          42.41781423611111,
+          42.75141666666667
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 23,
+      "speaker": "Rose",
+      "text": "Mm-hmm.",
+      "expression": "neutral",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 42.87141666666666,
+      "duration": 1.2635416666666666,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_023.wav",
+      "words": [
+        [
+          "Mm-hmm.",
+          42.87141666666666,
+          44.13495833333333
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 24,
+      "speaker": "Casey",
+      "text": "There's a tag. Rose, there's a barcode on the pot.",
+      "expression": "shocked",
+      "zoom": true,
+      "zoom_target": "",
+      "sfx": "record_scratch.wav",
+      "start": 44.25495833333333,
+      "duration": 2.6064583333333333,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_024.wav",
+      "words": [
+        [
+          "There's",
+          44.25495833333333,
+          44.69996341463414
+        ],
+        [
+          "a",
+          44.69996341463414,
+          44.763535569105684
+        ],
+        [
+          "tag.",
+          44.763535569105684,
+          45.01782418699187
+        ],
+        [
+          "Rose,",
+          45.01782418699187,
+          45.33568495934959
+        ],
+        [
+          "there's",
+          45.33568495934959,
+          45.780690040650406
+        ],
+        [
+          "a",
+          45.780690040650406,
+          45.84426219512195
+        ],
+        [
+          "barcode",
+          45.84426219512195,
+          46.28926727642276
+        ],
+        [
+          "on",
+          46.28926727642276,
+          46.41641158536585
+        ],
+        [
+          "the",
+          46.41641158536585,
+          46.60712804878048
+        ],
+        [
+          "pot.",
+          46.60712804878048,
+          46.86141666666666
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 25,
+      "speaker": "Rose",
+      "text": "Forty-nine cents.",
+      "expression": "smug",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 46.98141666666666,
+      "duration": 1.464625,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_025.wav",
+      "words": [
+        [
+          "Forty-nine",
+          46.98141666666666,
+          47.89680729166666
+        ],
+        [
+          "cents.",
+          47.89680729166666,
+          48.44604166666666
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 26,
+      "speaker": "Casey",
+      "text": "Forty-nine cents for what?",
+      "expression": "shocked",
+      "zoom": true,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 48.56604166666666,
+      "duration": 1.478125,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_026.wav",
+      "words": [
+        [
+          "Forty-nine",
+          48.56604166666666,
+          49.20870471014492
+        ],
+        [
+          "cents",
+          49.20870471014492,
+          49.530036231884054
+        ],
+        [
+          "for",
+          49.530036231884054,
+          49.72283514492753
+        ],
+        [
+          "what?",
+          49.72283514492753,
+          50.04416666666666
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 27,
+      "speaker": "Rose",
+      "text": "Dollar aisle. That's where she lived.",
+      "expression": "bored",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 50.16416666666667,
+      "duration": 1.5345,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_027.wav",
+      "words": [
+        [
+          "Dollar",
+          50.16416666666667,
+          50.45188541666667
+        ],
+        [
+          "aisle.",
+          50.45188541666667,
+          50.73960416666667
+        ],
+        [
+          "That's",
+          50.73960416666667,
+          51.02732291666668
+        ],
+        [
+          "where",
+          51.02732291666668,
+          51.26708854166667
+        ],
+        [
+          "she",
+          51.26708854166667,
+          51.41094791666667
+        ],
+        [
+          "lived.",
+          51.41094791666667,
+          51.698666666666675
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 28,
+      "speaker": "Casey",
+      "text": "You let me plan a two-year anniversary for a dollar-aisle fern.",
+      "expression": "crying",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 51.818666666666665,
+      "duration": 3.179708333333333,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_028.wav",
+      "words": [
+        [
+          "You",
+          51.818666666666665,
+          51.9986501572327
+        ],
+        [
+          "let",
+          51.9986501572327,
+          52.17863364779874
+        ],
+        [
+          "me",
+          52.17863364779874,
+          52.29862264150943
+        ],
+        [
+          "plan",
+          52.29862264150943,
+          52.538600628930816
+        ],
+        [
+          "a",
+          52.538600628930816,
+          52.59859512578616
+        ],
+        [
+          "two-year",
+          52.59859512578616,
+          53.07855110062893
+        ],
+        [
+          "anniversary",
+          53.07855110062893,
+          53.73849056603773
+        ],
+        [
+          "for",
+          53.73849056603773,
+          53.91847405660377
+        ],
+        [
+          "a",
+          53.91847405660377,
+          53.978468553459116
+        ],
+        [
+          "dollar-aisle",
+          53.978468553459116,
+          54.69840251572327
+        ],
+        [
+          "fern.",
+          54.69840251572327,
+          54.998374999999996
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 29,
+      "speaker": "Rose",
+      "text": "She died in a dollar aisle, Casey. Before she ever met you.",
+      "expression": "neutral",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 55.118375,
+      "duration": 2.558125,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_029.wav",
+      "words": [
+        [
+          "She",
+          55.118375,
+          55.2782578125
+        ],
+        [
+          "died",
+          55.2782578125,
+          55.491434895833336
+        ],
+        [
+          "in",
+          55.491434895833336,
+          55.598023437500004
+        ],
+        [
+          "a",
+          55.598023437500004,
+          55.65131770833334
+        ],
+        [
+          "dollar",
+          55.65131770833334,
+          55.97108333333334
+        ],
+        [
+          "aisle,",
+          55.97108333333334,
+          56.29084895833334
+        ],
+        [
+          "Casey.",
+          56.29084895833334,
+          56.610614583333344
+        ],
+        [
+          "Before",
+          56.610614583333344,
+          56.93038020833335
+        ],
+        [
+          "she",
+          56.93038020833335,
+          57.09026302083335
+        ],
+        [
+          "ever",
+          57.09026302083335,
+          57.30344010416668
+        ],
+        [
+          "met",
+          57.30344010416668,
+          57.463322916666684
+        ],
+        [
+          "you.",
+          57.463322916666684,
+          57.67650000000002
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 32,
+      "speaker": "Rose",
+      "text": "Her name's Linda. Eleven dollars. She's alive.",
+      "expression": "neutral",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 59.5965,
+      "duration": 2.683625,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_032.wav",
+      "words": [
+        [
+          "Her",
+          59.5965,
+          59.797771875
+        ],
+        [
+          "name's",
+          59.797771875,
+          60.200315625
+        ],
+        [
+          "Linda.",
+          60.200315625,
+          60.602859375
+        ],
+        [
+          "Eleven",
+          60.602859375,
+          61.005403125
+        ],
+        [
+          "dollars.",
+          61.005403125,
+          61.542128125
+        ],
+        [
+          "She's",
+          61.542128125,
+          61.87758125
+        ],
+        [
+          "alive.",
+          61.87758125,
+          62.280125
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 33,
+      "speaker": "Casey",
+      "text": "Can I still have the dinner?",
+      "expression": "crying",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 62.400125,
+      "duration": 1.9120416666666666,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_033.wav",
+      "words": [
+        [
+          "Can",
+          62.400125,
+          62.649521739130435
+        ],
+        [
+          "I",
+          62.649521739130435,
+          62.73265398550725
+        ],
+        [
+          "still",
+          62.73265398550725,
+          63.14831521739131
+        ],
+        [
+          "have",
+          63.14831521739131,
+          63.48084420289855
+        ],
+        [
+          "the",
+          63.48084420289855,
+          63.730240942028985
+        ],
+        [
+          "dinner?",
+          63.730240942028985,
+          64.31216666666667
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 34,
+      "speaker": "Casey",
+      "text": "Thank you, Rose.",
+      "expression": "love",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 64.43216666666667,
+      "duration": 0.28,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_034.wav",
+      "words": [
+        [
+          "Thank",
+          64.43216666666667,
+          64.53216666666667
+        ],
+        [
+          "you,",
+          64.53216666666667,
+          64.61216666666667
+        ],
+        [
+          "Rose.",
+          64.61216666666667,
+          64.71216666666666
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 35,
+      "speaker": "Rose",
+      "text": "And if you tell anyone about this, I will deny everything.",
+      "expression": "smug",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 64.83216666666668,
+      "duration": 2.735875,
+      "audio": "C:\\Users\\balha\\Downloads\\tool_hoat_hinh\\projects\\20261022_170201_e616\\audio\\line_035.wav",
+      "words": [
+        [
+          "And",
+          64.83216666666668,
+          65.00315885416668
+        ],
+        [
+          "if",
+          65.00315885416668,
+          65.11715364583335
+        ],
+        [
+          "you",
+          65.11715364583335,
+          65.28814583333336
+        ],
+        [
+          "tell",
+          65.28814583333336,
+          65.5161354166667
+        ],
+        [
+          "anyone",
+          65.5161354166667,
+          65.8581197916667
+        ],
+        [
+          "about",
+          65.8581197916667,
+          66.14310677083336
+        ],
+        [
+          "this,",
+          66.14310677083336,
+          66.42809375000002
+        ],
+        [
+          "I",
+          66.42809375000002,
+          66.48509114583335
+        ],
+        [
+          "will",
+          66.48509114583335,
+          66.71308072916669
+        ],
+        [
+          "deny",
+          66.71308072916669,
+          66.94107031250003
+        ],
+        [
+          "everything.",
+          66.94107031250003,
+          67.5680416666667
+        ]
+      ],
+      "other_expr": {}
+    }
+  ],
+  "beats": [
+    {
+      "idx": 2,
+      "actor": "Rose",
+      "expression": "confused",
+      "zoom": true,
+      "sfx": "record_scratch.wav",
+      "start": 4.372166666666667,
+      "duration": 0.7
+    },
+    {
+      "idx": 7,
+      "actor": "Rose",
+      "expression": "neutral",
+      "zoom": true,
+      "sfx": "thud.wav",
+      "start": 11.63375,
+      "duration": 0.6
+    },
+    {
+      "idx": 21,
+      "actor": "Casey",
+      "expression": "confused",
+      "zoom": true,
+      "sfx": "thud.wav",
+      "start": 40.350125,
+      "duration": 0.8
+    },
+    {
+      "idx": 30,
+      "actor": "Casey",
+      "expression": "crying",
+      "zoom": true,
+      "sfx": "sad_trombone.wav",
+      "start": 57.7965,
+      "duration": 1.0
+    },
+    {
+      "idx": 31,
+      "actor": "Rose",
+      "expression": "neutral",
+      "zoom": false,
+      "sfx": "",
+      "start": 58.7965,
+      "duration": 0.8
+    }
+  ]
+}

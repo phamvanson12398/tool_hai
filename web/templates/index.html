@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tool hoạt hình hài thoại</title>
+<link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+
+<header class="topbar">
+  <div class="topbar-inner">
+    <div class="brand">
+      <span class="brand-dot"></span>
+      <span class="brand-name">Tool hoạt hình</span>
+      <span class="brand-sub">9:16 · 30–90s</span>
+    </div>
+    <nav class="tabs" id="tabs">
+      <button class="tab is-active" data-screen="new" type="button">Tập mới</button>
+      <button class="tab" data-screen="library" type="button">Thư viện</button>
+      <button class="tab" data-screen="settings" type="button">Cài đặt</button>
+      <button class="tab" data-screen="rig" type="button">Dựng xương</button>
+    </nav>
+    <div class="claude-calls" id="claude-calls" title="Số lần đã gọi Claude trong phiên">0</div>
+  </div>
+</header>
+
+<main class="app">
+
+  <!-- ================= SCREEN 1: TẬP MỚI ================= -->
+  <section class="screen is-active" id="screen-new">
+    <div class="layout-2col">
+
+      <!-- ---------- LEFT: workflow ---------- -->
+      <div class="col-work">
+
+        <!-- 1. Tiêu đề & ngôn ngữ -->
+        <section class="card" id="sec-meta">
+          <h2 class="card-title"><span class="step">1</span> Tiêu đề &amp; ngôn ngữ</h2>
+          <div class="field">
+            <label for="p-title">Tiêu đề tập</label>
+            <input type="text" id="p-title" placeholder="VD: 2026년 아기 이름">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="p-language">Ngôn ngữ</label>
+              <select id="p-language"></select>
+            </div>
+            <div class="field">
+              <label for="p-kind">Kiểu hài</label>
+              <select id="p-kind"></select>
+            </div>
+          </div>
+          <div class="field" id="kind-how-wrap" hidden>
+            <p class="hint" id="kind-how"></p>
+          </div>
+          <div class="field">
+            <label for="p-hints">Gợi ý thêm (độ dài, số nhân vật, bối cảnh)</label>
+            <textarea id="p-hints" rows="3" placeholder="VD: dài 40s, 2 nhân vật, bối cảnh bếp"></textarea>
+          </div>
+          <div class="row-actions">
+            <button class="btn btn-primary" id="btn-create" type="button">Tạo tập</button>
+            <span class="muted" id="project-badge">Chưa có tập nào</span>
+          </div>
+        </section>
+
+        <!-- 2. Nút AI viết -->
+        <section class="card" id="sec-write">
+          <h2 class="card-title"><span class="step">2</span> Viết kịch bản</h2>
+          <div class="row-actions">
+            <button class="btn btn-primary" id="btn-write" type="button">
+              <span class="btn-label">Viết kịch bản bằng AI</span>
+              <span class="spinner" hidden></span>
+            </button>
+          </div>
+          <p class="hint">AI viết theo tiêu đề, ngôn ngữ, kiểu hài và gợi ý ở trên.</p>
+        </section>
+
+        <!-- 3. 3 hướng khác -->
+        <section class="card" id="sec-ideas">
+          <h2 class="card-title"><span class="step">3</span> Hướng khác</h2>
+          <div class="row-actions">
+            <button class="btn" id="btn-ideas" type="button">
+              <span class="btn-label">3 hướng khác</span>
+              <span class="spinner" hidden></span>
+            </button>
+          </div>
+          <div class="card-list" id="ideas-list"></div>
+        </section>
+
+        <!-- 4. Bắt trend -->
+        <section class="card" id="sec-trends">
+          <h2 class="card-title"><span class="step">4</span> Bắt trend</h2>
+          <div class="row-actions">
+            <button class="btn" id="btn-trends" type="button">
+              <span class="btn-label">Bắt trend</span>
+              <span class="spinner" hidden></span>
+            </button>
+          </div>
+          <div class="card-list" id="trends-list"></div>
+        </section>
+
+        <!-- 5. Ô kịch bản -->
+        <section class="card" id="sec-script">
+          <h2 class="card-title"><span class="step">5</span> Ô kịch bản</h2>
+
+          <details class="help">
+            <summary>Định dạng kịch bản (bấm để xem)</summary>
+            <pre class="code-block"># tieu_de: 2026년 아기 이름
+# ngon_ngu: ko
+# nhan_vat: 지은=trai, 수아=phai
+
+수아 (happy): 와, 아기 진짜 귀엽다! 이름 정했어?
+지은 (proud): 우리 아기 이름은… "와이파이"야.
+&gt; 수아 (shocked, zoom, boing) 0.8
+수아 (angry, zoom): 왜?!</pre>
+            <ul class="help-list">
+              <li>Trong ngoặc <code>(...)</code> = biểu cảm / zoom / tiếng động. Có thể viết nhiều, cách nhau bằng dấu phẩy.</li>
+              <li>Dòng bắt đầu bằng <code>&gt;</code> = nhịp phản ứng không lời, kèm số giây ở cuối (VD <code>0.8</code>).</li>
+              <li>Dòng <code># ...</code> ở đầu = khai báo tiêu đề, ngôn ngữ, danh sách nhân vật kèm bên (trai/phai/giữa).</li>
+            </ul>
+          </details>
+
+          <div class="field">
+            <textarea id="p-script" class="mono" rows="16" spellcheck="false"
+              placeholder="Dán hoặc viết kịch bản ở đây…"></textarea>
+          </div>
+
+          <div class="script-meta">
+            <span class="pill" id="est-duration">~0s</span>
+            <span class="pill" id="est-target">Mục tiêu 30–90s</span>
+            <button class="btn btn-ghost btn-sm" id="btn-save-script" type="button">Lưu kịch bản</button>
+          </div>
+
+          <div class="issues" id="script-errors"></div>
+          <div class="issues issues-warn" id="script-warnings"></div>
+        </section>
+
+        <!-- 6. Rà soát -->
+        <section class="card" id="sec-review">
+          <h2 class="card-title"><span class="step">6</span> Rà soát</h2>
+          <div class="row-actions">
+            <button class="btn" id="btn-review" type="button">
+              <span class="btn-label">Rà soát bằng AI</span>
+              <span class="spinner" hidden></span>
+            </button>
+          </div>
+          <p class="hint">AI chỉ góp ý. Bạn chọn góp ý nào thì mới áp dụng.</p>
+          <div class="card-list" id="review-list"></div>
+          <div class="row-actions" id="review-apply-wrap" hidden>
+            <button class="btn btn-primary" id="btn-apply" type="button">
+              <span class="btn-label">Nhận các góp ý đã chọn</span>
+              <span class="spinner" hidden></span>
+            </button>
+          </div>
+        </section>
+
+        <!-- 7. Tải lên -->
+        <section class="card" id="sec-upload">
+          <h2 class="card-title"><span class="step">7</span> Tải lên</h2>
+
+          <div class="dropzone" id="dz-characters" data-kind="characters">
+            <div class="dz-icon">🖼️</div>
+            <div class="dz-title">Nhân vật</div>
+            <div class="dz-sub">Nhiều ảnh. Tên file = tên nhân vật, hoặc <code>tên_biểucảm_mo.png</code> cho bộ ảnh.</div>
+            <input type="file" id="in-characters" accept="image/*" multiple hidden>
+          </div>
+
+          <div class="dropzone" id="dz-background" data-kind="background">
+            <div class="dz-icon">🏞️</div>
+            <div class="dz-title">Bối cảnh</div>
+            <div class="dz-sub">Một ảnh bối cảnh.</div>
+            <input type="file" id="in-background" accept="image/*" hidden>
+          </div>
+
+          <div class="dropzone" id="dz-voices" data-kind="voices">
+            <div class="dz-icon">🎙️</div>
+            <div class="dz-title">Giọng mẫu</div>
+            <div class="dz-sub">Nhiều file wav 5–15s. Tên file = tên nhân vật.</div>
+            <input type="file" id="in-voices" accept="audio/*,.wav" multiple hidden>
+          </div>
+
+          <div class="row-actions">
+            <button class="btn btn-primary" id="btn-upload" type="button">
+              <span class="btn-label">Tải lên tập này</span>
+              <span class="spinner" hidden></span>
+            </button>
+          </div>
+
+          <div class="thumbs" id="upload-thumbs"></div>
+          <div class="card-list" id="parsed-characters"></div>
+        </section>
+
+        <!-- 8. AI làm phần còn thiếu -->
+        <section class="card" id="sec-generate">
+          <h2 class="card-title"><span class="step">8</span> AI làm phần còn thiếu</h2>
+          <div class="row-actions">
+            <button class="btn" id="btn-generate" type="button">
+              <span class="btn-label">Để AI tạo phần còn thiếu</span>
+              <span class="spinner" hidden></span>
+            </button>
+          </div>
+          <div class="asset-preview" id="generate-preview"></div>
+        </section>
+
+        <!-- 10. Xác nhận & dựng -->
+        <section class="card" id="sec-render">
+          <h2 class="card-title"><span class="step">10</span> Xác nhận &amp; dựng</h2>
+          <div class="row-actions">
+            <button class="btn btn-primary btn-lg" id="btn-render" type="button">
+              <span class="btn-label">Xác nhận và dựng video</span>
+              <span class="spinner" hidden></span>
+            </button>
+          </div>
+          <div class="progress-wrap" id="render-progress-wrap" hidden>
+            <div class="progress"><div class="progress-bar" id="render-progress-bar"></div></div>
+            <div class="progress-label"><span id="render-pct">0%</span> · <span id="render-state"></span></div>
+            <pre class="log" id="render-log"></pre>
+          </div>
+          <div class="output" id="render-output" hidden>
+            <video id="render-video" controls playsinline></video>
+            <div class="row-actions">
+              <a class="btn" id="dl-mp4" href="#" download>Tải mp4</a>
+              <a class="btn" id="dl-pack" href="#" download>Tải bộ file CapCut</a>
+              <button class="btn btn-ghost" id="btn-capcut-export" type="button">
+                Xuất dự án CapCut (thử nghiệm)
+              </button>
+            </div>
+            <p class="hint" id="capcut-export-note">
+              CapCut cập nhật có thể làm tính năng này ngừng hoạt động
+            </p>
+            <div id="capcut-export-result" hidden>
+              <p class="hint" id="capcut-export-msg"></p>
+            </div>
+          </div>
+        </section>
+
+      </div>
+
+      <!-- ---------- RIGHT: preview ---------- -->
+      <div class="col-preview">
+        <div class="sticky">
+          <section class="card" id="sec-preview">
+            <h2 class="card-title"><span class="step">9</span> Xem trước</h2>
+            <div class="stage-wrap">
+              <div class="stage" id="stage">
+                <div class="stage-bg" id="stage-bg"></div>
+                <div class="stage-cast" id="stage-cast"></div>
+                <div class="stage-title" id="stage-title"></div>
+                <div class="stage-empty" id="stage-empty">Chưa có nhân vật / bối cảnh</div>
+              </div>
+            </div>
+            <div class="stage-legend">
+              <span class="muted" id="stage-info">9:16 · 1080×1920</span>
+            </div>
+          </section>
+
+          <section class="card">
+            <h2 class="card-title">Trạng thái tập</h2>
+            <dl class="kv" id="project-kv">
+              <div><dt>Mã</dt><dd id="kv-id">—</dd></div>
+              <div><dt>Tiêu đề</dt><dd id="kv-title">—</dd></div>
+              <div><dt>Ngôn ngữ</dt><dd id="kv-lang">—</dd></div>
+              <div><dt>Kiểu hài</dt><dd id="kv-kind">—</dd></div>
+              <div><dt>Trạng thái</dt><dd id="kv-state">—</dd></div>
+              <div><dt>Ước lượng</dt><dd id="kv-duration">—</dd></div>
+            </dl>
+          </section>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ================= SCREEN 2: THƯ VIỆN ================= -->
+  <section class="screen" id="screen-library">
+    <div class="screen-head">
+      <h1>Thư viện</h1>
+      <button class="btn btn-ghost btn-sm" id="btn-lib-reload" type="button">Tải lại</button>
+    </div>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Nhân vật</h2>
+        <button class="btn btn-sm" id="btn-lib-char-upload" type="button">Tải nhân vật lên</button>
+        <input type="file" id="lib-char-input" accept="image/*" multiple hidden>
+      </div>
+      <div class="grid grid-char" id="lib-characters"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Bối cảnh</h2>
+        <button class="btn btn-sm" id="btn-lib-bg-upload" type="button">Tải bối cảnh lên</button>
+        <input type="file" id="lib-bg-input" accept="image/*" multiple hidden>
+      </div>
+      <div class="grid grid-bg" id="lib-backgrounds"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Giọng</h2>
+        <button class="btn btn-sm" id="btn-lib-voice-upload" type="button">Tải giọng mẫu lên</button>
+        <input type="file" id="lib-voice-input" accept="audio/*,.wav" multiple hidden>
+      </div>
+
+      <details class="help" id="voice-design-box">
+        <summary>Tạo giọng bằng AI</summary>
+        <div class="field-row">
+          <div class="field">
+            <label for="vd-name">Tên nhân vật</label>
+            <input type="text" id="vd-name" placeholder="VD: 지은">
+          </div>
+          <div class="field">
+            <label for="vd-language">Ngôn ngữ</label>
+            <select id="vd-language"></select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="vd-instruct">Mô tả giọng</label>
+          <input type="text" id="vd-instruct" placeholder="VD: nữ, lớn tuổi, giọng trầm">
+        </div>
+        <div class="row-actions">
+          <button class="btn btn-primary" id="btn-voice-design" type="button">
+            <span class="btn-label">Tạo giọng</span>
+            <span class="spinner" hidden></span>
+          </button>
+        </div>
+      </details>
+
+      <div class="list" id="lib-voices"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Tiếng động</h2>
+      </div>
+      <div class="list" id="lib-sfx"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <h2 class="card-title">Kiểu hài</h2>
+        <div class="field" style="max-width:200px;margin:0;">
+          <select id="kind-lang-select">
+            <option value="ko">Tiếng Hàn</option>
+            <option value="en">Tiếng Anh</option>
+          </select>
+        </div>
+      </div>
+      <p class="hint">Kiểu hài mặc định không xoá được. Bạn có thể thêm kiểu tự chọn.</p>
+      <div class="row-actions">
+        <button class="btn btn-sm" id="btn-add-kind" type="button">+ Thêm kiểu hài</button>
+      </div>
+      <div class="list" id="lib-kinds"></div>
+    </section>
+  </section>
+
+  <!-- ================= SCREEN 3: CÀI ĐẶT ================= -->
+  <section class="screen" id="screen-settings">
+    <div class="screen-head">
+      <h1>Cài đặt</h1>
+    </div>
+
+    <section class="card">
+      <h2 class="card-title">Nhịp &amp; phụ đề</h2>
+      <div class="field">
+        <label for="s-gap">Khoảng cách giữa các câu (giây)</label>
+        <input type="number" id="s-gap" min="0" max="2" step="0.05" value="0.1">
+      </div>
+      <div class="field">
+        <label for="s-subtitle">Kiểu phụ đề</label>
+        <div class="field-row">
+          <select id="s-subtitle"></select>
+          <div class="subtitle-swatch" id="subtitle-swatch">Xin chào! 안녕하세요</div>
+        </div>
+      </div>
+      <div class="field">
+        <label for="s-subtitle-mode">Hiển thị phụ đề</label>
+        <select id="s-subtitle-mode">
+          <option value="chunks">Từng cụm ngắn (theo nhịp)</option>
+          <option value="full">Cả câu (toàn bộ)</option>
+        </select>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">Nhạc nền</h2>
+      <div class="field">
+        <label for="s-bgm-file">File nhạc nền</label>
+        <input type="file" id="s-bgm-file" accept="audio/*">
+        <p class="hint" id="bgm-current">Chưa chọn file</p>
+      </div>
+      <div class="field">
+        <label for="s-bgm-volume">Âm lượng nhạc nền: <span id="s-bgm-volume-val">0.00</span></label>
+        <input type="range" id="s-bgm-volume" min="0" max="1" step="0.01" value="0">
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-sm" id="btn-bgm-play" type="button">Nghe thử</button>
+        <audio id="bgm-audio" hidden></audio>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">Tiếng động &amp; tiêu đề</h2>
+      <div class="field">
+        <label for="s-sfx-volume">Âm lượng tiếng động: <span id="s-sfx-volume-val">0.90</span></label>
+        <input type="range" id="s-sfx-volume" min="0" max="1" step="0.01" value="0.9">
+      </div>
+      <div class="field">
+        <label for="s-title-text">Tiêu đề cố định trên cùng</label>
+        <input type="text" id="s-title-text" placeholder="VD: HOẠT HÌNH HÀI">
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">Đường dẫn lệnh</h2>
+      <div class="field">
+        <label for="s-claude-bin">Lệnh Claude CLI (để trống = mặc định "claude")</label>
+        <input type="text" id="s-claude-bin" placeholder="claude">
+        <p class="hint">Ví dụ: claude hoặc /usr/local/bin/claude</p>
+      </div>
+      <div class="field">
+        <label for="s-ffmpeg-bin">Lệnh ffmpeg (để trống = mặc định "ffmpeg")</label>
+        <input type="text" id="s-ffmpeg-bin" placeholder="ffmpeg">
+        <p class="hint">Ví dụ: ffmpeg hoặc C:\ffmpeg\bin\ffmpeg.exe</p>
+      </div>
+      <div class="row-actions">
+        <button class="btn" id="btn-check-system" type="button">
+          <span class="btn-label">Kiểm tra máy</span>
+          <span class="spinner" hidden></span>
+        </button>
+      </div>
+      <div class="card-list" id="check-result"></div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">Cử động nhân vật</h2>
+      <div class="field">
+        <label for="s-enable-rig">Bật cử động nhân vật (khung xương, cử chỉ, thở)</label>
+        <div class="field-row">
+          <select id="s-enable-rig">
+            <option value="0">Tắt (cách dựng cũ — ảnh tĩnh, nhép miệng, nhún nhẹ)</option>
+            <option value="1">Bật (cử động bằng khung xương, yêu cầu nhân vật có rig.json)</option>
+          </select>
+        </div>
+        <p class="hint">
+          Khi bật: nhân vật vẽ bằng bộ ghép dùng cử chỉ theo kịch bản (vẫy tay, ôm đầu,…)
+          và thở nhẹ khi đứng yên. Nhân vật tải lên 1 ảnh uốn lưới tam giác theo khung xương.
+          Nếu phần cử động lỗi (thiếu rig, ảnh không đạt…) tool tự quay lại cách dựng cũ
+          và ghi vào file log.
+        </p>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2 class="card-title">Xuất dự án CapCut (thử nghiệm)</h2>
+      <p class="hint">
+        CapCut cập nhật có thể làm tính năng này ngừng hoạt động.
+        mp4 vẫn là đầu ra chính, bộ file zip vẫn tải được bình thường.
+      </p>
+      <div class="field">
+        <label for="s-capcut-root">Thư mục dự án CapCut</label>
+        <input type="text" id="s-capcut-root" placeholder="C:\Users\...\AppData\Local\CapCut\User Data\Projects\com.lveditor.draft">
+        <p class="hint" id="capcut-root-hint"></p>
+      </div>
+      <div class="field">
+        <label for="s-capcut-template">Chọn dự án CapCut mẫu</label>
+        <select id="s-capcut-template">
+          <option value="">— Chưa chọn —</option>
+        </select>
+        <p class="hint">
+          Chị tạo trong CapCut một dự án trống có sẵn 1 video, 1 audio, 1 text
+          rồi chọn dự án đó ở đây. Tool đọc dự án mẫu để khớp đúng phiên bản
+          CapCut của máy chị.
+        </p>
+      </div>
+      <div class="row-actions">
+        <button class="btn btn-sm" id="btn-capcut-reload" type="button">
+          <span class="btn-label">Tải lại danh sách dự án</span>
+          <span class="spinner" hidden></span>
+        </button>
+      </div>
+    </section>
+
+    <div class="row-actions">
+      <button class="btn btn-primary" id="btn-save-settings" type="button">
+        <span class="btn-label">Lưu cài đặt</span>
+        <span class="spinner" hidden></span>
+      </button>
+    </div>
+  </section>
+
+  <!-- ================= SCREEN 4: DỰNG XƯƠNG ================= -->
+  <section class="screen" id="screen-rig">
+    <div class="screen-head">
+      <h1>Dựng khung xương nhân vật</h1>
+      <button class="btn btn-ghost" id="btn-rig-back" type="button">← Quay lại</button>
+    </div>
+
+    <div class="layout-2col">
+      <div class="col-work">
+        <section class="card">
+          <h2 class="card-title">1. Tải ảnh nhân vật</h2>
+          <div class="field">
+            <label for="rig-image">Chọn ảnh (PNG/JPG)</label>
+            <input type="file" id="rig-image" accept="image/*">
+          </div>
+          <p class="hint" id="rig-image-info">Chưa chọn ảnh</p>
+          <div class="row-actions">
+            <button class="btn btn-primary" id="btn-rig-load" type="button">
+              <span class="btn-label">Tải ảnh &amp; ước khớp</span>
+              <span class="spinner" hidden></span>
+            </button>
+            <button class="btn btn-ghost" id="btn-rig-reset" type="button">Bỏ qua</button>
+          </div>
+          <div class="card-list" id="rig-joint-info"></div>
+        </section>
+
+        <section class="card" id="rig-canvas-card" hidden>
+          <h2 class="card-title">2. Sửa khớp (kéo hoặc bấm điểm)</h2>
+          <div class="rig-wrap">
+            <canvas id="rig-canvas"></canvas>
+            <div id="rig-overlay"></div>
+          </div>
+          <div class="rig-controls">
+            <label class="field inline">
+              <input type="checkbox" id="rig-show-labels"> Hiện tên khớp
+            </label>
+            <div class="rig-status" id="rig-status">Sẵn sàng</div>
+          </div>
+          <div class="row-actions">
+            <button class="btn btn-primary" id="btn-rig-save" type="button">
+              <span class="btn-label">Lưu rig.json</span>
+              <span class="spinner" hidden></span>
+            </button>
+            <button class="btn btn-ghost" id="btn-rig-preview-wave" type="button">Xem thử vẫy tay</button>
+            <button class="btn btn-ghost" id="btn-rig-preview-walk" type="button">Xem thử đi bộ</button>
+          </div>
+          <p class="hint" id="rig-preview-hint"></p>
+        </section>
+      </div>
+
+      <div class="col-preview">
+        <section class="card sticky">
+          <h2 class="card-title">Xem trước</h2>
+          <div class="stage-wrap">
+            <div id="rig-preview-stage" class="preview-stage">
+              <div class="stage-empty">Chưa có ảnh</div>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<div class="toasts" id="toasts" aria-live="polite"></div>
+
+<script src="/static/app.js"></script>
+<script src="/static/rig.js"></script>
+</body>
+</html>

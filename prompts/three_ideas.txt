@@ -1,0 +1,11 @@
+Đề tài: {{title}}
+Ngôn ngữ video: {{lang_label}}
+
+Dựa trên 3 kiểu hài sau, đưa ra 3 ý tưởng câu chuyện ngắn (mỗi ý 1–2 câu):
+{{kind_lines}}
+
+Tránh lặp lại kiểu hài và cách chốt của 5 tập gần nhất:
+{{history_block}}
+
+Output JSON đúng dạng này, không có gì khác:
+[{"kind_id":"ajae","kind":"아재개그 / 말장난","pitch":"một câu mô tả ý tưởng"}]

@@ -1,0 +1,8 @@
+# tieu_de: 테스트
+# ngon_ngu: ko
+# nhan_vat: 지은=trai, 수아=phai
+
+지은 (happy): 안녕하세요, 저예요!
+수아 (happy, 지은=proud): 그래, 반가워!
+지은 (shocked): 정말요?
+수아 (laughing): 장난이에요!

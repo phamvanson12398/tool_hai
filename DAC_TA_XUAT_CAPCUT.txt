@@ -1,0 +1,76 @@
+=====================================================================
+ĐẶC TẢ: NÚT "XUẤT DỰ ÁN CAPCUT (THỬ NGHIỆM)"
+=====================================================================
+
+GHI CHÚ VỀ TÌNH TRẠNG CODE HIỆN TẠI (đọc trước khi làm)
+- Tool đã có sẵn nút "Tải bộ file CapCut" (file capcut_pack.zip, hàm
+  _make_pack trong core/pipeline.py, route /api/project/<pid>/pack trong
+  web/server.py). GIỮ NGUYÊN nút này. Tính năng mới là nút riêng.
+- Tên file/thư mục thật trong mỗi tập (projects/<id>/) có thể khác tên
+  trong đặc tả bên dưới: giọng từng câu nằm ở audio/, phụ đề là
+  out/phude.srt, video là out/video.mp4. Hãy đọc code để dùng đúng tên
+  thật, đừng đổi tên file đang có.
+- Nếu tập chưa có du_an.json (mốc thời gian), hãy lưu mốc thời gian từ
+  Timeline khi dựng video (core/pipeline.py) vào out/du_an.json mà không
+  làm thay đổi kết quả mp4.
+
+---------------------------------------------------------------------
+Thêm tính năng mới vào tool hiện tại: nút "Xuất dự án CapCut (thử nghiệm)".
+KHÔNG được sửa hay làm hỏng luồng xuất mp4 đang có. mp4 vẫn là đầu ra chính.
+
+MỤC TIÊU
+Sau khi dựng xong một tập, bấm nút này sẽ tạo một dự án CapCut mới để
+người dùng mở CapCut là thấy sẵn các track riêng, đúng mốc thời gian:
+  - Track hình: video không tiếng (xuất thêm file video_khong_tieng.mp4)
+  - Track giọng: mỗi câu là một clip riêng (lấy từ thư mục giọng của tập),
+    tách 1 track cho mỗi nhân vật
+  - Track tiếng động: các clip boing/whoosh... đúng vị trí
+  - Track nhạc nền (nếu tập có nhạc nền)
+  - Track chữ: phụ đề từng câu (lấy từ file .srt), có thể ẩn hoặc hiện
+Mốc thời gian lấy từ du_an.json đã lưu khi dựng video.
+
+CÁCH LÀM
+1. Thư mục dự án CapCut trên Windows thường là:
+   %LOCALAPPDATA%\CapCut\User Data\Projects\com.lveditor.draft\
+   Cho phép chỉnh đường dẫn này trong trang Cài đặt.
+2. Dùng "dự án mẫu" để khớp đúng phiên bản CapCut của người dùng:
+   - Trang Cài đặt có mục "Chọn dự án CapCut mẫu": người dùng tự tạo trong
+     CapCut một dự án trống, có sẵn 1 video, 1 audio, 1 text, rồi chọn
+     dự án đó ở đây.
+   - Tool đọc file draft_content.json (và draft_meta_info.json) của dự án
+     mẫu để học cấu trúc: tracks, segments, materials, đơn vị thời gian
+     (micro giây), cách khai báo đường dẫn file.
+   - Khi xuất: sao chép thư mục mẫu sang một thư mục dự án MỚI
+     (tên = <ngày>_<tiêu đề>), thay nội dung tracks/materials bằng dữ
+     liệu của tập, đặt id mới (UUID) cho mọi phần tử, cập nhật tên dự án,
+     thời lượng và thời gian tạo trong draft_meta_info.json.
+   - Chép toàn bộ file media của tập vào trong thư mục dự án mới và trỏ
+     đường dẫn tuyệt đối tới đó.
+   - Có thể tham khảo các thư viện mã nguồn mở tạo draft CapCut/JianYing
+     (ví dụ pyJianYingDraft) nếu phù hợp, nhưng phải kiểm tra lại với dự
+     án mẫu của người dùng.
+3. An toàn:
+   - TUYỆT ĐỐI không ghi đè hay sửa dự án có sẵn nào (kể cả dự án mẫu).
+   - Nếu draft_content.json của dự án mẫu không đọc được dạng JSON
+     (bị mã hoá) thì dừng, báo bằng tiếng Việt: "Phiên bản CapCut này mã
+     hoá file dự án nên chưa xuất được. Chị dùng file mp4 và bộ file rời
+     trong thư mục tập nhé." rồi không làm gì thêm.
+   - Nhắc người dùng đóng CapCut trước khi xuất (hoặc mở lại CapCut sau
+     khi xuất) để dự án mới hiện ra trong danh sách.
+   - Mọi lỗi phải bắt lại, ghi vào file log, hiện thông báo tiếng Việt dễ
+     hiểu; không được làm treo ứng dụng.
+4. Giao diện:
+   - Nút "Xuất dự án CapCut (thử nghiệm)" nằm cạnh nút tải mp4, chỉ hiện
+     khi tập đã dựng xong. Có nhãn "Thử nghiệm" và một dòng giải thích:
+     "CapCut cập nhật có thể làm tính năng này ngừng hoạt động".
+   - Xuất xong hiện tên dự án và đường dẫn thư mục.
+
+LÀM TỪNG BƯỚC, MỖI BƯỚC CHẠY THỬ RỒI MỚI SANG BƯỚC SAU:
+  Bước A: Đọc dự án mẫu, in ra tóm tắt cấu trúc (số track, loại track,
+          đơn vị thời gian, các trường quan trọng) và cho tôi xem trước.
+  Bước B: Xuất một dự án thử chỉ có 1 track hình + 1 clip giọng. Tôi mở
+          CapCut kiểm tra.
+  Bước C: Thêm đủ các track giọng theo nhân vật, tiếng động, nhạc nền,
+          phụ đề.
+  Bước D: Thêm nút vào giao diện, xử lý lỗi, cập nhật HUONG_DAN.md.
+=====================================================================

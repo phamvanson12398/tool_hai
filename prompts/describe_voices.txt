@@ -1,0 +1,16 @@
+Mô tả giọng cho từng nhân vật trong kịch bản, dùng CHỈ các cụm trong từ vựng sau
+(ghép bằng dấu phẩy, 2–4 cụm mỗi nhân vật):
+
+{{vocab}}
+
+### Kịch bản
+{{script}}
+
+### Nhân vật
+{{names}}
+
+Yêu cầu: các nhân vật phải nghe khác nhau rõ (giới tính, tuổi, cao độ khác nhau).
+{{accent_hint}}
+
+Output JSON đúng dạng này, không có gì khác:
+{{example}}

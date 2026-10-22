@@ -1,0 +1,11 @@
+Chọn bối cảnh cho video hài ngắn sau. Quy chuẩn: màu đơn giản, nét phẳng,
+chừa chỗ ở giữa cho nhân vật đứng.
+
+### Kịch bản
+{{script}}
+
+Gợi ý thêm: {{desc}}
+
+Output JSON đúng dạng này (màu RGB 0–255), không có gì khác:
+{"name":"tên ngắn của bối cảnh","desc":"mô tả một câu",
+  "sky":[214,232,246],"floor":[226,206,180],"accent":[168,196,170]}

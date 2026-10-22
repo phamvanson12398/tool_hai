@@ -1,0 +1,14 @@
+{
+  "id": "20261022_152856_7404",
+  "title": "Tập chưa đặt tên",
+  "language": "en",
+  "kind": "",
+  "script": "# tieu_de: Tập chưa đặt tên\n# ngon_ngu: en\n# nhan_vat: Sam=left, Riley=right\n\nSam (proud, giohaitay): Behold. My perfectly color-coded Saturday.\n// Nhìn đây. Lịch thứ Bảy mã màu hoàn hảo của tôi.\n> Riley (suspicious, lacdau, sad_trombone) 0.8\nRiley (bored, nhunvai): Green means nap. Blue means stare at the wall. Yellow means reschedule the nap.\n// Xanh lá là ngủ. Xanh da trời là nhìn tường. Vàng là dời lịch ngủ.\nSam (angry, chitay, rung): That yellow block is strategic buffer time!\n// Khung vàng đó là thời gian đệm chiến lược!\nRiley (deadpan, khoanhtay): You scheduled buffer time to recover from scheduling buffer time.\n// Bạn xếp thời gian đệm để khử mệt từ việc xếp thời gian đệm.\n> Sam (shocked, omdau, record_scratch) 1.0\nSam (embarrassed, nga): ...I need a block for this revelation.\n// ...Tôi cần một khung lịch cho sự nhận thức này.",
+  "assets": {
+    "characters": [],
+    "background": null,
+    "voices": {}
+  },
+  "state": "draft",
+  "created_at": "2026-10-22T15:28:56"
+}

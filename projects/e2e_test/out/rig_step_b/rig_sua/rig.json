@@ -1,0 +1,263 @@
+{
+  "name": "sua",
+  "root": "than",
+  "spec": {
+    "name": "sua",
+    "body": "adult",
+    "skin": "light",
+    "hair_style": "short",
+    "hair_color": "black",
+    "shirt": "blue",
+    "accessory": "none",
+    "blush": false
+  },
+  "parts_dir": "parts",
+  "canvas": {
+    "w": 600,
+    "h": 1000,
+    "pad_x": 300,
+    "pad_y": 500
+  },
+  "bones": [
+    {
+      "name": "than",
+      "parent": null,
+      "offset": [
+        300.0,
+        920.0
+      ],
+      "part": "than.png",
+      "pivot": [
+        165.0,
+        520.0
+      ],
+      "layer": 2,
+      "layer_name": "than",
+      "angle": 0.0
+    },
+    {
+      "name": "co",
+      "parent": "than",
+      "offset": [
+        0.0,
+        -520.0
+      ],
+      "part": "co.png",
+      "pivot": [
+        26.0,
+        25.0
+      ],
+      "layer": 2,
+      "layer_name": "than",
+      "angle": 0.0
+    },
+    {
+      "name": "dau",
+      "parent": "co",
+      "offset": [
+        0.0,
+        -15.0
+      ],
+      "part": "dau_dong.png",
+      "pivot": [
+        130.0,
+        285.0
+      ],
+      "layer": 3,
+      "layer_name": "dau",
+      "angle": 0.0
+    },
+    {
+      "name": "vai_left",
+      "parent": "than",
+      "offset": [
+        -161.0,
+        -520.0
+      ],
+      "part": "vai_left.png",
+      "pivot": [
+        32.0,
+        0.0
+      ],
+      "layer": 0,
+      "layer_name": "tay_sau",
+      "angle": 0.0
+    },
+    {
+      "name": "khuyu_left",
+      "parent": "vai_left",
+      "offset": [
+        0.0,
+        150.0
+      ],
+      "part": "khuyu_left.png",
+      "pivot": [
+        29.0,
+        0.0
+      ],
+      "layer": 0,
+      "layer_name": "tay_sau",
+      "angle": 0.0
+    },
+    {
+      "name": "co_tay_left",
+      "parent": "khuyu_left",
+      "offset": [
+        0.0,
+        140.0
+      ],
+      "part": "co_tay_left.png",
+      "pivot": [
+        30.0,
+        15.0
+      ],
+      "layer": 0,
+      "layer_name": "tay_sau",
+      "angle": 0.0
+    },
+    {
+      "name": "vai_right",
+      "parent": "than",
+      "offset": [
+        161.0,
+        -520.0
+      ],
+      "part": "vai_right.png",
+      "pivot": [
+        32.0,
+        0.0
+      ],
+      "layer": 4,
+      "layer_name": "tay_truoc",
+      "angle": 0.0
+    },
+    {
+      "name": "khuyu_right",
+      "parent": "vai_right",
+      "offset": [
+        0.0,
+        150.0
+      ],
+      "part": "khuyu_right.png",
+      "pivot": [
+        29.0,
+        0.0
+      ],
+      "layer": 4,
+      "layer_name": "tay_truoc",
+      "angle": 0.0
+    },
+    {
+      "name": "co_tay_right",
+      "parent": "khuyu_right",
+      "offset": [
+        0.0,
+        140.0
+      ],
+      "part": "co_tay_right.png",
+      "pivot": [
+        30.0,
+        15.0
+      ],
+      "layer": 4,
+      "layer_name": "tay_truoc",
+      "angle": 0.0
+    },
+    {
+      "name": "dui_left",
+      "parent": "than",
+      "offset": [
+        -52.0,
+        0.0
+      ],
+      "part": "dui_left.png",
+      "pivot": [
+        38.0,
+        0.0
+      ],
+      "layer": 1,
+      "layer_name": "chan",
+      "angle": 0.0
+    },
+    {
+      "name": "goi_left",
+      "parent": "dui_left",
+      "offset": [
+        0.0,
+        150.0
+      ],
+      "part": "goi_left.png",
+      "pivot": [
+        33.0,
+        0.0
+      ],
+      "layer": 1,
+      "layer_name": "chan",
+      "angle": 0.0
+    },
+    {
+      "name": "co_chan_left",
+      "parent": "goi_left",
+      "offset": [
+        0.0,
+        150.0
+      ],
+      "part": "co_chan_left.png",
+      "pivot": [
+        38.0,
+        14.0
+      ],
+      "layer": 1,
+      "layer_name": "chan",
+      "angle": 0.0
+    },
+    {
+      "name": "dui_right",
+      "parent": "than",
+      "offset": [
+        52.0,
+        0.0
+      ],
+      "part": "dui_right.png",
+      "pivot": [
+        38.0,
+        0.0
+      ],
+      "layer": 1,
+      "layer_name": "chan",
+      "angle": 0.0
+    },
+    {
+      "name": "goi_right",
+      "parent": "dui_right",
+      "offset": [
+        0.0,
+        150.0
+      ],
+      "part": "goi_right.png",
+      "pivot": [
+        33.0,
+        0.0
+      ],
+      "layer": 1,
+      "layer_name": "chan",
+      "angle": 0.0
+    },
+    {
+      "name": "co_chan_right",
+      "parent": "goi_right",
+      "offset": [
+        0.0,
+        150.0
+      ],
+      "part": "co_chan_right.png",
+      "pivot": [
+        38.0,
+        14.0
+      ],
+      "layer": 1,
+      "layer_name": "chan",
+      "angle": 0.0
+    }
+  ]
+}

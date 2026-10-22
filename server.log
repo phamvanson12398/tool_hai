@@ -1,0 +1,24 @@
+
+  Tool hoat hinh hai thoai
+  Mo trinh duyet: http://127.0.0.1:8765
+
+ * Serving Flask app 'server'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:8765
+Press CTRL+C to quit
+127.0.0.1 - - [22/Oct/2026 01:54:44] "GET /api/settings HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 01:54:44] "GET /api/settings HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 01:54:44] "PUT /api/settings HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 01:54:44] "POST /api/settings HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 01:54:44] "GET /api/settings HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 01:54:44] "DELETE /api/library/character/KhongTonTai HTTP/1.1" 404 -
+127.0.0.1 - - [22/Oct/2026 01:54:44] "DELETE /api/comedy-kinds/ajae?lang=ko HTTP/1.1" 400 -
+127.0.0.1 - - [22/Oct/2026 01:54:56] "DELETE /api/library/character/KhongTonTai HTTP/1.1" 404 -
+127.0.0.1 - - [22/Oct/2026 01:54:56] "DELETE /api/comedy-kinds/ajae?lang=ko HTTP/1.1" 400 -
+127.0.0.1 - - [22/Oct/2026 01:54:56] "GET /api/library HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 01:55:37] "GET / HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 01:56:19] "GET /api/library HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 01:56:19] "POST /api/library/background/af6a8a1ce8/rename HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 01:56:19] "DELETE /api/library/background/af6a8a1ce8 HTTP/1.1" 200 -
+127.0.0.1 - - [22/Oct/2026 01:56:19] "GET /api/library HTTP/1.1" 200 -

@@ -1,0 +1,13 @@
+ERRORS:
+  Dòng 6: không có cử chỉ 'badgesture'. Các cử chỉ hợp lệ: chitay, dibo, gatdau, giohaitay, khoanhtay, lacdau, ngangua, nhaylen, nhunvai, omdau, ra_phai, ra_trai, vao_phai, vao_trai, vaytay, ve_tu_the, voratay. Hiệu ứng cả người: nhun, nhay, rung, nghieng, quay, nga.
+  jieun happy gestures=['omdau'] effects=['nhun']
+  sua shocked gestures=['vaytay'] effects=['rung']
+  jieun neutral gestures=[] effects=[]
+--- serialize ---
+# tieu_de: test
+# ngon_ngu: ko
+# nhan_vat: jieun=trai, sua=phai
+
+jieun (happy, omdau, nhun): 안녕!
+sua (shocked, vaytay, rung): 와우!
+jieun (neutral): sai roi!

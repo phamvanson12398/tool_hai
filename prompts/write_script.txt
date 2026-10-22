@@ -1,0 +1,38 @@
+Bạn là biên tập viên hài kịch viết kịch bản video ngắn mạng xã hội.
+
+{{comedy_block}}
+
+### Yêu cầu
+- Viết bằng {{lang_label}}. Toàn bộ thoại, biểu cảm và ngữ cảnh phải theo {{lang_label}}.
+- Tiêu đề: {{title}}
+- Kiểu hài: {{kind_name}}
+{{cast_txt}}
+{{cast_hint}}
+- Gợi ý thêm từ chị: {{hints}}
+- Độ dài đích: 30–90 giây khi đọc lên. Khoảng 8–16 nhịp (câu + nhịp phản ứng).
+- 2 hoặc 3 nhân vật, không cố định.
+
+### Chống lặp khuôn — KHÔNG được dùng lại các kiểu sau từ 5 tập gần nhất
+{{history_block}}
+Nếu chị không chỉ định kiểu hài cụ thể, hãy chọn kiểu khác với các tập trên.
+
+### Quy cách ghi (bắt buộc, output đúng format này)
+```
+# tieu_de: {{title}}
+# ngon_ngu: {{language}}
+# nhan_vat: {{cast_header}}
+
+{{sample}}
+```
+Quy tắc:
+- Trong ngoặc: biểu cảm (happy, sad, angry, shocked, proud, neutral, embarrassed, smug, confused, scared, disgusted, thinking, laughing, crying, worried, tired, suspicious, love, determined, shy, bored), có thêm "zoom" nếu câu đó nên zoom vào người nói, có thêm tên tiếng động (boing, ding, honk, boom, swoosh, pop, slap, crash, record_scratch, tada, drumroll, sad_trombone, rimshot, boo, gasp, laugh_track, applause, whistle, siren, thud, whoosh, splash).
+- Có thêm cử chỉ khung xương trong ngoặc (chọn từ danh sách, cách nhau bằng dấu phẩy):
+  {{gestures_block}}
+- Có thêm hiệu ứng cả người trong ngoặc (chọn từ): nhun, nhay, rung, nghieng, quay, nga.
+- Tuỳ chọn thêm: pause=0.5 (nghỉ thêm sau câu, giây), Tên=biểu_cảm (đổi biểu cảm người nghe), zoom=Tên (zoom vào người khác).
+- Dòng bắt đầu bằng `>` là nhịp phản ứng KHÔNG có lời, kèm số giây (0.5–1.2). Đây là khoảng lặng có chủ đích.
+- Mỗi dòng thoại có thể kèm dòng bản dịch tiếng Việt bắt đầu bằng `//` ngay sau dòng đó (để chị dễ đọc).
+- Câu chốt phải có cú lật hoặc châm biếm đáng nhớ.
+- Câu nối câu: ít dấu câu ở cuối, nhịp nhanh, không dài dòng.
+
+CHỈ output nội dung kịch bản, không giải thích, không markdown code fence.

@@ -1,0 +1,98 @@
+{
+  "total": 5.231791666666666,
+  "lines": [
+    {
+      "idx": 0,
+      "speaker": "지은",
+      "text": "안녕하세요, 저예요!",
+      "expression": "happy",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 0.3,
+      "duration": 1.2857916666666667,
+      "audio": "projects\\e2e_test\\out\\rig_step_d\\audio\\line_000.wav",
+      "words": [
+        [
+          "안녕하세요,",
+          0.3,
+          1.071475
+        ],
+        [
+          "저예요!",
+          1.071475,
+          1.5857916666666667
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 1,
+      "speaker": "수아",
+      "text": "그래, 반가워!",
+      "expression": "happy",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 1.6857916666666668,
+      "duration": 0.7647083333333333,
+      "audio": "projects\\e2e_test\\out\\rig_step_d\\audio\\line_001.wav",
+      "words": [
+        [
+          "그래,",
+          1.6857916666666668,
+          2.0135238095238095
+        ],
+        [
+          "반가워!",
+          2.0135238095238095,
+          2.4505
+        ]
+      ],
+      "other_expr": {
+        "지은": "proud"
+      }
+    },
+    {
+      "idx": 2,
+      "speaker": "지은",
+      "text": "정말요?",
+      "expression": "shocked",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 2.5505,
+      "duration": 0.5456666666666666,
+      "audio": "projects\\e2e_test\\out\\rig_step_d\\audio\\line_002.wav",
+      "words": [
+        [
+          "정말요?",
+          2.5505,
+          3.0961666666666665
+        ]
+      ],
+      "other_expr": {}
+    },
+    {
+      "idx": 3,
+      "speaker": "수아",
+      "text": "장난이에요!",
+      "expression": "laughing",
+      "zoom": false,
+      "zoom_target": "",
+      "sfx": "",
+      "start": 3.1961666666666666,
+      "duration": 0.935625,
+      "audio": "projects\\e2e_test\\out\\rig_step_d\\audio\\line_003.wav",
+      "words": [
+        [
+          "장난이에요!",
+          3.1961666666666666,
+          4.1317916666666665
+        ]
+      ],
+      "other_expr": {}
+    }
+  ],
+  "beats": []
+}

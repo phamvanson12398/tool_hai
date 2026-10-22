@@ -1,0 +1,15 @@
+{
+  "gap_between_lines": 0.12,
+  "subtitle_style": "yellow",
+  "subtitle_mode": "full",
+  "bgm_volume": 0.0,
+  "bgm_file": null,
+  "sfx_volume": 0.45,
+  "title_text": "",
+  "review_before_render": true,
+  "claude_bin": "",
+  "ffmpeg_bin": "",
+  "tts_engine": "",
+  "capcut_drafts_root": "",
+  "capcut_template_draft": ""
+}
