@@ -1755,6 +1755,18 @@ def _story_view(pid: str, data: dict) -> dict:
     out["images"] = sorted(imgs)
     out["scene_count"] = len(scenes)
     out["missing"] = [sc["id"] for _ci, sc in scenes if sc["id"] not in imgs]
+    from core import doodle, story_live
+    for c in st.get("characters") or []:          # truyện làm từ trước: đoán bộ ghép từ mô tả
+        if not c.get("kit"):
+            c["kit"] = doodle.kit_from_look(c.get("name", ""), c.get("look", ""))
+    for p in st.get("places") or []:
+        if p.get("kind") not in scene_art.KINDS:
+            p["kind"] = story_live.place_kind(p)
+        p.setdefault("time", "ngay")
+    out["visual"] = st.get("visual", "tool")
+    out["kit_options"] = doodle.options()
+    out["kinds"] = [[k, v["label"]] for k, v in scene_art.KINDS.items()]
+    out["acts"] = [[k, v[0]] for k, v in story_live.ACTS.items()]
     out["styles"] = [[k, v[0]] for k, v in story_mod.STYLES.items()]   # giữ thứ tự
     out["style_ref"] = (story_mod.image_dir(pdir) / story_mod.STYLE_REF).exists()
     out["cameras"] = list(story_mod.CAMERAS)
@@ -1817,6 +1829,8 @@ def api_story_save(pid):
     for k in ("title", "author", "source_text", "style", "subtitles", "era"):
         if k in body:
             st[k] = body[k]
+    if body.get("visual") in ("tool", "images"):
+        st["visual"] = body["visual"]
     if "minutes" in body:
         try:
             st["minutes"] = max(3, min(40, int(float(body["minutes"]))))
@@ -1825,9 +1839,13 @@ def api_story_save(pid):
     if isinstance(body.get("narrator"), dict):
         st["narrator"] = {"voice": str(body["narrator"].get("voice") or ""),
                           "instruct": str(body["narrator"].get("instruct") or "")}
-    for k in ("characters", "places", "chapters"):
-        if isinstance(body.get(k), list):
-            st[k] = body[k]
+    if isinstance(body.get("characters"), list):
+        st["characters"] = [story_mod._clean_char(c) for c in body["characters"]
+                            if isinstance(c, dict)]
+    if isinstance(body.get("places"), list):
+        st["places"] = [story_mod._clean_place(p) for p in body["places"] if isinstance(p, dict)]
+    if isinstance(body.get("chapters"), list):
+        st["chapters"] = body["chapters"]
     story_mod.renumber(st)
     if "format" in body:
         data["format"] = _norm_format(body["format"])
@@ -1949,6 +1967,58 @@ def api_story_style_ref_get(pid):
         return _err("Chưa có ảnh mẫu.", 404)
     return send_file(str(p), as_attachment=request.args.get("dl") == "1",
                      download_name="style_ref.png")
+
+
+def _png(img):
+    import io
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png")
+
+
+@app.get("/api/story/<pid>/char/<cid>.png")
+def api_story_char_png(pid, cid):
+    """Ảnh xem trước nhân vật tool vẽ."""
+    from core import story_live
+    try:
+        _data, st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    c = next((c for c in st.get("characters") or [] if c.get("id") == cid), None)
+    if not c:
+        return _err("Không có nhân vật.", 404)
+    return _png(story_live.character_preview(c, 300))
+
+
+@app.get("/api/story/<pid>/place/<plid>.png")
+def api_story_place_png(pid, plid):
+    from core import story_live
+    try:
+        _data, st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    p = next((p for p in st.get("places") or [] if p.get("id") == plid), None)
+    if not p:
+        return _err("Không có địa điểm.", 404)
+    return _png(story_live.place_preview(p, p.get("time") or "ngay", (480, 270)))
+
+
+@app.get("/api/story/<pid>/preview/<sid>.png")
+def api_story_preview_png(pid, sid):
+    """Khung xem trước một cảnh tool vẽ (nhân vật đang làm gì, ở đâu)."""
+    from core import story as story_mod, story_live
+    try:
+        data, st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    sc = next((sc for _ci, sc in story_mod.all_scenes(st) if sc.get("id") == sid), None)
+    if not sc:
+        return _err("Không có cảnh.", 404)
+    W, H = config.frame_size(data.get("format") or "16:9")
+    k = 480 / max(W, H)
+    img = story_live.preview(st, sc, (int(W * k), int(H * k)), 3.2)
+    return _png(img)
 
 
 @app.get("/api/story/<pid>/image/<sid>")

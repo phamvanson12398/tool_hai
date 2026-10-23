@@ -357,8 +357,8 @@
               <button class="btn btn-sm" id="st-new" type="button">+ Truyện mới</button>
             </div>
           </div>
-          <p class="hint">Video kể chuyện dài (vd Lão Hạc — Nam Cao): một giọng người kể, tranh minh hoạ
-            chị tự vẽ từ bộ câu lệnh tool xuất ra. Truyện của tác giả mất trên 50 năm (Nam Cao, Ngô Tất Tố...)
+          <p class="hint">Video kể chuyện dài (vd Lão Hạc — Nam Cao): một giọng người kể; hình do
+            tool tự vẽ và cho nhân vật cử động theo lời kể (hoặc tranh chị tự vẽ từ bộ câu lệnh tool xuất ra). Truyện của tác giả mất trên 50 năm (Nam Cao, Ngô Tất Tố...)
             mới dán nguyên văn được; truyện còn bản quyền thì để trống nguyên văn cho AI kể lại.</p>
           <div class="field-row">
             <div class="field"><label for="st-title">Tên truyện</label><input type="text" id="st-title" placeholder="Lão Hạc"></div>
@@ -368,7 +368,12 @@
             <div class="field"><label for="st-minutes">Thời lượng (phút)</label><input type="number" id="st-minutes" min="3" max="40" value="25"></div>
             <div class="field"><label for="st-format">Khung</label>
               <select id="st-format"><option value="16:9">16:9 ngang (YouTube)</option><option value="9:16">9:16 dọc</option><option value="1:1">1:1 vuông</option></select></div>
-            <div class="field"><label for="st-style">Phong cách tranh</label><select id="st-style"></select></div>
+            <div class="field"><label for="st-visual">Cách làm hình</label>
+              <select id="st-visual">
+                <option value="tool">Tool tự vẽ &amp; nhân vật cử động (miễn phí)</option>
+                <option value="images">Tranh tự vẽ ở công cụ khác (xuất câu lệnh)</option>
+              </select></div>
+            <div class="field st-img-only"><label for="st-style">Phong cách tranh</label><select id="st-style"></select></div>
           </div>
           <div class="field-row">
             <div class="field"><label for="st-voice">Giọng người kể (Thư viện)</label><select id="st-voice"></select></div>
@@ -392,13 +397,15 @@
 
         <section class="card">
           <h2 class="card-title">2. Nhân vật &amp; địa điểm</h2>
-          <p class="hint">Mô tả ngoại hình cố định (tiếng Anh) được ghép vào mọi câu lệnh vẽ để nhân vật giống nhau ở mọi tranh. Sửa được.</p>
+          <p class="hint st-tool-only">Tool vẽ nhân vật theo các lựa chọn (tóc, áo, râu, kính...) và vẽ bối cảnh theo mẫu. Đổi lựa chọn là ảnh xem trước vẽ lại ngay; nhân vật giống nhau ở mọi cảnh.</p>
+          <p class="hint st-img-only">Mô tả ngoại hình cố định (tiếng Anh) được ghép vào mọi câu lệnh vẽ để nhân vật giống nhau ở mọi tranh. Sửa được.</p>
           <div id="st-bible" class="card-list"></div>
         </section>
 
         <section class="card">
           <h2 class="card-title">3. Lời kể &amp; cảnh</h2>
-          <p class="hint">Mỗi cảnh một tranh (scene_001.png...). Sửa lời kể, mô tả tranh, kiểu máy quay rồi bấm Lưu.</p>
+          <p class="hint st-tool-only">Mỗi cảnh: lời kể, máy quay, mỗi nhân vật đang làm gì (khóc, cười, giật mình, đi vào...) và ai nhép miệng khi người kể đọc câu nói của họ. Đổi xong bấm Lưu; ảnh bên trái là khung xem trước.</p>
+          <p class="hint st-img-only">Mỗi cảnh một tranh (scene_001.png...). Sửa lời kể, mô tả tranh, kiểu máy quay rồi bấm Lưu.</p>
           <div id="st-scenes" class="card-list"></div>
           <div class="row-actions"><button class="btn" id="st-save2" type="button">Lưu thay đổi</button></div>
         </section>
@@ -415,12 +422,12 @@
             <label for="st-files">Tải ảnh lên (chọn nhiều; tên có số cảnh: scene_001.png, 001.jpg...)</label>
             <input type="file" id="st-files" accept="image/*" multiple>
           </div>
-          <p class="hint">Cảnh chưa có tranh vẫn dựng được (hiện khung chữ tạm) để chị nghe thử nhịp kể.</p>
-          <div class="field">
+          <p class="hint st-img-only">Cảnh chưa có tranh vẫn dựng được (hiện khung chữ tạm) để chị nghe thử nhịp kể.</p>
+          <div class="field st-img-only">
             <label for="st-ref-file">Ảnh mẫu phong cách (không bắt buộc)</label>
             <input type="file" id="st-ref-file" accept="image/*">
           </div>
-          <p class="hint">Một khung hình có bối cảnh và nhân vật đúng kiểu chị muốn. Bộ câu lệnh sẽ nhắc gửi kèm ảnh này mọi lần vẽ để tranh ra cùng phong cách.</p>
+          <p class="hint st-img-only">Một khung hình có bối cảnh và nhân vật đúng kiểu chị muốn. Bộ câu lệnh sẽ nhắc gửi kèm ảnh này mọi lần vẽ để tranh ra cùng phong cách.</p>
           <div id="st-ref-wrap" hidden>
             <img id="st-ref-img" class="st-ref" alt="Ảnh mẫu phong cách">
             <div class="row-actions">

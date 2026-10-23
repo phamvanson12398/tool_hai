@@ -52,7 +52,10 @@ ART_STYLES: dict[str, str] = {
     "vintage": "Hoài cổ — ngả vàng nâu, hạt phim, tối góc",
     "night_neon": "Tối neon — tông tối, ánh tím xanh như phim",
     "blur": "Xoá phông — nền mờ nhẹ cho nhân vật nổi bật",
+    "doodle": "Vẽ tay webtoon — nét run, màu dịu, vân giấy (hợp kể chuyện)",
 }
+
+OUTDOOR = {"duong_pho", "cong_vien", "bai_bien", "san_que", "duong_lang", "canh_dong"}
 
 
 def kinds_catalog() -> str:
@@ -554,12 +557,17 @@ def render_scene(kind: str = "phong_khach", time: str = "ngay",
     wall = _rgb(wall, spec["wall"]) if wall is not None else spec["wall"]
     floor = _rgb(floor, spec["floor"]) if floor is not None else spec["floor"]
     accent = _rgb(accent, spec["accent"]) if accent is not None else spec["accent"]
-    if night and kind not in ("duong_pho", "cong_vien", "bai_bien"):
+    if night and kind not in OUTDOOR:
         wall, floor = _mix(wall, (40, 44, 80), 0.45), _mix(floor, (30, 30, 50), 0.4)
     w, h = size or (config.WIDTH, config.HEIGHT)
     img = Image.new("RGB", (w, h), wall)
     pen = _Pen(img, layout_size)
-    _draw_kind(pen, kind, wall, floor, accent, night, random.Random(seed))
+    if kind in _rural.KINDS:
+        _rural.draw(pen, kind, wall, floor, accent, night, random.Random(seed))
+    else:
+        _draw_kind(pen, kind, wall, floor, accent, night, random.Random(seed))
+    if art == "doodle" and kind not in OUTDOOR:
+        _scratches(pen, wall, random.Random(seed + 3))
     # đồ đời thường (đèn trần, điều hoà, kệ, thảm, xe máy...) cho giống thật
     from . import scene_decor
     scene_decor.decorate(pen, kind, wall, floor, accent, night, random.Random(seed + 7))
@@ -668,7 +676,47 @@ def stylize(img: Image.Image, art: str | None, layout_size=None) -> Image.Image:
         glow = cv2.GaussianBlur(np.clip(a - 90, 0, None), (0, 0), 14)
         a = a + glow * np.array([0.9, 0.5, 1.0], dtype="float32")
         a = _vignette(a, layout_size, 0.45)
+    elif art == "doodle":
+        a = _wobble(a, max(1.2, a.shape[0] / 700), 5)
+        hsv = cv2.cvtColor(np.clip(a, 0, 255).astype("uint8"), cv2.COLOR_RGB2HSV).astype("float32")
+        hsv[..., 1] *= 0.78
+        a = cv2.cvtColor(hsv.astype("uint8"), cv2.COLOR_HSV2RGB).astype("float32")
+        a = a * 0.94 + np.array([14, 10, 2], dtype="float32")
+        a = _paper(a, 9, 0.035)
     elif art == "blur":
         a = cv2.GaussianBlur(a, (0, 0), max(2.0, a.shape[0] / 300))
         a = a * 0.95 + 255 * 0.05
     return Image.fromarray(np.clip(a, 0, 255).astype("uint8"))
+
+
+def _wobble(a, amp: float, seed: int):
+    """Làm nét hơi run như vẽ tay: dịch điểm ảnh theo nhiễu mượt."""
+    import cv2
+    import numpy as np
+    h, w = a.shape[:2]
+    rng = np.random.default_rng(seed)
+    small = (max(2, h // 40), max(2, w // 40))
+    dx = cv2.resize(rng.normal(0, 1, small).astype("float32"), (w, h), interpolation=cv2.INTER_CUBIC)
+    dy = cv2.resize(rng.normal(0, 1, small).astype("float32"), (w, h), interpolation=cv2.INTER_CUBIC)
+    gx, gy = np.meshgrid(np.arange(w, dtype="float32"), np.arange(h, dtype="float32"))
+    return cv2.remap(a, gx + dx * amp, gy + dy * amp, cv2.INTER_LINEAR,
+                     borderMode=cv2.BORDER_REFLECT)
+
+
+def _scratches(p: _Pen, wall, rng) -> None:
+    """Vài vệt sọc dọc trên tường như tranh vẽ tay kể chuyện Hàn."""
+    top = max(0, p.Y(WALL_CM))
+    col = _shade(wall, 0.8)
+    for _ in range(int(p.w / (70 * p.u))):
+        x = rng.random() * p.w
+        y = top + rng.random() * (p.base - top) * 0.8
+        ln = rng.uniform(25, 70) * p.u
+        for k in range(rng.choice((1, 2, 2, 3))):
+            xx = x + k * 7 * p.u
+            p.d.line([(xx, y), (xx + rng.uniform(-2, 2) * p.u, y + ln * rng.uniform(0.6, 1))],
+                     fill=col, width=max(2, int(2.5 * p.u)))
+
+
+from . import scene_rural as _rural  # noqa: E402  (vẽ bằng _Pen ở trên)
+
+KINDS.update(_rural.KINDS)

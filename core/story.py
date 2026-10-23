@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
 """Chế độ Truyện kể: video dài 20–30 phút kể truyện (Lão Hạc, Tắt đèn...).
 
-Chỉ có MỘT giọng người kể, hình là tranh minh hoạ (phong cách hoạt hình 2D...)
-do chị tự vẽ bằng công cụ quen tay từ bộ câu lệnh vẽ tool xuất ra, rồi thả
-ảnh vào; tool lo lời kể, giọng kể, chuyển động máy quay trên tranh, chuyển
-cảnh, tên chương, nhạc nền và ghép video.
+Chỉ có MỘT giọng người kể. Hình có hai cách (st["visual"]):
+  - "tool"   — tool tự vẽ bối cảnh + nhân vật con nhộng và cho cử động theo lời
+               kể (core/story_live.py), không cần vẽ gì ở ngoài
+  - "images" — chị tự vẽ tranh bằng công cụ khác từ bộ câu lệnh tool xuất ra
+Tool lo lời kể, giọng kể, máy quay, chuyển cảnh, tên chương, nhạc nền, ghép video.
 
 Quy trình:
   1. plan     — Claude chia chương + "kinh thánh hình ảnh" (nhân vật, địa điểm
@@ -86,7 +87,7 @@ _NUM = re.compile(r"(\d+)")
 def default_story(title: str = "", author: str = "") -> dict:
     return {
         "title": title, "author": author, "source_text": "", "minutes": 25,
-        "style": "doodle", "narrator": {"voice": "", "instruct": "male, elderly, low pitch"},
+        "style": "doodle", "visual": "tool", "narrator": {"voice": "", "instruct": "male, elderly, low pitch"},
         "subtitles": False, "era": "", "characters": [], "places": [], "chapters": [],
     }
 
@@ -134,22 +135,21 @@ def write_story(st: dict, progress=None) -> dict:
                     "(Không có nguyên văn: kể lại theo đúng nội dung truyện mà bạn biết, "
                     "không bịa thêm.)")
     look_hint = LOOK_HINTS.get(st.get("style"), "")
+    tool = st.get("visual", "tool") == "tool"
+    visual_block, scene_block = (_tool_blocks() if tool else ("", ""))
     say(0.03, "AI chia chương và lập danh sách nhân vật, địa điểm")
     plan = claude_cli._run_json(claude_cli._load_prompt(
         "story_plan", minutes=str(int(minutes)), style_vi=style_vi,
         title=st.get("title") or "", author=st.get("author") or "(không rõ)",
-        source_block=source_block, n_chapters=str(n), look_hint=look_hint),
+        source_block=source_block, n_chapters=str(n), look_hint=look_hint,
+        visual_block=visual_block),
         task="story", timeout=600)
     if not isinstance(plan, dict) or not plan.get("chapters"):
         raise RuntimeError("AI không lập được dàn chương.")
     chapters = plan["chapters"][:16]
     st["era"] = str(plan.get("era") or "")
-    st["characters"] = [{"id": _slug(c.get("id") or c.get("name")), "name": str(c.get("name") or ""),
-                         "look": str(c.get("look") or "")} for c in plan.get("characters") or []
-                        if isinstance(c, dict)]
-    st["places"] = [{"id": _slug(p.get("id") or p.get("name")), "name": str(p.get("name") or ""),
-                     "look": str(p.get("look") or "")} for p in plan.get("places") or []
-                    if isinstance(p, dict)]
+    st["characters"] = [_clean_char(c) for c in plan.get("characters") or [] if isinstance(c, dict)]
+    st["places"] = [_clean_place(p) for p in plan.get("places") or [] if isinstance(p, dict)]
     parts = _split_source(src, len(chapters)) if src else [""] * len(chapters)
     outline = "\n".join(f"{i + 1}. {c.get('title')}: {c.get('summary')}" for i, c in enumerate(chapters))
     chars_txt = "\n".join(f"- {c['id']}: {c['name']}" for c in st["characters"]) or "(không có)"
@@ -164,7 +164,7 @@ def write_story(st: dict, progress=None) -> dict:
             outline=outline, characters=chars_txt, places=places_txt, index=str(i + 1),
             chapter_title=str(c.get("title") or ""), chapter_summary=str(c.get("summary") or ""),
             source_block=block, syllables=str(int(per_min * SYLLABLES_PER_MIN)),
-            minutes=f"{per_min:.1f}"), task="story", timeout=600)
+            minutes=f"{per_min:.1f}", scene_block=scene_block), task="story", timeout=600)
         scenes = data.get("scenes") if isinstance(data, dict) else None
         if not scenes:
             raise RuntimeError(f"AI không viết được chương {i + 1}.")
@@ -183,13 +183,76 @@ def _slug(v) -> str:
     return t or "x"
 
 
+def _tool_blocks() -> tuple[str, str]:
+    """Phần thêm vào câu lệnh khi tool tự vẽ: AI chọn bộ ghép nhân vật, mẫu
+    bối cảnh và nhân vật làm gì trong từng cảnh."""
+    from . import doodle, story_live
+    opt = doodle.options()
+    cat = "\n".join(f"     {k}: {', '.join(v)}" for k, v in opt.items() if k != "expressions")
+    plan = (
+        "4. Tool sẽ TỰ VẼ nhân vật kiểu hoạt hình đầu tròn, thân con nhộng (không tay chân) "
+        "và tự vẽ bối cảnh. Nên mỗi nhân vật thêm \"kit\" chọn ĐÚNG giá trị trong danh mục:\n"
+        f"{cat}\n"
+        "   (species: human/dog/cat; con vật thì chỉ cần species và fur; top là kiểu áo: ao_nau áo "
+        "nâu nông dân, ao_ba_ba, ao_cach áo cánh + váy, dress áo + váy, jacket, shirt sơ mi, "
+        "sweater, robe áo dài thụng, ao_dai; hat: non_la nón lá, khan_van khăn vấn, khan_dau "
+        "khăn quấn đầu; patched: true nếu áo vá)\n"
+        "   Mỗi địa điểm thêm \"kind\" (mẫu bối cảnh) và \"time\" (ngay|dem). Mẫu bối cảnh: "
+        f"{story_live.kinds_text()}\n"
+        "   Ví dụ: {\"id\":\"lao_hac\",\"name\":\"Lão Hạc\",\"look\":\"...\",\"kit\":{\"species\":\"human\","
+        "\"age\":\"old\",\"sex\":\"male\",\"hair\":\"messy\",\"hair_color\":\"gray\",\"facial\":\"goatee\","
+        "\"top\":\"ao_nau\",\"top_color\":\"brown\",\"bottom_color\":\"black\",\"patched\":true}}; "
+        "{\"id\":\"nha\",\"name\":\"Nhà Lão Hạc\",\"look\":\"...\",\"kind\":\"nha_tranh\",\"time\":\"ngay\"}\n")
+    acts = ", ".join(f"{k} ({v[0]})" for k, v in story_live.ACTS.items())
+    scene = (
+        "### Tool tự vẽ và cho nhân vật cử động — mỗi cảnh thêm:\n"
+        "- \"acts\": nhân vật có mặt đang làm gì, {id: hành động}, hành động là một trong: "
+        f"{acts}. Chọn theo lời kể của cảnh (khóc thì cry, vui thì happy, chết/ốm thì lie, "
+        "người mới đến thì walk_in, bỏ đi thì walk_out). Không ghi thì đứng yên.\n"
+        "- \"talk\": id nhân vật có câu nói được trích trong lời kể của cảnh (nhân vật đó nhép "
+        "miệng khi người kể đọc câu trích), không có thì \"\".\n"
+        "- \"time\": \"ngay\" hoặc \"dem\" nếu khác giờ mặc định của địa điểm (không cần thì bỏ).\n"
+        "- \"chars\" chỉ gồm người/vật THẤY trong cảnh (tối đa 4), người đang được nhắc tới "
+        "nhưng không có mặt thì không đưa vào.\n"
+        "Ví dụ: {\"text\":\"...\",\"prompt\":\"...\",\"chars\":[\"lao_hac\",\"cau_vang\"],"
+        "\"place\":\"nha\",\"camera\":\"zoom_in\",\"acts\":{\"lao_hac\":\"cry\",\"cau_vang\":\"idle\"},"
+        "\"talk\":\"lao_hac\"}\n")
+    return plan, scene
+
+
+def _clean_char(c: dict) -> dict:
+    from . import doodle
+    out = {"id": _slug(c.get("id") or c.get("name")), "name": str(c.get("name") or ""),
+           "look": str(c.get("look") or "")}
+    out["kit"] = doodle.clean_kit(c["kit"]) if isinstance(c.get("kit"), dict) and c["kit"] \
+        else doodle.kit_from_look(out["name"], out["look"])
+    return out
+
+
+def _clean_place(p: dict) -> dict:
+    from . import scene_art, story_live
+    out = {"id": _slug(p.get("id") or p.get("name")), "name": str(p.get("name") or ""),
+           "look": str(p.get("look") or "")}
+    out["kind"] = p.get("kind") if p.get("kind") in scene_art.KINDS else story_live.place_kind(out)
+    out["time"] = p.get("time") if p.get("time") in scene_art.TIMES else "ngay"
+    return out
+
+
 def _clean_scene(s: dict) -> dict:
+    from . import story_live
     cam = str(s.get("camera") or "zoom_in")
-    return {"text": str(s.get("text") or "").strip(),
-            "prompt": str(s.get("prompt") or "").strip(),
-            "chars": [_slug(c) for c in (s.get("chars") or []) if c],
-            "place": _slug(s.get("place")) if s.get("place") else "",
-            "camera": cam if cam in CAMERAS else "zoom_in"}
+    out = {"text": str(s.get("text") or "").strip(),
+           "prompt": str(s.get("prompt") or "").strip(),
+           "chars": [_slug(c) for c in (s.get("chars") or []) if c],
+           "place": _slug(s.get("place")) if s.get("place") else "",
+           "camera": cam if cam in CAMERAS else "zoom_in"}
+    if isinstance(s.get("acts"), dict):
+        out["acts"] = {_slug(k): v for k, v in s["acts"].items() if v in story_live.ACTS}
+    if "talk" in s:
+        out["talk"] = _slug(s["talk"]) if s.get("talk") else ""
+    if s.get("time") in ("ngay", "dem"):
+        out["time"] = s["time"]
+    return out
 
 
 def renumber(st: dict) -> None:

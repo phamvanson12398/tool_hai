@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Dựng video Truyện kể: tranh + chuyển động máy quay + chuyển cảnh mờ + thẻ tên
+"""Dựng video Truyện kể: tranh (hoặc cảnh tool tự vẽ, nhân vật cử động —
+core/story_live.py) + chuyển động máy quay + chuyển cảnh mờ + thẻ tên
 truyện / tên chương + lời kể + nhạc nền (+ phụ đề tuỳ chọn).
 
 Video dài (20–30 phút ≈ 36.000 khung ở 24 hình/giây) nên mỗi khung chỉ là một
@@ -253,14 +254,23 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict[str, Path
          "-framerate", str(FPS), "-i", "-", "-c:v", "libx264", "-crf", "20",
          "-pix_fmt", "yuv420p", "-preset", "veryfast", str(raw)],
         stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    shots: dict[int, _Shot] = {}
+    shots: dict = {}
+    tool = st.get("visual", "tool") == "tool"
 
     def shot(i: int) -> _Shot:
         if i not in shots:
             for k in [k for k in shots if k < i - 1]:
                 del shots[k]                      # chỉ giữ vài tranh trong bộ nhớ
-            sc = tl[i]["sc"]
+            row = tl[i]
+            sc = row["sc"]
             p = imgs.get(sc["id"])
+            if not p and tool:
+                # tool tự vẽ cảnh và cho nhân vật cử động theo lời kể
+                from .story_live import LiveShot
+                shots[i] = LiveShot(st, sc, size, sc.get("camera") or "zoom_in", row["dur"],
+                                    audio=row["audio"], audio_at=row["card"] + LEAD,
+                                    audio_dur=row["audio_dur"], over=OVER, fps=FPS)
+                return shots[i]
             try:
                 im = Image.open(p) if p else _placeholder(size, sc["id"], sc.get("text") or "")
             except Exception:  # noqa: BLE001

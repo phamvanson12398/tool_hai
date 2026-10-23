@@ -13,6 +13,7 @@ Tác giả: {{author}}
    - Mọi địa điểm chính: id, tên tiếng Việt, mô tả bằng tiếng Anh (kiến trúc, đồ vật, cây cối, ánh sáng) đúng thời đại, vùng miền của truyện.
    - "era": một câu tiếng Anh về thời đại, vùng miền (vd "rural northern Vietnam village in the 1940s").
 3. Không bịa thêm nhân vật hay tình tiết không có trong truyện.
+{{visual_block}}
 
 Output JSON đúng dạng này, không có gì khác:
 {"chapters":[{"title":"tên chương","summary":"tóm tắt 2-3 câu"}],

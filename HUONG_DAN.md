@@ -573,8 +573,8 @@ màn hình đó. Ảnh không đạt (nửa người, tay khoanh) thì báo và 
 
 ## 11. Giới hạn của bản đầu
 
-- Nhân vật chỉ đổi biểu cảm, nhép miệng, nhún nhẹ và zoom; chưa có cử động như
-  đi lại hay vẫy tay.
+- Video hài: nhân vật cử động theo khung xương (cử chỉ, ngồi, quay mặt); Truyện
+  kể: nhân vật con nhộng không tay chân nên chỉ diễn bằng biểu cảm và cả thân.
 - Nhân vật tải lên bằng 1 ảnh thì không đổi được biểu cảm.
 - Chất lượng giọng tiếng Hàn của OmniVoice cần nghe thử trước khi làm nhiều tập.
 - Bối cảnh do AI vẽ là tranh phẳng 2D (không 3D), nhưng đồ vật vẽ theo kích
@@ -610,10 +610,38 @@ tool_hoat_hinh/
 
 Tab **Truyện kể** làm video kể chuyện kiểu kênh YouTube văn học (Lão Hạc, Tắt
 đèn, truyện cổ tích...): **một giọng người kể** đọc suốt, không có thoại nhân vật;
-hình là **tranh minh hoạ** chị tự vẽ (Midjourney, Gemini, ChatGPT...) từ **bộ câu
-lệnh vẽ** tool xuất ra; tool lo phần còn lại.
+hình có hai cách (ô **Cách làm hình**):
 
-### Các bước
+- **Tool tự vẽ & nhân vật cử động** (mặc định, miễn phí): tool tự vẽ bối cảnh và
+  nhân vật, không cần vẽ gì ở ngoài. Xem mục *Tool tự vẽ* ngay dưới.
+- **Tranh tự vẽ ở công cụ khác**: chị vẽ tranh (Midjourney, Gemini, ChatGPT...) từ
+  **bộ câu lệnh vẽ** tool xuất ra rồi tải lên.
+
+### Tool tự vẽ & nhân vật cử động
+- **Nhân vật** kiểu vẽ tay kể chuyện Hàn: đầu tròn to, thân con nhộng không tay
+  chân, viền đen nét bút, màu dịu. Có người (trẻ con, thanh niên, trung niên, già),
+  chó, mèo. Chọn được tóc (búi, rối, rẽ ngôi, hói...), màu tóc, nón lá, khăn vấn,
+  kính, râu, áo (áo nâu, áo bà ba, áo cánh + váy, sơ mi, áo dài...), màu áo, màu
+  quần, áo vá. AI chọn sẵn khi viết lời kể; chị sửa ở mục 2, ảnh xem trước vẽ lại
+  ngay.
+- **Bối cảnh** nét vẽ tay có vân giấy: nhà tranh, nhà ngói xưa, sân nhà quê, đường
+  làng, cánh đồng lúa (và các mẫu hiện đại: phòng khách, bếp, đường phố...), ngày
+  hoặc đêm. Lời kể nhắc "đêm, tối, đèn dầu" thì cảnh tự thành ban đêm.
+- **Diễn theo lời kể** (mục 3, mỗi cảnh chọn cho từng nhân vật): đứng thở chớp mắt,
+  vui nhún nhảy, mừng rỡ nhảy cẫng, buồn cúi đầu, khóc (nước mắt rơi, nấc), giận
+  (rung người, dấu nổi gân), giật mình (bật lên, vạch sốc, giọt mồ hôi), lo lắng
+  (lắc lư), suy nghĩ (dấu ...), ranh mãnh, gật gù, lắc đầu, ngủ (zzz), nằm (ốm,
+  chết), đi vào, đi ra. Chọn **Nhép miệng** cho nhân vật có câu nói được trích
+  trong lời kể: nhân vật đó mấp máy môi theo giọng khi người kể đọc câu trong ngoặc
+  kép.
+- Nhân vật tự quay mặt về phía nhau; máy quay phóng nhẹ vào chỗ có người hoặc lia
+  ngang.
+- Muốn một cảnh đặc biệt đẹp hơn: tải tranh lên đúng số cảnh (scene_012.png),
+  tranh đó thay cảnh tool vẽ.
+- Truyện làm từ trước khi có tính năng này: tool tự đoán bộ ghép nhân vật và bối
+  cảnh từ mô tả tiếng Anh; bấm **AI viết lời kể** lại để AI chọn hành động từng cảnh.
+
+### Các bước (cách tranh tự vẽ)
 1. **Truyện:** tên truyện, tác giả, thời lượng (phút), khung (16:9 cho YouTube),
    phong cách tranh (mặc định **Vẽ tay webtoon Hàn**: nhân vật đầu tròn, thân
    con nhộng không tay chân, viền đen nét bút, màu phẳng nhạt, nền vẽ tay có vân

@@ -61,6 +61,40 @@
     });
   }
 
+
+  var KIT_LABEL = { species: "Loài", age: "Tuổi", sex: "Giới", skin: "Da", hair: "Tóc",
+    hair_color: "Màu tóc", hat: "Mũ nón", glasses: "Kính", facial: "Râu", top: "Áo",
+    top_color: "Màu áo", bottom_color: "Màu quần/váy", fur: "Màu lông" };
+  var OPT_VI = {
+    human: "người", dog: "chó", cat: "mèo", child: "trẻ con", young: "thanh niên", adult: "trung niên",
+    old: "già", male: "nam", female: "nữ", light: "trắng", fair: "sáng", tan: "rám nắng", dark: "ngăm",
+    short: "ngắn", bangs: "mái bằng", messy: "rối", side_part: "rẽ ngôi", bun: "búi", long: "dài",
+    bob: "ngang vai", bald: "hói", balding: "hói đỉnh", wavy: "bồng xoăn", none: "không",
+    non_la: "nón lá", khan_van: "khăn vấn", khan_dau: "khăn quấn", hat: "mũ phớt", round: "kính tròn",
+    square: "kính vuông", mustache: "ria", beard: "râu quai nón", stubble: "râu lún phún",
+    goatee: "chòm râu dê", ao_nau: "áo nâu", ao_ba_ba: "áo bà ba", ao_cach: "áo cánh + váy",
+    dress: "áo + váy", jacket: "áo khoác", shirt: "sơ mi", sweater: "áo len", robe: "áo thụng",
+    ao_dai: "áo dài", brown: "nâu", darkbrown: "nâu đậm", indigo: "chàm", navy: "xanh than",
+    blue: "xanh dương", lightblue: "xanh nhạt", white: "trắng", cream: "kem", beige: "be",
+    gray: "xám", darkgray: "xám đậm", black: "đen", red: "đỏ", pink: "hồng", green: "xanh lá",
+    olive: "ô liu", yellow: "vàng", purple: "tím", orange: "cam", salt: "muối tiêu", spotted: "đốm"
+  };
+  var HUMAN_KEYS = ["age", "sex", "skin", "hair", "hair_color", "hat", "glasses", "facial", "top",
+                    "top_color", "bottom_color"];
+
+  function isTool() { return $("st-visual").value !== "images"; }
+
+  function stamp() { return st.stamp || (st.stamp = Date.now()); }
+
+  function kitSelect(key, opts, val) {
+    var sel = document.createElement("select");
+    sel.setAttribute("data-k", key);
+    sel.title = KIT_LABEL[key] || key;
+    opts.forEach(function (o) { sel.appendChild(new Option((KIT_LABEL[key] || key) + ": " + (OPT_VI[o] || o), o)); });
+    sel.value = val;
+    return sel;
+  }
+
   function loadVoices() {
     return api("/api/library").then(function (d) {
       var sel = $("st-voice");
@@ -90,6 +124,7 @@
       minutes: parseInt($("st-minutes").value, 10) || 25,
       format: $("st-format").value,
       style: $("st-style").value,
+      visual: $("st-visual").value,
       subtitles: $("st-subs").value === "1",
       source_text: $("st-source").value,
       narrator: { voice: $("st-voice").value, instruct: $("st-instruct").value.trim() }
@@ -97,11 +132,22 @@
     // nhân vật / địa điểm đã sửa
     var bible = { characters: [], places: [] };
     document.querySelectorAll("#st-bible [data-kind]").forEach(function (row) {
-      bible[row.getAttribute("data-kind")].push({
+      var item = {
         id: row.getAttribute("data-id"),
-        name: row.querySelector("input").value,
+        name: row.querySelector("input[type=text]").value,
         look: row.querySelector("textarea").value
-      });
+      };
+      var kit = {};
+      row.querySelectorAll("select[data-k]").forEach(function (s) { kit[s.getAttribute("data-k")] = s.value; });
+      var pt = row.querySelector("input[type=checkbox]");
+      if (pt) kit.patched = pt.checked;
+      if (row.getAttribute("data-kind") === "characters") {
+        if (Object.keys(kit).length) item.kit = Object.assign({}, row._kit || {}, kit);
+      } else {
+        if (kit.kind) item.kind = kit.kind;
+        if (kit.time) item.time = kit.time;
+      }
+      bible[row.getAttribute("data-kind")].push(item);
     });
     if (s.characters) { body.characters = bible.characters; body.places = bible.places; }
     // chương / cảnh đã sửa
@@ -116,7 +162,14 @@
             var out = Object.assign({}, sc);
             out.text = box.querySelector(".st-text").value;
             out.prompt = box.querySelector(".st-prompt").value;
-            out.camera = box.querySelector("select").value;
+            out.camera = box.querySelector("select.st-cam").value;
+            var acts = {}, any = false;
+            box.querySelectorAll("select[data-act]").forEach(function (s) {
+              acts[s.getAttribute("data-act")] = s.value; any = true;
+            });
+            if (any) out.acts = acts;
+            var tk = box.querySelector("select.st-talk");
+            if (tk) out.talk = tk.value;
             return out;
           })
         };
@@ -155,6 +208,8 @@
     sty.innerHTML = "";
     (d.styles || []).forEach(function (kv) { sty.appendChild(new Option(kv[1], kv[0])); });
     sty.value = s.style || "doodle";
+    $("st-visual").value = s.visual || "tool";
+    applyVisual();
     showStyleRef(d);
     $("st-subs").value = s.subtitles ? "1" : "0";
     $("st-source").value = s.source_text || "";
@@ -164,7 +219,11 @@
     renderBible(s);
     renderScenes(d);
     var n = d.scene_count || 0;
-    $("st-img-count").textContent = n
+    st.stamp = Date.now();
+    $("st-img-count").textContent = (n && isTool())
+      ? ("Tool tự vẽ " + n + " cảnh. Tranh tải lên (nếu có) sẽ thay cảnh tool vẽ: " +
+         (n - (d.missing || []).length) + " tranh.")
+      : n
       ? ("Đã có " + (n - (d.missing || []).length) + "/" + n + " tranh" +
          ((d.missing || []).length ? " · thiếu: " + d.missing.slice(0, 12).join(", ") +
           (d.missing.length > 12 ? "…" : "") : ""))
@@ -182,6 +241,8 @@
       box.appendChild(el("p", "hint", "AI sẽ lập danh sách khi viết lời kể."));
       return;
     }
+    var d = st.data || {};
+    var opt = d.kit_options || {};
     rows.forEach(function (r) {
       var row = el("div", "st-bible-item");
       row.setAttribute("data-kind", r[0]);
@@ -193,8 +254,55 @@
       var look = document.createElement("textarea");
       look.rows = 2;
       look.value = r[1].look || "";
-      row.appendChild(name);
-      row.appendChild(look);
+      look.className = "st-look";
+      var left = el("div", "st-bible-left");
+      left.appendChild(name);
+      var right = el("div", "");
+      if (isTool() && st.id) {
+        var img = document.createElement("img");
+        img.className = r[0] === "characters" ? "st-char-img" : "st-place-img";
+        img.loading = "lazy";
+        img.src = "/api/story/" + encodeURIComponent(st.id) + "/" +
+          (r[0] === "characters" ? "char/" : "place/") + encodeURIComponent(r[1].id) + ".png?v=" + stamp();
+        left.appendChild(img);
+        var kits = el("div", "st-kit");
+        if (r[0] === "characters") {
+          var kit = r[1].kit || {};
+          row._kit = kit;
+          kits.appendChild(kitSelect("species", opt.species || ["human"], kit.species || "human"));
+          var keys = (kit.species && kit.species !== "human") ? ["fur"] : HUMAN_KEYS;
+          keys.forEach(function (k) { kits.appendChild(kitSelect(k, opt[k] || [], kit[k] || (opt[k] || [""])[0])); });
+          if (!kit.species || kit.species === "human") {
+            var lab = el("label", "st-patch");
+            var cb = document.createElement("input");
+            cb.type = "checkbox";
+            cb.checked = !!kit.patched;
+            lab.appendChild(cb);
+            lab.appendChild(document.createTextNode(" áo vá"));
+            kits.appendChild(lab);
+          }
+        } else {
+          var ks = document.createElement("select");
+          ks.setAttribute("data-k", "kind");
+          (d.kinds || []).forEach(function (kv) { ks.appendChild(new Option(kv[1], kv[0])); });
+          ks.value = r[1].kind || "nha_ngoi";
+          var ts = document.createElement("select");
+          ts.setAttribute("data-k", "time");
+          ts.appendChild(new Option("Ban ngày", "ngay"));
+          ts.appendChild(new Option("Ban đêm", "dem"));
+          ts.value = r[1].time || "ngay";
+          kits.appendChild(ks);
+          kits.appendChild(ts);
+        }
+        // đổi lựa chọn -> lưu rồi vẽ lại ảnh xem trước
+        kits.addEventListener("change", function () { save(true); });
+        right.appendChild(kits);
+        look.rows = 1;
+        look.title = "Mô tả tiếng Anh (dùng khi xuất câu lệnh vẽ)";
+      }
+      right.appendChild(look);
+      row.appendChild(left);
+      row.appendChild(right);
       box.appendChild(row);
     });
   }
@@ -222,7 +330,13 @@
         var row = el("div", "st-scene");
         row.setAttribute("data-scene", sc.id);
         var thumb;
-        if (have[sc.id]) {
+        var tool = isTool();
+        if (tool && !have[sc.id]) {
+          thumb = document.createElement("img");
+          thumb.className = "st-thumb";
+          thumb.loading = "lazy";
+          thumb.src = "/api/story/" + encodeURIComponent(st.id) + "/preview/" + sc.id + ".png?v=" + stamp();
+        } else if (have[sc.id]) {
           thumb = document.createElement("img");
           thumb.className = "st-thumb";
           thumb.loading = "lazy";
@@ -233,6 +347,7 @@
         var right = el("div", "");
         var meta = el("div", "st-meta", "Cảnh " + sc.id + " · máy quay");
         var cam = document.createElement("select");
+        cam.className = "st-cam";
         (d.cameras || []).forEach(function (c) { cam.appendChild(new Option(CAM_VI[c] || c, c)); });
         cam.value = sc.camera || "zoom_in";
         meta.appendChild(cam);
@@ -247,12 +362,46 @@
         prompt.value = sc.prompt || "";
         right.appendChild(meta);
         right.appendChild(text);
+        if (tool) {
+          prompt.hidden = true;
+          var names = {};
+          (s.characters || []).forEach(function (c) { names[c.id] = c.name; });
+          var actRow = el("div", "st-acts");
+          (sc.chars || []).forEach(function (cid) {
+            if (!names[cid]) return;
+            var a = document.createElement("select");
+            a.setAttribute("data-act", cid);
+            (d.acts || []).forEach(function (kv) { a.appendChild(new Option(names[cid] + ": " + kv[1], kv[0])); });
+            a.value = (sc.acts || {})[cid] || "idle";
+            actRow.appendChild(a);
+          });
+          if ((sc.chars || []).length) {
+            var talk = document.createElement("select");
+            talk.className = "st-talk";
+            talk.appendChild(new Option("Không ai nhép miệng", ""));
+            (sc.chars || []).forEach(function (cid) {
+              if (names[cid]) talk.appendChild(new Option("Nhép miệng: " + names[cid], cid));
+            });
+            talk.value = sc.talk || "";
+            actRow.appendChild(talk);
+          } else {
+            actRow.appendChild(el("span", "muted", "Cảnh không có nhân vật (chỉ bối cảnh)"));
+          }
+          actRow.addEventListener("change", function () { save(true); });
+          right.appendChild(actRow);
+        }
         right.appendChild(prompt);
         row.appendChild(thumb);
         row.appendChild(right);
         box.appendChild(row);
       });
     });
+  }
+
+  function applyVisual() {
+    var tool = isTool();
+    var scr = $("screen-story");
+    if (scr) scr.classList.toggle("st-tool", tool);
   }
 
   function showVideo(ready) {
@@ -313,6 +462,10 @@
         .catch(fail("Không tạo được truyện"));
     });
     $("st-pick").addEventListener("change", function () { open(this.value); });
+    $("st-visual").addEventListener("change", function () {
+      applyVisual();
+      if (st.id) save(true); else if (st.data) render(st.data);
+    });
     $("st-save").addEventListener("click", function () { save(); });
     $("st-save2").addEventListener("click", function () { save(); });
     $("st-write").addEventListener("click", function () {

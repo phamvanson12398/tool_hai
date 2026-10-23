@@ -136,9 +136,9 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 .col-preview { min-width: 0; }
 .col-flow { display: flex; flex-direction: column; gap: 16px; }
 /* Truyện kể */
-.st-scene { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; padding: 10px;
+.st-scene { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 12px; padding: 10px;
   background: var(--bg); border: 1px solid var(--line-soft); border-radius: var(--radius); }
-.st-thumb { width: 120px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px;
+.st-thumb { width: 160px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px;
   background: var(--bg-raise-2); display: flex; align-items: center; justify-content: center;
   font-size: 11px; color: var(--text-faint); text-align: center; }
 .st-scene textarea { min-height: 54px; }
@@ -147,6 +147,20 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 .st-meta { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--text-faint); }
 .st-meta select { width: auto; padding: 4px 8px; font-size: 12px; }
 .st-bible-item { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 10px; }
+.st-bible-left { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.st-char-img { width: 110px; height: 110px; object-fit: contain; border-radius: 8px;
+  background: #f6eede; align-self: center; }
+.st-place-img { width: 160px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px; }
+.st-kit, .st-acts { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 6px; }
+.st-kit select, .st-acts select { width: auto; max-width: 100%; padding: 4px 8px; font-size: 12px; }
+.st-patch { font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; }
+.st-tool .st-img-only { display: none; }
+#screen-story:not(.st-tool) .st-tool-only { display: none; }
+.st-tool .st-look { min-height: 34px; height: 34px; font-size: 12px; }
+@media (max-width: 600px) {
+  .st-bible-item, .st-scene { grid-template-columns: minmax(0, 1fr); }
+  .st-thumb { width: 100%; }
+}
 
 @media (min-width: 1101px) {
   .col-preview { position: sticky; top: 74px; }
