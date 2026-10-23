@@ -1,5 +1,5 @@
 {
-  "version": 5,
+  "version": 8,
   "gestures": [
     {
       "name": "vaytay",
@@ -1153,6 +1153,293 @@
             "dich_y": -0.01
           },
           "thoi_luong": 0.14,
+          "kieu": "lap"
+        }
+      ]
+    },
+    {
+      "name": "chong_cam",
+      "label": "Chống cằm",
+      "mo_ta": "Tay chống cằm, đầu nghiêng (chán, nghĩ ngợi, nghe chuyện nhạt).",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -0.4188790204786391,
+            "khuyu_right": -2.722713633111154,
+            "dau": 0.13962634015954636
+          },
+          "thoi_luong": 0.35,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_right": -0.4188790204786391,
+            "khuyu_right": -2.722713633111154,
+            "dau": 0.15707963267948966
+          },
+          "thoi_luong": 0.4,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "chong_nanh",
+      "label": "Chống nạnh",
+      "mo_ta": "Hai tay chống nạnh (giận, ra oai, mắng).",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_left": -0.8726646259971648,
+            "vai_right": -0.8726646259971648,
+            "khuyu_left": 1.2217304763960306,
+            "khuyu_right": 1.2217304763960306
+          },
+          "thoi_luong": 0.3,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_left": -0.8726646259971648,
+            "vai_right": -0.8726646259971648,
+            "khuyu_left": 1.2217304763960306,
+            "khuyu_right": 1.2217304763960306,
+            "dau": -0.05235987755982989
+          },
+          "thoi_luong": 0.4,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "gai_dau",
+      "label": "Gãi đầu",
+      "mo_ta": "Gãi đầu ngượng ngùng, bối rối, cười trừ.",
+      "loop": true,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -1.9547687622336491,
+            "khuyu_right": -2.129301687433082,
+            "dau": 0.10471975511965978
+          },
+          "thoi_luong": 0.25,
+          "kieu": "lap"
+        },
+        {
+          "goc": {
+            "vai_right": -1.8849555921538759,
+            "khuyu_right": -2.4085543677521746,
+            "dau": 0.12217304763960307
+          },
+          "thoi_luong": 0.18,
+          "kieu": "lap"
+        }
+      ]
+    },
+    {
+      "name": "che_mieng",
+      "label": "Che miệng",
+      "mo_ta": "Tay che miệng (cười khúc khích, lỡ lời, sốc nhẹ).",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -0.3490658503988659,
+            "khuyu_right": -2.827433388230814,
+            "dau": 0.06981317007977318
+          },
+          "thoi_luong": 0.25,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_right": -0.3490658503988659,
+            "khuyu_right": -2.827433388230814,
+            "dau": 0.10471975511965978
+          },
+          "thoi_luong": 0.4,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "dap_ban",
+      "label": "Đập bàn",
+      "mo_ta": "Giơ hai tay đập mạnh xuống bàn (tức giận, phản đối). Hợp khi ngồi sau bàn.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_left": -1.9198621771937625,
+            "vai_right": -1.9198621771937625,
+            "khuyu_left": -0.6981317007977318,
+            "khuyu_right": -0.6981317007977318
+          },
+          "thoi_luong": 0.18,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_left": -0.4188790204786391,
+            "vai_right": -0.4188790204786391,
+            "khuyu_left": 0.7330382858376184,
+            "khuyu_right": 0.7330382858376184,
+            "dau": 0.10471975511965978
+          },
+          "thoi_luong": 0.1,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_left": -0.4188790204786391,
+            "vai_right": -0.4188790204786391,
+            "khuyu_left": 0.7330382858376184,
+            "khuyu_right": 0.7330382858376184,
+            "dau": 0.06981317007977318
+          },
+          "thoi_luong": 0.5,
+          "kieu": "mot_lan"
+        }
+      ]
+    },
+    {
+      "name": "go_phim",
+      "label": "Gõ phím",
+      "mo_ta": "Hai tay gõ bàn phím, mắt nhìn màn hình (đang làm việc, giả vờ bận).",
+      "loop": true,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -0.17453292519943295,
+            "khuyu_right": 1.2566370614359172,
+            "vai_left": -0.24434609527920614,
+            "khuyu_left": 1.0821041362364843,
+            "dau": 0.08726646259971647
+          },
+          "thoi_luong": 0.14,
+          "kieu": "lap"
+        },
+        {
+          "goc": {
+            "vai_right": -0.24434609527920614,
+            "khuyu_right": 1.0821041362364843,
+            "vai_left": -0.17453292519943295,
+            "khuyu_left": 1.2566370614359172,
+            "dau": 0.08726646259971647
+          },
+          "thoi_luong": 0.14,
+          "kieu": "lap"
+        }
+      ]
+    },
+    {
+      "name": "gac_tay",
+      "label": "Gác tay sau đầu",
+      "mo_ta": "Hai tay gác sau gáy, thảnh thơi (lười, tự mãn, thư giãn).",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_left": -2.303834612632515,
+            "vai_right": -2.303834612632515,
+            "khuyu_left": -2.478367537831948,
+            "khuyu_right": -2.478367537831948,
+            "dau": -0.06981317007977318
+          },
+          "thoi_luong": 0.35,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_left": -2.3387411976724017,
+            "vai_right": -2.3387411976724017,
+            "khuyu_left": -2.5132741228718345,
+            "khuyu_right": -2.5132741228718345,
+            "dau": -0.08726646259971647
+          },
+          "thoi_luong": 0.4,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "cui_dau",
+      "label": "Cúi đầu",
+      "mo_ta": "Cúi gằm mặt, tay buông thõng (buồn, xấu hổ, bị mắng).",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "dau": 0.15707963267948966,
+            "co": 0.06981317007977318,
+            "vai_left": 0.06981317007977318,
+            "vai_right": 0.06981317007977318
+          },
+          "thoi_luong": 0.35,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "dau": 0.17453292519943295,
+            "co": 0.08726646259971647,
+            "vai_left": 0.06981317007977318,
+            "vai_right": 0.06981317007977318
+          },
+          "thoi_luong": 0.5,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "gio_tay",
+      "label": "Giơ tay phát biểu",
+      "mo_ta": "Giơ thẳng một tay lên (xin phát biểu, 'em ạ!', 'tôi!').",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -2.9321531433504737,
+            "khuyu_right": -0.10471975511965978
+          },
+          "thoi_luong": 0.25,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_right": -3.001966313430247,
+            "khuyu_right": -0.06981317007977318
+          },
+          "thoi_luong": 0.5,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "lac_tay",
+      "label": "Lắc ngón tay",
+      "mo_ta": "Giơ tay lắc ngón 'không không không' (từ chối, chê).",
+      "loop": true,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -1.0821041362364843,
+            "khuyu_right": -1.9547687622336491,
+            "co_tay_right": -0.24434609527920614,
+            "dau": -0.06981317007977318
+          },
+          "thoi_luong": 0.16,
+          "kieu": "lap"
+        },
+        {
+          "goc": {
+            "vai_right": -1.0821041362364843,
+            "khuyu_right": -1.9547687622336491,
+            "co_tay_right": 0.24434609527920614,
+            "dau": 0.06981317007977318
+          },
+          "thoi_luong": 0.16,
           "kieu": "lap"
         }
       ]

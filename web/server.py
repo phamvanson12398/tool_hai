@@ -110,8 +110,9 @@ def _scene_kinds(data: dict, s) -> dict[int, dict]:
             or furniture.kind_from_desc(rec.get("desc") or "")
         if not kind and not rec.get("image"):
             kind = general.get("kind") or furniture.kind_from_desc(general.get("desc") or "")
-        if kind:
-            out[i] = {"kind": kind, "accent": (rec.get("spec") or {}).get("accent")}
+        if kind or desc:
+            out[i] = {"kind": kind, "desc": desc,
+                      "accent": (rec.get("spec") or {}).get("accent")}
     return out
 
 

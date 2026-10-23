@@ -362,7 +362,7 @@ def render_episode(pdir: Path, script: Script, chars_cfg: list[dict],
         from . import furniture
         stage.seat_fallback = True
         for i, info in (scene_kinds or {}).items():
-            seat = furniture.seat_type(info.get("kind"))
+            seat = furniture.seat_type(info.get("kind"), info.get("desc") or "")
             if seat:
                 stage.scene_seats[i] = seat
                 if info.get("accent"):

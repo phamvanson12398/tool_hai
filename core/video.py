@@ -70,17 +70,22 @@ def _sit_geom(anim) -> tuple[float, float, float, float] | None:
                        for b in ("co_chan_left", "co_chan_right"))
             hip = w0["than"]["pivot"][1]
             out = (float(CH), drop, hip + drop + 0.03 * CH,
-                   w0["vai_right"]["pivot"][1] + drop)
+                   w0["vai_right"]["pivot"][1] + drop, hip)
         elif getattr(anim, "pchar", None) is not None:   # ảnh tải lên
             j = anim.pchar.joints
             fh = float(anim.pchar.rgba.size[1])
             thigh = math.dist(j.hip_r, j.knee_r)
             drop = thigh * (1 - math.cos(a))
-            out = (fh, drop, j.hip_r[1] + drop + 0.03 * fh, j.shoulder_r[1] + drop)
+            out = (fh, drop, j.hip_r[1] + drop + 0.03 * fh, j.shoulder_r[1] + drop,
+                   float(j.hip_r[1]))
     except Exception:  # noqa: BLE001
         out = ()
     anim._sit_cache = out
     return out or None
+
+
+# Mức nghiêng 3/4 khi hai người nói chuyện (1 = nghiêng hết cỡ)
+TURN_TALK = 0.8
 
 
 def _sprite(img: Image.Image | None):
@@ -281,13 +286,18 @@ class Stage:
                 g = _sit_geom(ch.rig_animator) if ch.rig_animator is not None else None
                 if not g:
                     continue
-                fh, drop, seat_c, sh_c = g
+                fh, drop, seat_c, sh_c, hip_c = g
                 th = self.char_h(n, ch.scale)
                 sc = th / fh
                 rows.append([ch.name, self.w * slots[i], base_y - th + seat_c * sc,
-                             drop * sc, th, base_y - th + sh_c * sc])
+                             drop * sc, th, base_y - th + sh_c * sc,
+                             base_y - th + hip_c * sc])
         if rows:
             from . import furniture
+            standing = seat in furniture.STANDING
+            if standing:                # quầy: cao ngang hông người đứng
+                for r in rows:
+                    r[2] = r[6]
             if seat in furniture.SHARED:
                 top = min(r[2] for r in rows)
                 for r in rows:          # cùng một mặt sofa: người thấp ngồi cao lên
@@ -298,7 +308,7 @@ class Stage:
             back, front = furniture.draw(seat, [(r[1], r[2], r[5]) for r in rows], k,
                                          self.floor_y, (self.w, self.h),
                                          self.scene_colors.get(self.scene))
-            out = {"drops": {r[0]: r[3] for r in rows},
+            out = {"drops": {} if standing else {r[0]: r[3] for r in rows},
                    "back": _sprite(back), "front": _sprite(front)}
         self._seat_cache[key] = out
         return out
@@ -852,7 +862,9 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
         khách...) mọi người đã ngồi sẵn; chỗ khác thì đứng."""
         _entered.add(scene)
         here = set(timeline.present(scene, list(rig_animators)))
-        sit = auto_seat and bool(stage.scene_seats.get(scene))
+        from .furniture import STANDING
+        seat = stage.scene_seats.get(scene)
+        sit = auto_seat and bool(seat) and seat not in STANDING
         for nm, anim in rig_animators.items():
             if nm not in here:
                 continue
@@ -907,6 +919,42 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
         _first = getattr(events[0][2], "scene", 0)
         _enter_scene(_first, 0.0)
         _last_scene = _first
+
+    # Góc nghiêng 3/4: ai nhìn ai khi nói chuyện
+    three_quarter = bool(settings.get("three_quarter", True))
+    _last_talker: dict[str, str] = {}      # người nói -> người vừa nói trước đó
+    _prev_talker: list = [None]
+
+    def _set_turns(vis: list[Character], talker: str | None) -> None:
+        """Người nghe quay về phía người đang nói; người nói quay về phía
+        người vừa nói với mình (không có thì người đứng gần nhất)."""
+        anims = [c for c in vis if c.rig_animator is not None
+                 and hasattr(c.rig_animator, "turn_target")]
+        if not anims:
+            return
+        if not three_quarter or len(vis) < 2:
+            for c in anims:
+                c.rig_animator.turn_target = 0.0
+            return
+        if talker is None:
+            return                         # khoảng lặng: giữ hướng nhìn cũ
+        if talker != _prev_talker[0]:
+            if _prev_talker[0] is not None:
+                _last_talker[talker] = _prev_talker[0]
+            _prev_talker[0] = talker
+        xs = dict(zip([c.name for c in vis], stage.slots(len(vis))))
+        if talker not in xs:
+            return
+        for c in anims:
+            if c.name == talker:
+                other = _last_talker.get(talker)
+                if other not in xs or other == talker:
+                    others = [n for n in xs if n != talker]
+                    other = min(others, key=lambda n: abs(xs[n] - xs[talker]))
+            else:
+                other = talker
+            d = xs[other] - xs[c.name]
+            c.rig_animator.turn_target = TURN_TALK * (1 if d > 0 else -1 if d < 0 else 0)
 
     # Theo dõi câu hiện tại để chỉ áp cử chỉ ở khung đầu của mỗi câu
     _current_line_idx: object = None
@@ -1003,6 +1051,13 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
             zoom = cur.zoom and (cur.start <= t < cur.start + cur.duration)
             if cur.actor and cur.start <= t < cur.start + cur.duration:
                 speaking = None
+
+        if isinstance(cur, Line):
+            _set_turns(vis, cur.speaker)
+        elif isinstance(cur, Beat) and cur.actor:
+            _set_turns(vis, cur.actor)
+        else:
+            _set_turns(vis, None)
 
         # Dựng khung mới mỗi lần: nhân vật thở, nhún, làm cử chỉ theo thời
         # gian nên không dùng lại khung cũ được (trước đây cache theo biểu

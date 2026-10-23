@@ -1902,6 +1902,41 @@ def load_rig(rig_path: Path) -> Rig:
 
 # ------------------------------------------------------------------ vẽ khung
 
+# Góc nghiêng 3/4: uốn ngang ảnh đầu (và thân, nhẹ hơn) để mắt mũi miệng dồn
+# về phía nhân vật đang nhìn, nửa mặt bên kia hẹp lại; viền ngoài giữ nguyên.
+TURN_BONES = {"dau": 1.0, "than": 0.45}
+TURN_MAX = 0.3           # độ dồn lớn nhất (phần nửa bề ngang)
+TURN_STEPS = 5           # số bậc mỗi bên (cache ảnh đã uốn)
+
+
+def turn_warp(img: Image.Image, amount: float) -> Image.Image:
+    """Uốn ngang ảnh: amount > 0 quay sang phải màn hình, < 0 sang trái."""
+    import numpy as np
+    box = img.getbbox()
+    if not box or abs(amount) < 1e-3:
+        return img
+    x0, x1 = box[0], box[2]
+    half = (x1 - x0) / 2.0
+    if half < 4:
+        return img
+    c = max(-0.45, min(0.45, amount * TURN_MAX))
+    arr = np.asarray(img.convert("RGBA"))
+    w = arr.shape[1]
+    xd = np.arange(w, dtype=np.float64)
+    ud = (xd - x0 - half) / half
+    # u_dich = u_goc + c (1 - u_goc^2)  -> giải ngược u_goc theo u_dich
+    disc = np.clip(1 - 4 * c * (ud - c), 0, None)
+    us = (1 - np.sqrt(disc)) / (2 * c)
+    inside = np.abs(ud) <= 1
+    xs = np.where(inside, x0 + half + us * half, xd)
+    xs = np.clip(xs, 0, w - 1)
+    lo = np.floor(xs).astype(int)
+    hi = np.minimum(lo + 1, w - 1)
+    f = (xs - lo)[None, :, None]
+    out = arr[:, lo].astype(np.float32) * (1 - f) + arr[:, hi].astype(np.float32) * f
+    return Image.fromarray(np.clip(out, 0, 255).astype(np.uint8), "RGBA")
+
+
 class RigRenderer:
     """Ráp các bộ phận theo khung xương, xoay quanh khớp."""
 
@@ -1911,6 +1946,7 @@ class RigRenderer:
         self.parts_dir = self.base_dir / rig.parts_dir if rig.parts_dir else self.base_dir
         self._cache: dict[str, Image.Image] = {}
         self._np_cache: dict[str, object] = {}
+        self.turn = 0.0          # góc nghiêng 3/4 của khung đang vẽ (-1..1)
         # đầu theo biểu cảm, vẽ khi cần: tên file -> pivot
         self._head_pivots: dict[str, tuple[float, float]] = {}
         try:
@@ -1933,6 +1969,12 @@ class RigRenderer:
     def _part(self, filename: str) -> Image.Image:
         img = self._cache.get(filename)
         if img is None:
+            if "#t" in filename and not filename.endswith("#o"):
+                base, q = filename.rsplit("#t", 1)
+                img = turn_warp(self._part(base), int(q) / TURN_STEPS)
+                self._trim_turn_cache()
+                self._cache[filename] = img
+                return img
             if filename.startswith("#prop:"):
                 from . import props as props_mod
                 img = props_mod.render(filename[6:])[0]
@@ -1942,6 +1984,15 @@ class RigRenderer:
                 img = Image.open(self.parts_dir / filename).convert("RGBA")
             self._cache[filename] = img
         return img
+
+    def _trim_turn_cache(self) -> None:
+        """Ảnh đã uốn nhiều bậc x biểu cảm x miệng: giữ bộ nhớ vừa phải."""
+        keys = [k for k in self._cache if "#t" in k]
+        if len(keys) > 160:
+            for k in keys:
+                self._cache.pop(k, None)
+            for k in [k for k in self._np_cache if "#t" in str(k)]:
+                self._np_cache.pop(k, None)
 
     def _add_props(self, ordered: list["Bone"], world: dict, held: dict | None) -> list["Bone"]:
         """Thêm đạo cụ như xương tạm: đặt ở lòng bàn tay, đứng thẳng, vẽ ngay
@@ -2026,6 +2077,9 @@ class RigRenderer:
         filename, pivot = b.part, b.pivot
         if b.name == "dau":
             filename, pivot = self._head_part(b, mouth_open, expression)
+        q = int(round(self.turn * TURN_BONES.get(b.name, 0.0) * TURN_STEPS))
+        if q:
+            filename = f"{filename}#t{q}"
         if outline:
             return filename + "#o", (pivot[0] + SOFT_OUTLINE, pivot[1] + SOFT_OUTLINE)
         return filename, pivot
@@ -2051,12 +2105,13 @@ class RigRenderer:
     def render(self, angles: dict[str, float] | None = None,
                mouth_open: bool = False,
                crop: bool = True, expression: str | None = None,
-               props: dict[str, str] | None = None) -> Image.Image:
+               props: dict[str, str] | None = None, turn: float = 0.0) -> Image.Image:
         """Vẽ một khung nhân vật theo góc xương cho trước.
 
         Kết quả trả về trong khung gốc 600x1000 (nếu crop=True thì cắt sát
-        nội dung, giữ nguyên tỉ lệ).
+        nội dung, giữ nguyên tỉ lệ). turn: góc nghiêng 3/4 (-1 trái .. 1 phải).
         """
+        self.turn = max(-1.0, min(1.0, turn))
         world = self.rig.solve(angles)
         ordered = self.rig._ordered()
         ordered.sort(key=lambda b: world[b.name]["layer"])
@@ -2264,6 +2319,19 @@ class CharacterAnimator:
         # gáy (cảnh qua vai) — chỉ kiểu nét mềm có hình sau lưng
         self.back_head = self._back_head if rig.spec.get("style") in SOFT_STYLES else None
         self._back_cache = None
+        # góc nghiêng 3/4: đích do người dựng video đặt, quay dần tới đó
+        self.turn_target = 0.0
+        self.turn = 0.0
+        self._turn_t: float | None = None
+
+    def _update_turn(self, t: float) -> float:
+        if self._turn_t is None or t < self._turn_t:
+            self.turn = self.turn_target
+        else:
+            k = min(1.0, (t - self._turn_t) * 7.0)     # quay đầu ~0,3 giây
+            self.turn += (self.turn_target - self.turn) * k
+        self._turn_t = t
+        return self.turn
 
     def _head_center(self, angles: dict[str, float]) -> tuple[float, float] | None:
         """Tâm đầu thật (toạ độ khung gốc 600x1000) — máy quay bám theo khi
@@ -2362,7 +2430,8 @@ class CharacterAnimator:
             # trả về ảnh sát nội dung, kèm vị trí khung gốc trong ảnh để
             # người đặt nhân vật giữ đúng chỗ đứng (frame_origin, frame_size).
             img = self.renderer.render(angles, mouth_open=mouth_open, crop=False,
-                                       expression=expression, props=self.props)
+                                       expression=expression, props=self.props,
+                                       turn=self._update_turn(t))
             self.head_pos = self._head_center(angles)
             bbox = img.getbbox() or (PAD_X, PAD_Y, PAD_X + CW, PAD_Y + CH)
             self.frame_origin = (PAD_X - bbox[0], PAD_Y - bbox[1])

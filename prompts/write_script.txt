@@ -34,6 +34,8 @@ Quy tắc:
 - TƯ THẾ PHẢI HỢP TÌNH HUỐNG, không phải ai cũng đứng suốt:
   - Ở văn phòng, lớp học, quán cà phê, phòng khách, phòng ngủ, công viên: tool tự vẽ bàn ghế/sofa/giường/ghế đá và cho nhân vật NGỒI sẵn — không cần ghi gì. Nhà bếp, đường phố, cửa hàng, bãi biển: đứng; muốn ngồi thì ghi `ngoi_ghe`.
   - Đang ngồi vẫn làm cử chỉ tay được (omdau, chitay, vaytay, cam=...) mà KHÔNG đứng dậy. Ghi `dung_day` ở đúng câu nhân vật bật dậy (sốc, giận, bỏ đi, đập bàn); muốn ngồi lại thì ghi `ngoi_ghe`.
+  - Ghi rõ việc đang làm trong dòng `## canh:` để có đúng đồ đạc: "phòng khách, ăn cơm" (bàn ăn có bát đũa), "văn phòng, phòng họp" (bàn họp dài), "trạm xe buýt" (ghế chờ), "cửa hàng tiện lợi, quầy thu ngân" (quầy tính tiền). Nhà bếp có quầy bếp, nhân vật đứng nấu.
+  - Dùng cử chỉ đời thường cho nhân vật đang ngồi: go_phim (gõ phím), chong_cam (chống cằm chán), dap_ban (đập bàn), gac_tay (gác tay sau đầu), cui_dau (cúi đầu bị mắng), gio_tay (giơ tay phát biểu), gai_dau (gãi đầu ngượng), che_mieng, chong_nanh, lac_tay.
   - Đổi tư thế theo diễn biến cho sinh động: đang ngồi làm việc → đứng bật dậy ở cú lật; nằm dài sofa bấm điện thoại → ngồi dậy; đi vào (vao_trai/vao_phai), bỏ đi (ra_trai/ra_phai), ngồi bó gối khi tủi thân. Mỗi tập nên có ít nhất 2–3 lần đổi tư thế, nhưng không đổi ở mọi câu.
 - GÓC MÁY (tuỳ chọn, tool tự chọn nếu không ghi): `goc=toan` (toàn cảnh), `goc=trung` (nửa người), `goc=can` (cận mặt), `goc=sieucan` (siêu cận khi sốc), `goc=quavai` (qua vai người nghe). Mở cảnh nên toàn cảnh, cú lật nên siêu cận.
 - Viết như phim hoạt hình hài ngắn: nhân vật làm việc gì đó cụ thể (nằm chơi điện thoại, nấu mì, dọn nhà...), có hành động và đạo cụ trong hầu hết các câu, phản ứng cơ thể mạnh ở cú lật.

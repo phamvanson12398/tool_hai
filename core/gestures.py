@@ -27,7 +27,7 @@ KIEU_GIU = "giu"           # giữ nguyên tư thế cuối
 KIEU_LAP = "lap"           # lặp lại liên tục
 
 # Phiên bản thư viện: tăng khi đổi cử chỉ mặc định để file cũ được tạo lại
-LIBRARY_VERSION = 5
+LIBRARY_VERSION = 8
 
 # Khoá dịch cả người (không phải xương)
 OFFSET_KEYS = ("dich_x", "dich_y")
@@ -425,6 +425,79 @@ def _default_gestures() -> list[Gesture]:
                       "khuyu_left": -40, "khuyu_right": -40, "dich_y": 0.0}, 0.14, KIEU_LAP),
                    K({"dui_right": 0, "goi_right": 0, "vai_left": -18, "vai_right": -18,
                       "khuyu_left": -50, "khuyu_right": -50, "dich_y": -0.01}, 0.14, KIEU_LAP)],
+        loop=True,
+    ))
+
+    # ---------------- cử chỉ tay đời thường (làm được cả khi đang ngồi) ----------
+    g.append(Gesture(
+        name="chong_cam", label="Chống cằm",
+        mo_ta="Tay chống cằm, đầu nghiêng (chán, nghĩ ngợi, nghe chuyện nhạt).",
+        keyframes=[K({"vai_right": -24, "khuyu_right": -156, "dau": 8}, 0.35),
+                   K({"vai_right": -24, "khuyu_right": -156, "dau": 9}, 0.4, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="chong_nanh", label="Chống nạnh",
+        mo_ta="Hai tay chống nạnh (giận, ra oai, mắng).",
+        keyframes=[K({"vai_left": -50, "vai_right": -50, "khuyu_left": 70, "khuyu_right": 70}, 0.3),
+                   K({"vai_left": -50, "vai_right": -50, "khuyu_left": 70, "khuyu_right": 70,
+                      "dau": -3}, 0.4, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="gai_dau", label="Gãi đầu",
+        mo_ta="Gãi đầu ngượng ngùng, bối rối, cười trừ.",
+        keyframes=[K({"vai_right": -112, "khuyu_right": -122, "dau": 6}, 0.25, KIEU_LAP),
+                   K({"vai_right": -108, "khuyu_right": -138, "dau": 7}, 0.18, KIEU_LAP)],
+        loop=True,
+    ))
+    g.append(Gesture(
+        name="che_mieng", label="Che miệng",
+        mo_ta="Tay che miệng (cười khúc khích, lỡ lời, sốc nhẹ).",
+        keyframes=[K({"vai_right": -20, "khuyu_right": -162, "dau": 4}, 0.25),
+                   K({"vai_right": -20, "khuyu_right": -162, "dau": 6}, 0.4, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="dap_ban", label="Đập bàn",
+        mo_ta="Giơ hai tay đập mạnh xuống bàn (tức giận, phản đối). Hợp khi ngồi sau bàn.",
+        keyframes=[K({"vai_left": -110, "vai_right": -110, "khuyu_left": -40, "khuyu_right": -40}, 0.18),
+                   K({"vai_left": -24, "vai_right": -24, "khuyu_left": 42, "khuyu_right": 42,
+                      "dau": 6}, 0.1),
+                   K({"vai_left": -24, "vai_right": -24, "khuyu_left": 42, "khuyu_right": 42,
+                      "dau": 4}, 0.5)],
+    ))
+    g.append(Gesture(
+        name="go_phim", label="Gõ phím",
+        mo_ta="Hai tay gõ bàn phím, mắt nhìn màn hình (đang làm việc, giả vờ bận).",
+        keyframes=[K({"vai_right": -10, "khuyu_right": 72, "vai_left": -14, "khuyu_left": 62,
+                      "dau": 5}, 0.14, KIEU_LAP),
+                   K({"vai_right": -14, "khuyu_right": 62, "vai_left": -10, "khuyu_left": 72,
+                      "dau": 5}, 0.14, KIEU_LAP)],
+        loop=True,
+    ))
+    g.append(Gesture(
+        name="gac_tay", label="Gác tay sau đầu",
+        mo_ta="Hai tay gác sau gáy, thảnh thơi (lười, tự mãn, thư giãn).",
+        keyframes=[K({"vai_left": -132, "vai_right": -132, "khuyu_left": -142, "khuyu_right": -142,
+                      "dau": -4}, 0.35),
+                   K({"vai_left": -134, "vai_right": -134, "khuyu_left": -144, "khuyu_right": -144,
+                      "dau": -5}, 0.4, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="cui_dau", label="Cúi đầu",
+        mo_ta="Cúi gằm mặt, tay buông thõng (buồn, xấu hổ, bị mắng).",
+        keyframes=[K({"dau": 9, "co": 4, "vai_left": 4, "vai_right": 4}, 0.35),
+                   K({"dau": 10, "co": 5, "vai_left": 4, "vai_right": 4}, 0.5, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="gio_tay", label="Giơ tay phát biểu",
+        mo_ta="Giơ thẳng một tay lên (xin phát biểu, 'em ạ!', 'tôi!').",
+        keyframes=[K({"vai_right": -168, "khuyu_right": -6}, 0.25),
+                   K({"vai_right": -172, "khuyu_right": -4}, 0.5, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="lac_tay", label="Lắc ngón tay",
+        mo_ta="Giơ tay lắc ngón 'không không không' (từ chối, chê).",
+        keyframes=[K({"vai_right": -62, "khuyu_right": -112, "co_tay_right": -14, "dau": -4}, 0.16, KIEU_LAP),
+                   K({"vai_right": -62, "khuyu_right": -112, "co_tay_right": 14, "dau": 4}, 0.16, KIEU_LAP)],
         loop=True,
     ))
 

@@ -4,8 +4,8 @@
 Ảnh nền (core/scene_art.py) vẽ đồ ở tường sau. Đồ ở đây đặt ngay chỗ nhân
 vật, chia hai lớp:
   * lớp sau  (vẽ trước nhân vật): lưng ghế, sofa, giường, ghế đá
-  * lớp trước (vẽ sau nhân vật): bàn làm việc, bàn học, bàn quán — che chân
-    như người thật ngồi sau bàn.
+  * lớp trước (vẽ sau nhân vật): bàn làm việc, bàn học, bàn quán, bàn ăn,
+    bàn trà, quầy bếp, quầy thu ngân — che chân như người thật sau bàn.
 Kích thước tính theo cm (k = số px cho 1 cm, người cao 160 cm), mặt ghế đặt
 đúng chỗ hông nhân vật đang ngồi nên vừa với mọi kiểu nhân vật.
 """
@@ -25,11 +25,24 @@ SEAT_BY_KIND = {
     "phong_khach": "sofa",
     "phong_ngu": "bed",
     "cong_vien": "bench",
+    "bep": "kitchen",
+    "cua_hang": "shop",
 }
 # Loại có bàn phía trước (từng người một bàn, bàn sát nhau thì liền thành một)
-WITH_DESK = {"office", "school", "cafe"}
+WITH_DESK = {"office", "school", "cafe", "dining", "meeting"}
 # Loại dùng chung một món dài cho cả nhóm
 SHARED = {"sofa", "bed", "bench"}
+# Loại đứng sau quầy (không tự ngồi): quầy bếp, quầy thu ngân
+STANDING = {"kitchen", "shop"}
+
+# Mô tả cảnh nói rõ hơn mẫu bối cảnh thì theo mô tả (vd "phòng khách, ăn cơm")
+_SEAT_WORDS = [
+    ("meeting", r"phòng họp|cuộc họp|họp |meeting|회의"),
+    ("dining", r"bàn ăn|ăn cơm|bữa cơm|bữa tối|ăn tối|ăn trưa|nhà hàng|quán ăn|dinner|lunch|"
+               r"restaurant|식당|밥"),
+    ("bench", r"trạm xe buýt|bến xe|bus stop|정류장"),
+    ("shop", r"quầy thu ngân|thu ngân|cashier|계산대|편의점"),
+]
 
 # Nhận ra bối cảnh từ mô tả '## canh:' khi ảnh nền do chị tải lên
 _KIND_WORDS = [
@@ -50,7 +63,13 @@ def kind_from_desc(desc: str) -> str | None:
     return None
 
 
-def seat_type(kind: str | None) -> str | None:
+def seat_type(kind: str | None, desc: str = "") -> str | None:
+    """Loại đồ đạc cho một cảnh: theo mô tả trước (bàn ăn, phòng họp...),
+    không có thì theo mẫu bối cảnh."""
+    t = (desc or "").lower()
+    for seat, pat in _SEAT_WORDS:
+        if re.search(pat, t):
+            return seat
     return SEAT_BY_KIND.get(kind or "")
 
 
@@ -138,8 +157,13 @@ def _desk(p: _Draw, x0, x1, top, floor, kind, color, items):
     if kind == "cafe":
         p.rect(x0, top + 4 * k, x1, floor - 16 * k, color, r=4)           # khăn bàn
         p.rect(x0 - 4 * k, top, x1 + 4 * k, top + 6 * k, (120, 84, 62), r=3)
+    elif kind == "dining":
+        for x in (x0 + 8 * k, x1 - 12 * k):
+            p.rect(x, top, x + 5 * k, floor, _shade(color, 0.75))
+        p.rect(x0 - 4 * k, top, x1 + 4 * k, top + 7 * k, color, r=3)
     else:
-        panel = _shade(color, 0.86) if kind == "office" else (104, 132, 112)
+        panel = {"office": _shade(color, 0.86), "meeting": _shade(color, 0.8)}.get(
+            kind, (104, 132, 112))
         for x in (x0 + 2 * k, x1 - 6 * k):
             p.rect(x, top, x + 4 * k, floor, _shade(color, 0.7))
         p.rect(x0 + 5 * k, top + 5 * k, x1 - 5 * k, floor - 10 * k, panel, r=2)
@@ -152,9 +176,60 @@ def _desk(p: _Draw, x0, x1, top, floor, kind, color, items):
         elif kind == "school":                                            # quyển sách
             x = cx + side * 26 * k
             p.rect(x - 12 * k, top - 4 * k, x + 12 * k, top + 1 * k, (220, 96, 84), r=1)
+        elif kind == "meeting":                                           # tập giấy
+            x = cx + side * 22 * k
+            p.rect(x - 11 * k, top - 3 * k, x + 11 * k, top + 1 * k, (246, 246, 240), r=1)
+        elif kind == "dining":                                            # bát cơm, đũa
+            x = cx + side * 16 * k
+            p.d.chord([int(x - 10 * k), int(top - 10 * k), int(x + 10 * k), int(top + 8 * k)],
+                      0, 180, fill=(250, 250, 246, 255), outline=OUT + (255,), width=p.lw)
+            p.ell(x - 8 * k, top - 4 * k, x + 8 * k, top, (255, 255, 255))
+            p.d.line([int(x + side * 12 * k), int(top - 12 * k),
+                      int(x + side * 20 * k), int(top - 1 * k)],
+                     fill=(150, 104, 60, 255), width=max(2, p.lw))
         else:                                                             # cốc cà phê
             x = cx + side * 22 * k
             p.rect(x - 4.5 * k, top - 10 * k, x + 4.5 * k, top + 1 * k, (250, 250, 248), r=2)
+
+
+def _coffee_table(p: _Draw, cx, half, floor):
+    """Bàn trà thấp trước sofa: che bắp chân, có cốc và đĩa quả."""
+    k = p.k
+    top = floor - 42 * k
+    wood = (168, 124, 88)
+    for x in (cx - half + 6 * k, cx + half - 10 * k):
+        p.rect(x, top, x + 4 * k, floor - 1 * k, _shade(wood, 0.8))
+    p.rect(cx - half + 8 * k, top + 22 * k, cx + half - 8 * k, top + 26 * k, _shade(wood, 0.9))
+    p.rect(cx - half, top, cx + half, top + 6 * k, wood, r=2)
+    p.rect(cx - 14 * k, top - 10 * k, cx - 6 * k, top + 1 * k, (250, 250, 248), r=2)
+    p.ell(cx + 2 * k, top - 6 * k, cx + 22 * k, top + 2 * k, (236, 120, 96))
+
+
+def _counter(p: _Draw, x0, x1, top, floor, kind, xs):
+    """Quầy bếp (thớt, nồi) hoặc quầy thu ngân (máy tính tiền), cao ngang hông."""
+    k = p.k
+    if kind == "kitchen":
+        body, slab = (236, 232, 222), (120, 128, 140)
+    else:
+        body, slab = (232, 96, 88), (246, 246, 246)
+    p.rect(x0, top + 5 * k, x1, floor, body)
+    x = x0 + 6 * k
+    while x + 30 * k < x1 - 4 * k:                                         # cánh tủ
+        p.rect(x, top + 14 * k, x + 30 * k, floor - 8 * k, _shade(body, 0.93), r=2)
+        x += 36 * k
+    p.rect(x0 - 4 * k, top, x1 + 4 * k, top + 6 * k, slab, r=2)
+    mid = (x0 + x1) / 2
+    for cx in xs:
+        side = 1 if cx <= mid else -1
+        if kind == "kitchen":
+            p.rect(cx - 16 * k, top - 3 * k, cx + 10 * k, top + 1 * k, (214, 170, 120), r=1)
+            px = cx + side * 34 * k
+            p.rect(px - 13 * k, top - 16 * k, px + 13 * k, top + 1 * k, (150, 156, 166), r=3)
+            p.rect(px - 16 * k, top - 18 * k, px + 16 * k, top - 14 * k, (110, 116, 126), r=1)
+        else:
+            px = cx + 30 * k
+            p.rect(px - 14 * k, top - 14 * k, px + 14 * k, top + 1 * k, (64, 68, 80), r=2)
+            p.rect(px - 10 * k, top - 24 * k, px + 10 * k, top - 14 * k, (120, 200, 160), r=1)
 
 
 def _merge(spans: list[tuple[float, float]], gap: float) -> list[tuple[float, float]]:
@@ -170,30 +245,47 @@ def _merge(spans: list[tuple[float, float]], gap: float) -> list[tuple[float, fl
 def draw(seat: str, seats: list[tuple[float, float, float]], k: float, floor: float,
          size: tuple[int, int], color=None) -> tuple[Image.Image | None, Image.Image | None]:
     """Vẽ đồ đạc cho các chỗ ngồi [(x giữa, y mặt ghế, y vai khi ngồi)] trên
-    khung `size`.
+    khung `size`. Loại đứng sau quầy (STANDING): y là hông lúc đứng.
 
     Trả về (lớp sau, lớp trước) cùng cỡ khung, nền trong suốt."""
     if not seats:
         return None, None
-    back = Image.new("RGBA", size, (0, 0, 0, 0))
-    pb = _Draw(back, k)
     mid = size[0] / 2
     xs = [x for x, _, _ in seats]
+
+    if seat in STANDING:
+        # quầy bếp trước mọi người; quầy thu ngân trước người đứng bên phải
+        front = Image.new("RGBA", size, (0, 0, 0, 0))
+        pf = _Draw(front, k)
+        who = seats if seat == "kitchen" else [max(seats, key=lambda s: s[0])]
+        for a, b in _merge([(x - 50 * k, x + 50 * k) for x, _, _ in who], gap=10 * k):
+            top = min(y for x, y, _ in who if a <= x <= b) - 2 * k
+            _counter(pf, a, b, top, floor, seat, [x for x, _, _ in who if a <= x <= b])
+        return None, front
+
+    back = Image.new("RGBA", size, (0, 0, 0, 0))
+    pb = _Draw(back, k)
     if seat in SHARED:
         top = min(y for _, y, _ in seats)
         x0, x1 = min(xs) - 45 * k, max(xs) + 45 * k
+        front = None
         if seat == "sofa":
             _sofa(pb, x0, x1, top, floor, tuple(color or (120, 160, 196)))
+            if len(seats) >= 2:                  # bàn trà thấp giữa hai người
+                front = Image.new("RGBA", size, (0, 0, 0, 0))
+                _coffee_table(_Draw(front, k), (min(xs) + max(xs)) / 2,
+                              (max(xs) - min(xs)) * 0.3 + 18 * k, floor)
         elif seat == "bed":
             _bed(pb, x0 - 20 * k, x1 + 20 * k, top, floor, tuple(color or (236, 160, 186)))
         else:
             _bench(pb, x0, x1, top, floor, (176, 128, 84))
-        return back, None
+        return back, front
 
     chair_col = {"office": (64, 68, 82), "school": (196, 150, 98), "cafe": (150, 104, 72),
-                 "chair": (176, 128, 84)}[seat]
+                 "chair": (176, 128, 84), "dining": (160, 112, 76),
+                 "meeting": (52, 56, 70)}[seat]
     for x, y, _ in seats:
-        if seat == "office":
+        if seat in ("office", "meeting"):
             _office_chair(pb, x, y, floor, chair_col)
         else:
             _wood_chair(pb, x, y, floor, chair_col, round_back=(seat == "cafe"))
@@ -202,10 +294,13 @@ def draw(seat: str, seats: list[tuple[float, float, float]], k: float, floor: fl
 
     front = Image.new("RGBA", size, (0, 0, 0, 0))
     pf = _Draw(front, k)
-    half = {"office": 52, "school": 40, "cafe": 38}[seat] * k
+    half = {"office": 52, "school": 40, "cafe": 38, "dining": 55, "meeting": 60}[seat] * k
     desk_col = {"office": (226, 214, 196), "school": (214, 176, 120),
-                "cafe": tuple(color or (236, 226, 206))}[seat]
-    for a, b in _merge([(x - half, x + half) for x in xs], gap=6 * k):
+                "cafe": tuple(color or (236, 226, 206)), "dining": (176, 128, 92),
+                "meeting": (128, 96, 74)}[seat]
+    # bàn ăn, bàn họp: một bàn dài chung cho cả nhóm
+    gap = size[0] if seat in ("dining", "meeting") else 6 * k
+    for a, b in _merge([(x - half, x + half) for x in xs], gap=gap):
         members = [(x, y, sh) for x, y, sh in seats if a <= x <= b]
         # mặt bàn ngang khuỷu tay: ~40% quãng từ mặt ghế lên vai
         top = min(y - max(12 * k, min(30 * k, 0.4 * (y - sh))) for x, y, sh in members)

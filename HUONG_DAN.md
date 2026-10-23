@@ -215,6 +215,11 @@ bãi biển thì đứng như trước.
   không có bàn ghế).
 - **Đang ngồi vẫn làm cử chỉ tay** (`omdau`, `chitay`, `vaytay`, cầm đồ...) mà
   không đứng dậy. Cử chỉ dùng cả người (`dibo`, `chay`, `nhaylen`...) thì đứng lên.
+- **Nhà bếp** có quầy bếp (thớt, nồi), **cửa hàng** có quầy thu ngân trước người
+  đứng bên phải — mọi người đứng. **Phòng khách** có thêm bàn trà trước sofa.
+- Ghi rõ việc đang làm trong `## canh:` để có đúng đồ đạc: "phòng khách, **ăn
+  cơm**" → bàn ăn có bát đũa; "**phòng họp**" → bàn họp dài; "**trạm xe buýt**"
+  → ghế chờ; "**quầy thu ngân**" → quầy tính tiền.
 - Ảnh nền chị tự tải lên: tool đoán loại cảnh từ dòng `## canh:` (vd "văn phòng",
   "quán cà phê", "phòng khách").
 - Tắt ở **Cài đặt → Cử động nhân vật → Bàn ghế theo bối cảnh**.
@@ -224,6 +229,17 @@ bãi biển thì đứng như trước.
 Linh (worried, omdau): Họp lúc... năm phút nữa.
 Tuấn (shocked, dung_day, zoom): Hả?!
 ```
+
+**Cử chỉ đời thường mới** (làm được cả khi đang ngồi): `go_phim` (gõ phím),
+`chong_cam` (chống cằm), `dap_ban` (đập bàn), `gac_tay` (gác tay sau đầu),
+`cui_dau` (cúi đầu), `gio_tay` (giơ tay phát biểu), `gai_dau` (gãi đầu ngượng),
+`che_mieng` (đưa tay lên miệng), `chong_nanh` (chống nạnh), `lac_tay` (lắc ngón tay
+"không không").
+
+**Góc nghiêng 3/4** — khi hai người trở lên nói chuyện, người nghe quay mặt về phía
+người đang nói, người nói quay về phía người vừa nói với mình (mắt mũi miệng dồn
+sang một bên, quay dần trong ~0,3 giây). Cảnh một người thì nhìn thẳng. Tắt ở
+**Cài đặt → Cử động nhân vật → Góc nghiêng 3/4**.
 
 **Góc máy** — tool **tự đổi góc như phim** (mở cảnh toàn cảnh, câu thường xen kẽ
 cận mặt và qua vai có gáy người nghe ở tiền cảnh, phản ứng mạnh thì siêu cận,
