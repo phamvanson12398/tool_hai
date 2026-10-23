@@ -106,8 +106,18 @@ def _load():
             pipe.scheduler.config, timestep_spacing="trailing")
     # chung card với OmniVoice: chỉ đưa phần đang chạy lên GPU
     pipe.enable_model_cpu_offload()
-    pipe.enable_vae_tiling()
-    pipe.set_progress_bar_config(disable=True)
+    # giải mã ảnh từng mảnh cho đỡ tốn bộ nhớ card (diffusers mới gọi qua pipe.vae)
+    try:
+        if hasattr(pipe.vae, "enable_tiling"):
+            pipe.vae.enable_tiling()
+        else:
+            pipe.enable_vae_tiling()
+    except Exception:  # noqa: BLE001
+        logger.info("Không bật được VAE tiling, bỏ qua.")
+    try:
+        pipe.set_progress_bar_config(disable=True)
+    except Exception:  # noqa: BLE001
+        pass
     _PIPE = pipe
     return pipe
 
