@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import threading
@@ -130,38 +131,75 @@ def _log_fallback(task: str, eng: str, err: Exception) -> None:
         pass
 
 
+# Gọi Claude cho gọn để đỡ tốn hạn mức: Claude Code mặc định gửi kèm mỗi lần
+# gọi một bản hướng dẫn rất dài (lập trình, công cụ, MCP, skill...). Tool chỉ
+# cần Claude trả chữ, nên thay bằng một câu ngắn, tắt hết công cụ (trừ việc tìm
+# web), bỏ MCP và skill, không lưu phiên. Bản Claude CLI cũ không hiểu các
+# tuỳ chọn này thì tự quay về cách gọi cũ.
+LEAN_SYSTEM = ("Bạn là biên tập viên kịch bản video hài ngắn. Làm đúng yêu cầu trong "
+               "tin nhắn, trả lời thẳng đúng định dạng được yêu cầu, không giải thích thêm.")
+_LEAN_OK = True
+
+
+def _claude_dir() -> str:
+    # thư mục riêng: Claude không tự đọc CLAUDE.md và mã nguồn của tool
+    d = config.DATA / "tmp" / "claude"
+    d.mkdir(parents=True, exist_ok=True)
+    return str(d)
+
+
+def _claude_cmd(allowed_tools: list[str] | None, append_system: str | None,
+                lean: bool) -> list[str]:
+    cmd = [_cli_path(), "-p", "--output-format", "text"]
+    if lean:
+        cmd += ["--system-prompt", LEAN_SYSTEM + ("\n" + append_system if append_system else ""),
+                "--tools", ",".join(allowed_tools) if allowed_tools else "",
+                "--strict-mcp-config", "--disable-slash-commands",
+                "--no-session-persistence"]
+    elif append_system:
+        cmd += ["--append-system-prompt", append_system]
+    if allowed_tools:
+        cmd += ["--allowedTools", ",".join(allowed_tools)]
+    return cmd
+
+
 def _run_claude(prompt: str, *, allowed_tools: list[str] | None = None,
                 append_system: str | None = None, timeout: int = TIMEOUT) -> str:
-    """Chạy claude -p và trả về phần text của kết quả."""
-    cmd = [_cli_path(), "-p", prompt, "--output-format", "text"]
-    if allowed_tools is not None:
-        cmd += ["--allowedTools", ",".join(allowed_tools)]
-    if append_system:
-        cmd += ["--append-system-prompt", append_system]
-    try:
-        proc = subprocess.run(
-            cmd,
-            capture_output=True,
-            text=True,
-            encoding="utf-8",
-            errors="replace",
-            timeout=timeout,
-        )
-    except FileNotFoundError:
-        raise RuntimeError(
-            "Không tìm thấy lệnh 'claude'. Chị cần cài Claude Code CLI "
-            "và đăng nhập trước."
-        ) from None
-    except subprocess.TimeoutExpired:
-        raise RuntimeError(
-            f"Claude CLI chạy quá {timeout}s và bị dừng."
-        ) from None
+    """Chạy claude -p (prompt gửi qua stdin) và trả về phần text của kết quả."""
+    global _LEAN_OK
+    for lean in ((True, False) if _LEAN_OK else (False,)):
+        cmd = _claude_cmd(allowed_tools, append_system, lean)
+        try:
+            proc = subprocess.run(
+                cmd,
+                input=prompt,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=timeout,
+                cwd=_claude_dir(),
+            )
+        except FileNotFoundError:
+            raise RuntimeError(
+                "Không tìm thấy lệnh 'claude'. Chị cần cài Claude Code CLI "
+                "và đăng nhập trước."
+            ) from None
+        except subprocess.TimeoutExpired:
+            raise RuntimeError(
+                f"Claude CLI chạy quá {timeout}s và bị dừng."
+            ) from None
 
-    out = (proc.stdout or "").strip()
-    if proc.returncode != 0 and not out:
+        out = (proc.stdout or "").strip()
         err = (proc.stderr or "").strip()
-        raise RuntimeError(f"Claude CLI lỗi (mã {proc.returncode}): {err[:500]}")
-    return out
+        if lean and proc.returncode != 0 and re.search(
+                r"unknown option|unrecognized|invalid option|error: option", err, re.I):
+            _LEAN_OK = False            # bản Claude CLI cũ: dùng cách gọi cũ từ giờ
+            continue
+        if proc.returncode != 0 and not out:
+            raise RuntimeError(f"Claude CLI lỗi (mã {proc.returncode}): {err[:500]}")
+        return out
+    raise RuntimeError("Claude CLI không chạy được.")
 
 
 def _extract_json(text: str) -> object:
@@ -437,7 +475,7 @@ def write_script(title: str, language: str, kind: str | None = None,
         hints=hints or "(không có)",
         history_block=_history_block(language),
         language=language,
-        gestures_block=gesture_catalog_text(),
+        gestures_block=gesture_catalog_text(compact=True),
         props_block=_props_catalog(),
         cast_header={"ko": "지은=trai, 수아=phai", "vi": "Tuấn=trai, Linh=phai"}.get(
             language, "Mike=left, Sarah=right"),
@@ -665,8 +703,9 @@ def find_trends(language: str, title: str = "") -> list[dict]:
         sources=sources,
         topic=topic,
     )
-    data = _run_json(prompt, task="trends", timeout=300,
-                     allowed_tools=["WebSearch", "WebFetch"])
+    # chỉ cho tìm web (không mở từng trang) — mỗi trang mở ra là thêm rất nhiều
+    # chữ phải gửi lại ở các lượt sau, tốn hạn mức nhất
+    data = _run_json(prompt, task="trends", timeout=300, allowed_tools=["WebSearch"])
     if isinstance(data, dict):
         data = data.get("ideas", data.get("trends", []))
     if not isinstance(data, list):

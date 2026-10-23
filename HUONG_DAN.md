@@ -25,7 +25,13 @@ Cần có sẵn trên máy:
 | Antigravity CLI `agy` (nên có) | Các việc phụ: bắt trend, 3 hướng, chọn nhân vật, bối cảnh, giọng — đỡ tốn hạn mức Claude | Mở **PowerShell**, chạy `irm https://antigravity.google/cli/install.ps1 \| iex`, mở cửa sổ lệnh mới, gõ `agy` một lần và đăng nhập tài khoản Google |
 | Dung lượng trống | Mô hình OmniVoice và Whisper | Vài GB, tải về lần đầu |
 
-> Mỗi lần gọi Claude đều trừ vào hạn mức tài khoản của chị. Góc trên bên phải
+> Mỗi lần gọi Claude đều trừ vào hạn mức tài khoản của chị. Tool gọi Claude ở
+> chế độ gọn (không kèm bản hướng dẫn lập trình dài của Claude Code, tắt công cụ,
+> bỏ MCP) nên mỗi lần gọi rẻ hơn khoảng 10 lần so với gọi mặc định; Bắt trend chỉ
+> tìm web tối đa 3 lần, không mở từng trang. Bước tốn nhất vẫn là **Bắt trend**
+> (mỗi lần bấm) và **Viết kịch bản** (mỗi tập, tăng theo thời lượng).
+> **Dựng video không tốn hạn mức AI**: giọng (OmniVoice), nghe giọng mẫu
+> (Whisper), vẽ nhân vật, cử chỉ, bàn ghế, góc máy và ghép video đều chạy trên máy. Góc trên bên phải
 > màn hình đếm số lần đã gọi Claude và Antigravity trong phiên.
 
 ### Trợ lý AI cho từng việc (Cài đặt → Trợ lý AI cho từng việc)

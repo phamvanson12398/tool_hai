@@ -868,9 +868,17 @@ def merge_angles(*dicts: dict[str, float]) -> dict[str, float]:
     return out
 
 
-def gesture_catalog_text() -> str:
-    """Mô tả thư viện cử chỉ + hiệu ứng để đưa vào prompt viết kịch bản."""
+def gesture_catalog_text(compact: bool = False) -> str:
+    """Mô tả thư viện cử chỉ + hiệu ứng để đưa vào prompt viết kịch bản.
+
+    compact: một dòng "tên (nghĩa)" cho mỗi cử chỉ — ngắn hơn ~3 lần, đỡ tốn
+    hạn mức Claude mà vẫn đủ để chọn đúng tên."""
     _, lib = ensure_library()
+    if compact:
+        names = ", ".join(f"{n} ({lib[n].label.lower()})" for n in sorted(lib)
+                          if n != "ve_tu_the")
+        effects = ", ".join(f"{n} ({EFFECT_LABELS[n][0].lower()})" for n in EFFECT_NAMES)
+        return (f"Cử chỉ / tư thế: {names}.\n  Hiệu ứng cả người: {effects}.")
     lines = ["DANH SÁCH CỬ CHỈ DÙNG ĐƯỢC (viết trong ngoặc, cách nhau bằng dấu phẩy):"]
     for name in sorted(lib):
         g = lib[name]
