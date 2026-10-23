@@ -366,56 +366,7 @@ class LiveShot:
 
     # --- vẽ
     def _marks(self, canvas, a, t, head):
-        cv2 = self.cv2
-        act = a["act"]
-        hx, hy, r = head
-        T = self.T
-        lw = max(2, int(T * 0.012))
-        if act == "cry":
-            for k, sx in enumerate((-1, 1)):
-                for j in range(2):
-                    u = ((t * 0.9 + j * 0.5 + k * 0.25) % 1.0)
-                    x = int(hx + sx * r * 0.42 + sx * u * r * 0.25)
-                    y = int(hy + r * 0.25 + u * r * 1.3)
-                    rr = max(2, int(r * 0.07 * (1 - u * 0.4)))
-                    cv2.circle(canvas, (x, y), rr, (150, 204, 240), -1, cv2.LINE_AA)
-                    cv2.circle(canvas, (x, y), rr, (60, 90, 120), max(1, lw // 2), cv2.LINE_AA)
-        if act in ("scratch_head", "hands_up", "tremble", "facepalm"):
-            x, y = int(hx + r * 0.95), int(hy - r * 0.5 + 0.02 * T * math.sin(t * 3))
-            pts = np.array([[x, y - int(r * 0.22)], [x - int(r * 0.1), y],
-                            [x + int(r * 0.1), y]], np.int32)
-            cv2.circle(canvas, (x, y + int(r * 0.03)), int(r * 0.1), (170, 214, 244), -1, cv2.LINE_AA)
-            cv2.fillPoly(canvas, [pts], (170, 214, 244), cv2.LINE_AA)
-            cv2.circle(canvas, (x, y + int(r * 0.03)), int(r * 0.1), (60, 90, 120), lw // 2 + 1, cv2.LINE_AA)
-        if act == "hands_up" and t < 1.8:
-            for k in (-1, 0, 1):
-                ang = math.radians(-90 + k * 30)
-                x0, y0 = hx + math.cos(ang) * r * 1.25, hy - r * 0.2 + math.sin(ang) * r * 1.25
-                x1, y1 = hx + math.cos(ang) * r * 1.55, hy - r * 0.2 + math.sin(ang) * r * 1.55
-                cv2.line(canvas, (int(x0), int(y0)), (int(x1), int(y1)), (40, 34, 38), lw, cv2.LINE_AA)
-        if act == "angry" and (t % 1.2) < 0.9:
-            x, y, s = int(hx - r * 0.75), int(hy - r * 0.75), int(r * 0.16)
-            for dx, dy in ((-1, -1), (1, -1), (-1, 1), (1, 1)):
-                cv2.ellipse(canvas, (x + dx * s, y + dy * s), (s, s), 0,
-                            {(-1, -1): 0, (1, -1): 90, (-1, 1): 270, (1, 1): 180}[(dx, dy)],
-                            {(-1, -1): 0, (1, -1): 90, (-1, 1): 270, (1, 1): 180}[(dx, dy)] + 90,
-                            (210, 60, 60), lw + 1, cv2.LINE_AA)
-        if act == "sleep":
-            for j in range(3):
-                u = (t * 0.5 + j / 3) % 1.0
-                s = int(r * (0.12 + 0.1 * u))
-                x = int(hx + r * (0.6 + 0.5 * u))
-                y = int(hy - r * (0.8 + 0.9 * u))
-                pts = np.array([[x - s, y - s], [x + s, y - s], [x - s, y + s], [x + s, y + s]], np.int32)
-                cv2.polylines(canvas, [pts], False, (60, 60, 80), lw, cv2.LINE_AA)
-        if act == "think":
-            for j in range(3):
-                if (t % 2.4) > j * 0.5:
-                    x = int(hx + (a["face"] > 0 and 1 or -1) * r * (0.6 + 0.3 * j))
-                    y = int(hy - r * (1.2 + 0.25 * j))
-                    rr = int(r * (0.06 + 0.03 * j))
-                    cv2.circle(canvas, (x, y), rr, (250, 250, 250), -1, cv2.LINE_AA)
-                    cv2.circle(canvas, (x, y), rr, (40, 34, 38), max(1, lw // 2), cv2.LINE_AA)
+        film_rig.marks(canvas, a["act"], t, head, self.T, a["face"])
 
     def _shadow(self, canvas, x, y, w):
         """Bóng mờ dưới chân cho nhân vật đứng vững trên nền (nhất là nền 3D)."""

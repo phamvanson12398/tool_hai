@@ -618,6 +618,39 @@ hình có hai cách (ô **Cách làm hình**):
 - **Tranh tự vẽ ở công cụ khác**: chị vẽ tranh (Midjourney, Gemini, ChatGPT...) từ
   **bộ câu lệnh vẽ** tool xuất ra rồi tải lên.
 
+### Hai kiểu video: Kể chuyện và Phim
+Ô **Kiểu video** ở đầu mục 1:
+
+- **Kể chuyện**: người kể đọc suốt, nhân vật diễn theo lời kể (có thể xen thoại).
+  Nhân vật có tay chân ngắn và **luôn cử động**: lúc đứng nghe cũng tự đổi động
+  tác nhỏ mỗi vài giây (nhìn quanh, chắp tay sau lưng, gãi đầu, chống cằm, đổi chân...);
+  khi lời kể nói "khóc, cười, ăn, uống, ôm, chỉ, vẫy, van xin, ngồi, nằm..." thì
+  nhân vật làm đúng động tác đó; nhân vật đang nói vung tay theo nhịp.
+- **Phim**: nhân vật tự nói chuyện với nhau bằng giọng riêng, đi lại, làm hành
+  động; người kể chỉ thỉnh thoảng nối cảnh ("Mấy hôm sau..."). Đổi kiểu video thì
+  bấm **AI viết lời kể & chia cảnh** lại để AI viết theo kiểu mới.
+
+### Chế độ Phim
+- AI chuyển truyện thành **kịch bản phim**: mỗi chương nhiều cảnh, mỗi cảnh ở một
+  địa điểm, gồm các **nhịp**:
+  - **Thoại**: ai nói, nói gì, cử chỉ khi nói (khóc, vẫy, chỉ tay...), nói với
+    ai; người nghe có thể phản ứng (sững sờ, gật đầu...).
+  - **Hành động**: đi / chạy tới ai hoặc chỗ nào, đi vào / đi ra khung, ngồi
+    xuống / đứng dậy / nằm, đưa đồ (đồ chuyển sang tay người nhận), ôm, xoa đầu,
+    ăn, uống, cúi chào, vỗ tay, làm việc... cùng đồ cầm tay (bát, chén, thư, tiền,
+    rổ, gậy, sách, hoa, tay nải, chai, dao, đèn dầu — thiếu thì "Vẽ thêm bằng AI"
+    loại **Đồ vật cầm tay**).
+  - **Người kể**: một câu nối cảnh.
+- **Máy quay tự đổi góc**: toàn cảnh khi mở cảnh và khi người kể nói, hai người
+  khi đối đáp, cận mặt người đang nói, lia theo người đi lại; đẩy máy rất chậm
+  cho đỡ đơ.
+- Mục 3 hiện từng cảnh với ảnh xem trước, địa điểm, ngày / đêm và danh sách nhịp:
+  đổi loại, người, hành động, "với ai / tới đâu", đồ cầm, câu nói; **↑** đưa nhịp
+  lên trước, **✕** bỏ, **+ Nhịp** thêm. Bấm **Lưu thay đổi** để ảnh xem trước vẽ lại.
+- Bối cảnh vẽ tay hoặc 3D, giọng từng nhân vật, phụ đề, nhạc nền dùng như Kể
+  chuyện. Chỗ đứng: sát mép trái, bên trái, giữa, bên phải, sát mép phải, ngoài
+  khung trái / phải (để đi vào sau).
+
 ### Thoại nhân vật xen giữa lời kể
 Kể suốt dễ chán, nên ô **Thoại nhân vật** (mục 1) cho AI chèn câu nói của nhân vật:
 **Thỉnh thoảng** (mặc định, khoảng 1/4 số cảnh, lúc cảm xúc cao), **Nhiều** (đối

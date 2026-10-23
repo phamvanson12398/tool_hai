@@ -34,8 +34,9 @@ KINDS = {
     "body": "Hoa văn, đồ khoác trên áo",
     "animal": "Con vật",
     "scene": "Bối cảnh",
+    "prop": "Đồ vật cầm tay",
 }
-MAX_SHAPES = {"head": 60, "body": 60, "animal": 90, "scene": 220}
+MAX_SHAPES = {"head": 60, "body": 60, "animal": 90, "scene": 220, "prop": 40}
 _LOCK = threading.Lock()
 
 
@@ -173,6 +174,10 @@ def clean_part(d: dict, kind: str, name: str, desc: str) -> dict:
             else (0.82, 0.5)
         part["size"] = _num(d.get("size"), 0.08, 2.0, 0.45)
         part["eye_r"] = _num(d.get("eye_r"), 0.01, 0.2, 0.045)
+    if kind == "prop":
+        h = d.get("hold") or [0, 0]
+        part["hold"] = (_num(h[0]), _num(h[1])) if isinstance(h, (list, tuple)) and len(h) >= 2 \
+            else (0.0, 0.0)
     if kind == "scene":
         part["indoor"] = bool(d.get("indoor", True))
         part["sky"] = _color(d.get("sky")) or (230, 214, 176)
@@ -241,6 +246,10 @@ def render_scene(part: dict, size, night: bool = False) -> Image.Image:
 # ------------------------------------------------------------ AI vẽ
 
 _EXAMPLES = {
+    "prop": ('Cái quạt nan: {"hold":[0,0.8],"shapes":[{"t":"poly","pts":[[0,0.8],[-0.8,-0.5],'
+             '[-0.3,-0.8],[0.3,-0.8],[0.8,-0.5]],"fill":"#d9b97a"},{"t":"line","pts":[[0,0.8],'
+             '[0,-0.8]],"w":0.04,"fill":"#8a6a3a"},{"t":"rect","x":-0.06,"y":0.6,"w":0.12,"h":0.5,'
+             '"fill":"#8a6a3a"}]}'),
     "head": ('Mũ miện vua: {"shapes":[{"t":"poly","pts":[[-0.85,-0.55],[-0.95,-1.45],[-0.5,-1.05],'
              '[0,-1.6],[0.5,-1.05],[0.95,-1.45],[0.85,-0.55]],"fill":"#e6c35a"},'
              '{"t":"rect","x":-0.9,"y":-0.7,"w":1.8,"h":0.2,"fill":"#c99a3a"},'
@@ -268,6 +277,9 @@ _EXAMPLES = {
 }
 
 _RULES = {
+    "prop": "Đồ vật nhân vật cầm trên tay, nhìn ngang. Toạ độ: tâm đồ vật (0,0), cỡ khoảng "
+            "-1..1 (1 đơn vị ≈ bàn tay). \"hold\": [x, y] là chỗ bàn tay cầm (vd quai giỏ, cán "
+            "dao, đáy bát).",
     "head": "Toạ độ theo bán kính đầu R: tâm đầu (0,0), đỉnh đầu y=-1, cằm y=0.97, mắt y=0.08 "
             "x=±0.36, tai x=±1. Mũ nằm trên đỉnh đầu (y từ khoảng -0.5 lên tới -1.8). "
             "Khối có \"layer\":\"back\" vẽ sau đầu (vd tóc dài, dải mũ phía sau).",
@@ -306,6 +318,14 @@ def preview(part: dict, size=(360, 360)) -> Image.Image:
     from . import doodle
     if part["kind"] == "scene":
         return render_scene(part, (480, 270))
+    if part["kind"] == "prop":
+        from . import film_rig
+        got = film_rig.prop_image(part["id"], 120)
+        bg = Image.new("RGBA", (300, 300), (246, 238, 222, 255))
+        if got:
+            img = got[0]
+            bg.alpha_composite(img, ((300 - img.width) // 2, (300 - img.height) // 2))
+        return bg.convert("RGB")
     kit = doodle.default_kit()
     if part["kind"] == "head":
         kit.update(hat=part["id"], hair="short")

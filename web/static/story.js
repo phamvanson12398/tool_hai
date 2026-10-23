@@ -134,6 +134,7 @@
       format: $("st-format").value,
       style: $("st-style").value,
       visual: $("st-visual").value,
+      mode: $("st-mode").value,
       bg_mode: $("st-bgmode").value,
       dialogue: $("st-dialogue").value,
       subtitles: $("st-subs").value === "1",
@@ -170,6 +171,8 @@
         return {
           title: t ? t.value : ch.title,
           scenes: (ch.scenes || []).map(function (sc) {
+            var fbox = document.querySelector('[data-fscene="' + sc.id + '"]');
+            if (fbox) return collectFilmScene(sc, fbox);
             var box = document.querySelector('[data-scene="' + sc.id + '"]');
             if (!box) return sc;
             var out = Object.assign({}, sc);
@@ -228,6 +231,7 @@
     (d.styles || []).forEach(function (kv) { sty.appendChild(new Option(kv[1], kv[0])); });
     sty.value = s.style || "doodle";
     $("st-visual").value = s.visual || "tool";
+    $("st-mode").value = s.mode || "story";
     $("st-bgmode").value = s.bg_mode || "draw";
     applyVisual();
     showStyleRef(d);
@@ -475,10 +479,148 @@
     return wrap;
   }
 
+  /* ------------------------------------------------- chế độ Phim: cảnh, nhịp */
+
+  var BEAT_VI = { narr: "Người kể", line: "Thoại", act: "Hành động" };
+
+  function opt(sel, items, val) {
+    items.forEach(function (kv) { sel.appendChild(new Option(kv[1], kv[0])); });
+    if (val !== undefined) sel.value = val;
+    return sel;
+  }
+
+  function beatRow(b, s, d) {
+    var row = el("div", "st-beat");
+    var chars = (s.characters || []).map(function (c) { return [c.id, c.name]; });
+    var type = opt(document.createElement("select"), [["narr", "Người kể"], ["line", "Thoại"], ["act", "Hành động"]], b.t || "act");
+    type.className = "st-b-type";
+    var who = opt(document.createElement("select"), chars, b.who || (chars[0] || [""])[0]);
+    who.className = "st-b-who";
+    var act = opt(document.createElement("select"), d.film_acts || [], b.act || (b.t === "line" ? "talk" : "idle"));
+    act.className = "st-b-act";
+    var to = opt(document.createElement("select"), [["", "— với ai / tới đâu —"]].concat(chars).concat(d.spots || []), b.to || "");
+    to.className = "st-b-to";
+    var prop = opt(document.createElement("select"), [["", "— đồ cầm —"], ["none", "Bỏ đồ xuống"]].concat(d.props || []), b.prop || "");
+    prop.className = "st-b-prop";
+    var text = document.createElement("input");
+    text.type = "text";
+    text.className = "st-b-text";
+    text.value = b.text || "";
+    var up = el("button", "btn btn-sm", "↑");
+    up.type = "button";
+    up.title = "Đưa lên trước";
+    up.addEventListener("click", function () {
+      if (row.previousElementSibling && row.previousElementSibling.classList.contains("st-beat"))
+        row.parentNode.insertBefore(row, row.previousElementSibling);
+    });
+    var rm = el("button", "btn btn-sm", "✕");
+    rm.type = "button";
+    rm.title = "Bỏ nhịp này";
+    rm.addEventListener("click", function () { row.remove(); });
+    row._react = b.react;
+    function sync() {
+      var t = type.value;
+      who.hidden = act.hidden = to.hidden = t === "narr";
+      prop.hidden = t !== "act";
+      text.hidden = t === "act";
+      text.placeholder = t === "narr" ? "Lời người kể (ngắn, nối cảnh)" : "Câu nhân vật nói";
+    }
+    type.addEventListener("change", sync);
+    [type, who, act, to, prop, text, up, rm].forEach(function (x) { row.appendChild(x); });
+    sync();
+    return row;
+  }
+
+  function collectFilmScene(sc, box) {
+    var out = Object.assign({}, sc);
+    var pl = box.querySelector(".st-f-place"), tm = box.querySelector(".st-f-time");
+    if (pl) out.place = pl.value;
+    if (tm) out.time = tm.value;
+    var chars = (sc.chars || []).slice();
+    out.beats = [];
+    box.querySelectorAll(".st-beat").forEach(function (row) {
+      var t = row.querySelector(".st-b-type").value;
+      var b = { t: t };
+      var txt = row.querySelector(".st-b-text").value.trim();
+      if (t === "narr") {
+        if (!txt) return;
+        b.text = txt;
+      } else {
+        b.who = row.querySelector(".st-b-who").value;
+        b.act = row.querySelector(".st-b-act").value;
+        var to = row.querySelector(".st-b-to").value;
+        if (to) b.to = to;
+        if (t === "line") {
+          if (!txt) return;
+          b.text = txt;
+          if (row._react) b.react = row._react;
+        } else {
+          var pr = row.querySelector(".st-b-prop").value;
+          if (pr) b.prop = pr;
+        }
+        if (b.who && chars.indexOf(b.who) < 0) chars.push(b.who);
+      }
+      out.beats.push(b);
+    });
+    out.chars = chars;
+    return out;
+  }
+
+  function renderFilmScenes(d) {
+    var box = $("st-scenes");
+    var s = d.story || {};
+    var places = (s.places || []).map(function (p) { return [p.id, p.name]; });
+    s.chapters.forEach(function (ch, ci) {
+      var t = document.createElement("input");
+      t.type = "text";
+      t.className = "st-chapter";
+      t.value = ch.title || "";
+      t.setAttribute("data-chapter", ci);
+      box.appendChild(el("div", "st-meta", "Chương " + (ci + 1)));
+      box.appendChild(t);
+      (ch.scenes || []).forEach(function (sc) {
+        var card = el("div", "st-fscene");
+        card.setAttribute("data-fscene", sc.id);
+        var head = el("div", "st-f-head");
+        var img = document.createElement("img");
+        img.className = "st-thumb";
+        img.loading = "lazy";
+        img.src = "/api/story/" + encodeURIComponent(st.id) + "/preview/" + sc.id + ".png?v=" + stamp();
+        var hr = el("div", "");
+        hr.appendChild(el("div", "st-meta", "Cảnh " + sc.id + " · " + (sc.beats || []).length + " nhịp"));
+        var pl = opt(document.createElement("select"), places, sc.place);
+        pl.className = "st-f-place";
+        var tm = opt(document.createElement("select"), [["ngay", "Ban ngày"], ["dem", "Ban đêm"]], sc.time || "ngay");
+        tm.className = "st-f-time";
+        var ctl = el("div", "st-kit");
+        ctl.appendChild(pl);
+        ctl.appendChild(tm);
+        hr.appendChild(ctl);
+        head.appendChild(img);
+        head.appendChild(hr);
+        card.appendChild(head);
+        var list = el("div", "st-beats");
+        (sc.beats || []).forEach(function (b) { list.appendChild(beatRow(b, s, d)); });
+        var add = el("button", "btn btn-sm", "+ Nhịp");
+        add.type = "button";
+        add.addEventListener("click", function () {
+          list.insertBefore(beatRow({ t: "line" }, s, d), add);
+        });
+        list.appendChild(add);
+        card.appendChild(list);
+        box.appendChild(card);
+      });
+    });
+  }
+
   function renderScenes(d) {
     var box = $("st-scenes");
     box.innerHTML = "";
     var s = d.story || {};
+    if ($("st-mode").value === "film" && (s.chapters || []).length) {
+      renderFilmScenes(d);
+      return;
+    }
     var have = {};
     (d.images || []).forEach(function (i) { have[i] = true; });
     if (!(s.chapters || []).length) {
@@ -570,6 +712,9 @@
   function applyVisual() {
     var tool = isTool();
     var scr = $("screen-story");
+    var filmMode = $("st-mode").value === "film";
+    if (scr) scr.classList.toggle("st-film", filmMode);
+    if (filmMode) tool = true;
     if (scr) scr.classList.toggle("st-tool", tool);
     if (scr) scr.classList.toggle("st-3d", tool && $("st-bgmode").value === "ai3d");
   }
@@ -635,6 +780,12 @@
     $("st-pick").addEventListener("change", function () { open(this.value); });
     $("st-part-make").addEventListener("click", newPart);
     $("st-bg3d-all").addEventListener("click", function () { drawBg3d([], false); });
+    $("st-mode").addEventListener("change", function () {
+      applyVisual();
+      if (st.id) save(true);
+      if (st.data && st.data.scene_count)
+        toast("warn", "Đổi kiểu video", "Bấm “AI viết lời kể & chia cảnh” lại để AI viết theo kiểu mới.");
+    });
     $("st-bgmode").addEventListener("change", function () {
       applyVisual();
       if (st.id) save(true);

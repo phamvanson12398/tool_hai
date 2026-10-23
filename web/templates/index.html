@@ -360,6 +360,13 @@
           <p class="hint">Video kể chuyện dài (vd Lão Hạc — Nam Cao): một giọng người kể; hình do
             tool tự vẽ và cho nhân vật cử động theo lời kể (hoặc tranh chị tự vẽ từ bộ câu lệnh tool xuất ra). Truyện của tác giả mất trên 50 năm (Nam Cao, Ngô Tất Tố...)
             mới dán nguyên văn được; truyện còn bản quyền thì để trống nguyên văn cho AI kể lại.</p>
+          <div class="field">
+            <label for="st-mode">Kiểu video</label>
+            <select id="st-mode">
+              <option value="story">Kể chuyện — người kể đọc, nhân vật diễn theo lời kể</option>
+              <option value="film">Phim — nhân vật tự nói chuyện, đi lại, hành động; người kể chỉ nối cảnh</option>
+            </select>
+          </div>
           <div class="field-row">
             <div class="field"><label for="st-title">Tên truyện</label><input type="text" id="st-title" placeholder="Lão Hạc"></div>
             <div class="field"><label for="st-author">Tác giả</label><input type="text" id="st-author" placeholder="Nam Cao"></div>
@@ -368,7 +375,7 @@
             <div class="field"><label for="st-minutes">Thời lượng (phút)</label><input type="number" id="st-minutes" min="3" max="40" value="25"></div>
             <div class="field"><label for="st-format">Khung</label>
               <select id="st-format"><option value="16:9">16:9 ngang (YouTube)</option><option value="9:16">9:16 dọc</option><option value="1:1">1:1 vuông</option></select></div>
-            <div class="field"><label for="st-visual">Cách làm hình</label>
+            <div class="field st-story-only"><label for="st-visual">Cách làm hình</label>
               <select id="st-visual">
                 <option value="tool">Tool tự vẽ &amp; nhân vật cử động (miễn phí)</option>
                 <option value="images">Tranh tự vẽ ở công cụ khác (xuất câu lệnh)</option>
@@ -383,7 +390,7 @@
           <div class="field-row">
             <div class="field"><label for="st-voice">Giọng người kể (Thư viện)</label><select id="st-voice"></select></div>
             <div class="field"><label for="st-instruct">hoặc mô tả giọng</label><input type="text" id="st-instruct" placeholder="male, elderly, low pitch"></div>
-            <div class="field"><label for="st-dialogue">Thoại nhân vật</label>
+            <div class="field st-story-only"><label for="st-dialogue">Thoại nhân vật</label>
               <select id="st-dialogue">
                 <option value="some">Thỉnh thoảng xen thoại</option>
               </select></div>
@@ -425,6 +432,7 @@
                   <option value="body">Hoa văn, đồ khoác trên áo (long bào, giáp...)</option>
                   <option value="animal">Con vật</option>
                   <option value="scene">Bối cảnh</option>
+                  <option value="prop">Đồ vật cầm tay (Phim)</option>
                 </select></div>
               <div class="field"><label for="st-part-name">Tên</label>
                 <input type="text" id="st-part-name" placeholder="Vd: con trâu"></div>
@@ -446,7 +454,7 @@
       </div>
 
       <aside class="col-preview col-flow">
-        <section class="card">
+        <section class="card st-story-only">
           <h2 class="card-title">4. Tranh minh hoạ</h2>
           <p class="hint" id="st-img-count">Chưa có cảnh</p>
           <div class="row-actions">

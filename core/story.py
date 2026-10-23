@@ -89,7 +89,7 @@ def default_story(title: str = "", author: str = "") -> dict:
         "title": title, "author": author, "source_text": "", "minutes": 25,
         "style": "doodle", "visual": "tool", "narrator": {"voice": "", "instruct": "male, elderly, low pitch"},
         "subtitles": False, "era": "", "characters": [], "places": [], "chapters": [],
-        "dialogue": "some",
+        "dialogue": "some", "mode": "story",
     }
 
 
@@ -136,7 +136,8 @@ def write_story(st: dict, progress=None) -> dict:
                     "(Không có nguyên văn: kể lại theo đúng nội dung truyện mà bạn biết, "
                     "không bịa thêm.)")
     look_hint = LOOK_HINTS.get(st.get("style"), "")
-    tool = st.get("visual", "tool") == "tool"
+    film_mode = st.get("mode") == "film"
+    tool = film_mode or st.get("visual", "tool") == "tool"
     visual_block, scene_block = (_tool_blocks() if tool else ("", ""))
     say(0.03, "AI chia chương và lập danh sách nhân vật, địa điểm")
     plan = claude_cli._run_json(claude_cli._load_prompt(
@@ -162,6 +163,10 @@ def write_story(st: dict, progress=None) -> dict:
     for i, c in enumerate(chapters):
         say(0.08 + 0.9 * i / len(chapters), f"AI viết chương {i + 1}/{len(chapters)}: {c.get('title')}")
         block = f"### Nguyên văn đoạn tương ứng\n{parts[i]}" if parts[i] else ""
+        if film_mode:
+            out_chapters.append(_write_film_chapter(st, i, c, outline, chars_txt, places_txt,
+                                                    block, per_min))
+            continue
         data = claude_cli._run_json(claude_cli._load_prompt(
             "story_chapter", title=st.get("title") or "", author=st.get("author") or "",
             outline=outline, characters=chars_txt, places=places_txt, index=str(i + 1),
@@ -186,6 +191,89 @@ def _slug(v) -> str:
     t = unicodedata.normalize("NFD", str(v or "")).encode("ascii", "ignore").decode()
     t = re.sub(r"[^a-zA-Z0-9]+", "_", t.replace("đ", "d").replace("Đ", "D")).strip("_").lower()
     return t or "x"
+
+
+def _film_lists() -> tuple[str, str, str]:
+    from . import doodle_parts, film, film_rig
+    acts = ", ".join(f"{k} ({v[0]})" for k, v in film.all_actions().items())
+    spots = ", ".join(f"{k} ({v})" for k, v in film.SPOT_VI.items())
+    props = dict(film_rig.PROPS)
+    props.update({k: v["name"] for k, v in doodle_parts.load().items() if v.get("kind") == "prop"})
+    return acts, spots, ", ".join(f"{k} ({v})" for k, v in props.items())
+
+
+def _write_film_chapter(st, i, c, outline, chars_txt, places_txt, block, per_min) -> dict:
+    """AI viết một chương dạng kịch bản phim (cảnh -> nhịp thoại / hành động)."""
+    acts, spots, props = _film_lists()
+    data = claude_cli._run_json(claude_cli._load_prompt(
+        "film_chapter", title=st.get("title") or "", author=st.get("author") or "",
+        outline=outline, characters=chars_txt, places=places_txt, index=str(i + 1),
+        chapter_title=str(c.get("title") or ""), chapter_summary=str(c.get("summary") or ""),
+        source_block=block, minutes=f"{per_min:.1f}", beats=str(int(per_min * 60 / 3.0)),
+        actions=acts, spots=spots, props=props), task="story", timeout=900)
+    scenes = data.get("scenes") if isinstance(data, dict) else None
+    if not scenes:
+        raise RuntimeError(f"AI không viết được chương {i + 1}.")
+    known = {ch["id"] for ch in st.get("characters") or []}
+    return {"title": str(c.get("title") or f"Chương {i + 1}"),
+            "scenes": [s for s in (clean_film_scene(x, known) for x in scenes if isinstance(x, dict))
+                       if s["beats"]]}
+
+
+def clean_film_scene(s: dict, known: set | None = None) -> dict:
+    """Kiểm tra một cảnh phim: nhịp hợp lệ, người nói có trong cảnh."""
+    from . import film, film_act
+    acts = film.all_actions()
+    chars = [_slug(c) for c in (s.get("chars") or []) if c]
+    if known is not None:
+        chars = [c for c in chars if c in known]
+    beats = []
+    for b in s.get("beats") or []:
+        if not isinstance(b, dict):
+            continue
+        t = b.get("t") or b.get("type")
+        who = _slug(b.get("who")) if b.get("who") else ""
+        if t == "narr":
+            if str(b.get("text") or "").strip():
+                beats.append({"t": "narr", "text": str(b["text"]).strip()})
+            continue
+        if t not in ("line", "act") or not who or (known is not None and who not in known):
+            continue
+        if who not in chars and len(chars) < 5:
+            chars.append(who)
+        act = str(b.get("act") or ("talk" if t == "line" else "idle"))
+        act = act if act in film.SPECIAL or act in ("sit", "lie") else film_act.norm(act)
+        if act not in acts:
+            act = "talk" if t == "line" else "idle"
+        nb = {"t": t, "who": who, "act": act}
+        to = b.get("to")
+        if to:
+            nb["to"] = to if to in film.SPOTS else _slug(to)
+        if t == "line":
+            text = str(b.get("text") or "").strip()
+            if not text:
+                continue
+            nb["text"] = text
+            if isinstance(b.get("react"), dict):
+                nb["react"] = {_slug(k): film_act.norm(str(v)) for k, v in b["react"].items()}
+        else:
+            if b.get("prop"):
+                nb["prop"] = str(b["prop"])
+            if b.get("text"):
+                nb["text"] = str(b["text"]).strip()
+        beats.append(nb)
+    start = {}
+    for k, v in (s.get("start") or {}).items():
+        if v in film.SPOTS and _slug(k) in chars:
+            start[_slug(k)] = v
+    out = {"place": _slug(s.get("place")) if s.get("place") else "", "chars": chars,
+           "start": start, "beats": beats, "camera": "still", "text": ""}
+    if s.get("time") in ("ngay", "dem"):
+        out["time"] = s["time"]
+    post = {_slug(k): v for k, v in (s.get("posture") or {}).items() if v == "sit"}
+    if post:
+        out["posture"] = post
+    return out
 
 
 def _tool_blocks() -> tuple[str, str]:
@@ -213,7 +301,8 @@ def _tool_blocks() -> tuple[str, str]:
         "\"new_parts\": [{\"id\":\"vuong_mien\",\"kind\":\"head\",\"name\":\"Mũ miện vua\","
         "\"desc\":\"mô tả hình dáng, màu sắc\"}] rồi dùng đúng id đó: kind head (đội/đeo trên "
         "đầu) -> kit.hat; body (hoa văn, đồ khoác trên áo) -> kit.extra; animal (con vật) -> "
-        "kit.species; scene (bối cảnh) -> kind của địa điểm. Tool sẽ tự vẽ các bộ phận này. "
+        "kit.species; scene (bối cảnh) -> kind của địa điểm; prop (đồ vật cầm tay, dùng ở "
+        "chế độ Phim) -> prop của hành động. Tool sẽ tự vẽ các bộ phận này. "
         "Chỉ khai báo khi thật cần, tối đa 8; thứ gần giống có sẵn thì dùng cái có sẵn.\n")
     acts = ", ".join(f"{k} ({v[0]})" for k, v in story_live.ACTS.items())
     scene = (

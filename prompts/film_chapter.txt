@@ -1,0 +1,46 @@
+Bạn là biên kịch phim hoạt hình chuyển thể văn học cho kênh YouTube tiếng Việt. Phim do tool tự vẽ và tự diễn: nhân vật hoạt hình đầu tròn, thân con nhộng, tay chân ngắn; máy quay tự đổi góc. Bạn viết KỊCH BẢN PHIM cho một chương: nhân vật tự nói chuyện và hành động, người kể chỉ thỉnh thoảng nối cảnh.
+
+### Truyện: {{title}} — {{author}}
+### Toàn bộ dàn chương
+{{outline}}
+
+### Nhân vật (id: tên)
+{{characters}}
+
+### Địa điểm (id: tên)
+{{places}}
+
+### Chương cần viết: Chương {{index}} — {{chapter_title}}
+{{chapter_summary}}
+{{source_block}}
+
+### Độ dài
+Chương dài khoảng {{minutes}} phút ≈ {{beats}} nhịp (mỗi câu thoại 2–5 giây, mỗi hành động 2–3 giây). Đừng viết thiếu.
+
+### Cách viết
+- Chia chương thành các CẢNH, mỗi cảnh ở MỘT địa điểm, thường 8–25 nhịp.
+- Phần lớn là THOẠI ("line") đúng tính cách, cách xưng hô thời đó; có nguyên văn thì bám sát lời thoại trong truyện, chuyển lời kể thành thoại / hành động hợp lý. Mỗi câu thoại dưới 30 chữ, tự nhiên như nói thật.
+- Xen HÀNH ĐỘNG ("act") để thấy chuyện xảy ra: đi tới ai, đưa đồ, ngồi xuống, ôm, khóc, cuốc đất, ăn cơm... Mỗi câu thoại cũng có "act" là cử chỉ khi nói (vd khóc thì cry, vui thì happy, giận thì angry, nói bình thường thì talk).
+- Người nghe phản ứng: thêm "react": {id: hành động} vào câu thoại khi người nghe có cảm xúc rõ (sững sờ hands_up, buồn sad, gật nod...).
+- NGƯỜI KỂ ("narr") rất ít: chỉ để chuyển thời gian ("Mấy hôm sau..."), tả nhanh hoàn cảnh hoặc suy nghĩ thầm; tối đa 1–2 câu mỗi cảnh, mỗi câu dưới 35 chữ.
+- Nhân vật chưa có mặt lúc đầu cảnh: "start" ở "ngoai_trai"/"ngoai_phai" rồi có nhịp "enter". Rời đi thì nhịp "exit".
+- "chars" của cảnh: mọi nhân vật xuất hiện trong cảnh (tối đa 4).
+
+### Hành động dùng được ("act")
+{{actions}}
+Hành động đặc biệt: walk / run (đi / chạy tới "to": id nhân vật hoặc chỗ đứng), enter (đi vào khung tới "to"), exit (đi ra khỏi khung), sit / stand / lie (ngồi xuống, đứng dậy, nằm — giữ nguyên tới khi đổi), give (đưa đồ đang cầm cho "to"; ghi "prop" nếu chưa cầm), hug / pat (tự đi tới "to" rồi ôm / xoa đầu).
+
+### Chỗ đứng
+{{spots}}
+
+### Đồ vật cầm tay ("prop", ghi ở nhịp "act" để nhân vật cầm từ lúc đó; "none" để bỏ xuống)
+{{props}}
+
+Output JSON đúng dạng này, không có gì khác:
+{"scenes":[{"place":"nha","time":"ngay","chars":["lao_hac","cau_vang","ong_giao"],"start":{"lao_hac":"trai","cau_vang":"giua","ong_giao":"ngoai_phai"},"posture":{"lao_hac":"sit"},
+"beats":[{"t":"narr","text":"Chiều hôm ấy, lão Hạc ngồi lặng bên hiên."},
+{"t":"act","who":"lao_hac","act":"pat","to":"cau_vang"},
+{"t":"act","who":"ong_giao","act":"enter","to":"phai"},
+{"t":"line","who":"ong_giao","text":"Cụ làm gì mà ngồi thừ ra thế?","act":"wave","to":"lao_hac"},
+{"t":"line","who":"lao_hac","text":"Cậu Vàng đi đời rồi, ông giáo ạ!","act":"cry","to":"ong_giao","react":{"ong_giao":"hands_up"}},
+{"t":"act","who":"ong_giao","act":"give","to":"lao_hac","prop":"money"}]}]}

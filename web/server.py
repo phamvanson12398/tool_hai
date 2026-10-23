@@ -1772,6 +1772,12 @@ def _story_view(pid: str, data: dict) -> dict:
             p["kind"] = story_live.place_kind(p)
         p.setdefault("time", "ngay")
     out["visual"] = st.get("visual", "tool")
+    from core import doodle_parts, film as film_m, film_rig
+    out["mode"] = st.get("mode", "story")
+    out["film_acts"] = [[k, v[0] if isinstance(v, tuple) else v] for k, v in film_m.all_actions().items()]
+    out["spots"] = [[k, v] for k, v in film_m.SPOT_VI.items()]
+    out["props"] = [[k, v] for k, v in film_rig.PROPS.items()] + \
+        [[k, "★ " + v["name"]] for k, v in doodle_parts.load().items() if v.get("kind") == "prop"]
     from core import bg3d
     out["bg_mode"] = st.get("bg_mode", "draw")
     from core import story as story_m
@@ -1783,7 +1789,6 @@ def _story_view(pid: str, data: dict) -> dict:
     d3 = pdir / bg3d.DIR
     out["bg3d"] = sorted(p.stem for p in d3.glob("*.png")) if d3.exists() else []
     out["kit_options"] = doodle.options()
-    from core import doodle_parts
     lib = doodle_parts.load()
     out["kinds"] = [[k, v["label"]] for k, v in scene_art.KINDS.items()] + \
         [[k, "★ " + v["name"]] for k, v in lib.items() if v.get("kind") == "scene"]
@@ -1859,6 +1864,8 @@ def api_story_save(pid):
         st["bg_mode"] = body["bg_mode"]
     if body.get("dialogue") in story_mod.DIALOGUE:
         st["dialogue"] = body["dialogue"]
+    if body.get("mode") in ("story", "film"):
+        st["mode"] = body["mode"]
     if "minutes" in body:
         try:
             st["minutes"] = max(3, min(40, int(float(body["minutes"]))))
@@ -2045,8 +2052,12 @@ def api_story_preview_png(pid, sid):
         return _err("Không có cảnh.", 404)
     W, H = config.frame_size(data.get("format") or "16:9")
     k = 480 / max(W, H)
-    img = story_live.preview(st, sc, (int(W * k), int(H * k)), 3.2,
-                             pdir=config.project_dir(pid))
+    if st.get("mode") == "film":
+        from core import film as film_m
+        img = film_m.preview(st, sc, (int(W * k), int(H * k)), pdir=config.project_dir(pid))
+    else:
+        img = story_live.preview(st, sc, (int(W * k), int(H * k)), 3.2,
+                                 pdir=config.project_dir(pid))
     return _png(img)
 
 
@@ -2206,6 +2217,19 @@ def api_story_render(pid):
                                              "dùng bối cảnh vẽ tay cho chỗ còn thiếu.")
                 finally:
                     bg3d.unload()                    # trả bộ nhớ card cho OmniVoice
+            if st.get("mode") == "film":
+                from core import film_render
+                faud = film_render.voices(st, pdir, lang, progress=lambda f, m: _set_status(
+                    pid, progress=round(0.4 * float(f), 3), message=str(m)))
+                mp4 = film_render.render(st, pdir, data.get("format") or "16:9", settings, faud,
+                                         progress=lambda f, m: _set_status(
+                                             pid, progress=round(0.4 + 0.6 * float(f), 3),
+                                             message=str(m)))
+                d2, _ = _load_story(pid)
+                d2["result"] = {"video": str(mp4)}
+                _save_project(pid, d2)
+                _set_status(pid, state="done", progress=1.0, message="xong")
+                return
             audio = story_mod.narrate(st, pdir, lang, progress=lambda f, m: _set_status(
                 pid, progress=round(0.4 * float(f), 3), message=str(m)))
             lines = story_mod.narrate_lines(st, pdir, lang, progress=lambda f, m: _set_status(
