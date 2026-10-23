@@ -414,6 +414,11 @@ def animal_pose(act: str, t: float, seed: int = 0, moving: bool = False) -> dict
         p["sy"] = 0.96                          # chó buồn: cụp tai, mắt hiền (không cau có)
         p["rot"] = -2
         p["expr"] = "sad"
+    elif act == "eat":                          # cúi đầu xuống bát, nhai nhóp nhép
+        p["rot"] = 22 + 3 * math.sin(w * t * 2.2)
+        p["pivot"] = 0.32                       # xoay quanh chân sau: đầu cúi, đuôi vẫn trên đất
+        p["chew"] = (t % 0.45) < 0.22
+        p["expr"] = "happy"
     elif act in ("lie", "sleep"):
         p["sy"] = 0.85 + 0.02 * _s(w * t / 3)
         p["expr"] = "sleep"

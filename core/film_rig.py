@@ -646,8 +646,9 @@ class AnimalRig:
                                            0.6 * d, height=int(self.T * zoom), seed=self.seed)
             self._cache[key] = (_premul(img), foot, eye)
         arr, foot, eye = self._cache[key]
+        pv = -d * pose.get("pivot", 0.0) * self.T          # điểm xoay (vd chân sau khi cúi ăn)
         G = _aff(cam, _aff(_tr(pose["x"], pose["y"] - pose.get("bob", 0.0) * self.T * 0.4),
-                           _rot(pose.get("rot", 0.0) * d)))
+                           _rot(pose.get("rot", 0.0) * d, pv, 0.0)))
         M = _aff(G, _aff(_sc(1 / zoom, pose.get("sy", 1.0) / zoom), _tr(-foot[0], -foot[1])))
         paste(canvas, arr, M, night)
         hx, hy = _pt(M, eye[0], eye[1])

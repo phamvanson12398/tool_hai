@@ -18,7 +18,6 @@ from .story_render import FPS, _dim, _over, _subtitle
 
 logger = logging.getLogger(__name__)
 
-INTRO = 3.5
 FADE = 0.35              # mờ ra đen rồi hiện cảnh mới (không hoà hình hai cảnh: hết "bóng ma")
 OUTRO = 1.2
 TAG_DUR = 2.5            # thẻ tên trên đầu khi nhân vật mới xuất hiện
@@ -273,41 +272,6 @@ def name_tags(rows: list[dict]) -> dict:
     return out
 
 
-def top_card(size, big: str, small: str = ""):
-    """Thẻ chữ ở phần trên khung (không che mặt nhân vật), nền nhạt trong suốt."""
-    from PIL import Image, ImageDraw, ImageFont
-    from .story_render import _tight
-    W, H = size
-    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-    d = ImageDraw.Draw(img)
-    fb = ImageFont.truetype(video.find_font(True, True), int(min(W, H) * 0.068))
-    fs = ImageFont.truetype(video.find_font(False, True), int(min(W, H) * 0.036))
-    lines, cur = [], ""
-    for w in big.split():
-        t = (cur + " " + w).strip()
-        if d.textlength(t, font=fb) <= W * 0.86:
-            cur = t
-        else:
-            lines.append(cur)
-            cur = w
-    lines.append(cur)
-    top = int(H * 0.04)
-    hgt = int((fs.size * 1.5 if small else 0) + len(lines) * fb.size * 1.2 + fb.size * 0.6)
-    d.rectangle([0, top, W, top + hgt], fill=(20, 18, 24, 90))
-    y = top + fb.size * 0.3
-    if small:
-        tw = d.textlength(small, font=fs)
-        d.text(((W - tw) / 2, y), small, font=fs, fill=(250, 226, 160, 255), stroke_width=2,
-               stroke_fill=(0, 0, 0, 255))
-        y += fs.size * 1.5
-    for ln in lines:
-        tw = d.textlength(ln, font=fb)
-        d.text(((W - tw) / 2, y), ln, font=fb, fill=(252, 250, 244, 255), stroke_width=3,
-               stroke_fill=(0, 0, 0, 255))
-        y += fb.size * 1.2
-    return _tight(np.asarray(img))
-
-
 _VIG: dict = {}
 
 
@@ -336,7 +300,7 @@ def plan_all(st: dict, size, audio: dict) -> list[dict]:
             c["kit"] = doodle.kit_from_look(c.get("name", ""), c.get("look", ""))
     allsc = [sc for ch in st.get("chapters") or [] for sc in ch.get("scenes") or []]
     hook = len(allsc) > 1 and bool(allsc[0].get("hook"))
-    rows, t = [], (0.0 if hook else INTRO)    # có móc câu: vào thẳng, tên truyện hiện sau móc câu
+    rows, t = [], 0.0                         # vào thẳng cảnh đầu, không có chữ giới thiệu
     for ci, ch in enumerate(st.get("chapters") or []):
         for k, sc in enumerate(ch.get("scenes") or []):
             durs, beats = {}, []
@@ -443,7 +407,6 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict, progress
             shots[i].tags = tags.get(i, {})
         return shots[i]
 
-    intro = top_card(size, st.get("title") or "", st.get("author") or "")
     sub_cache: dict = {}
     sub_on = bool(st.get("subtitles"))
     n_frames = int(total * FPS)
@@ -455,38 +418,30 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict, progress
             while i < len(rows) - 1 and t >= rows[i + 1]["start"]:
                 i += 1
             row = rows[i]
-            if t < row["start"]:
-                frame = shot(0).frame(0.0)
-                a = min(1.0, t / 0.6, (INTRO - t) / 0.6)
-                frame = _over(_dim(frame, 0.85), intro, max(0.0, a))
-            else:
-                lt = t - row["start"]
-                frame = shot(i).frame(min(lt, row["dur"]))
-                nxt = row["start"] + row["dur"]
-                if i + 1 < len(rows) and t > nxt - FADE:             # mờ ra đen ...
-                    frame = _dim(frame, max(0.0, (nxt - t) / FADE))
-                elif i > 0 and lt < FADE:                            # ... rồi hiện cảnh mới
-                    frame = _dim(frame, max(0.0, lt / FADE))
-                if row.get("hook"):                                  # móc câu: màu như ký ức
-                    frame = hook_look(frame)
-                if i == 1 and rows[0].get("hook") and 0.4 < lt < 0.4 + INTRO:   # tên truyện sau móc câu
-                    u = lt - 0.4
-                    frame = _over(frame, intro, min(1.0, u / 0.5, (INTRO - u) / 0.5))
-                if sub_on:
-                    while si < len(subs_plan) - 1 and subs_plan[si][1] < t:
-                        si += 1
-                    for k in range(max(0, si - 1), min(len(subs_plan), si + 2)):
-                        a0, a1, txt = subs_plan[k]
-                        if a0 <= t < a1:
-                            if txt not in sub_cache:
-                                if len(sub_cache) > 10:
-                                    sub_cache.clear()
-                                sub_cache[txt] = _subtitle(size, txt)
-                            frame = _over(frame, sub_cache[txt])
-                            break
-                end = total - OUTRO
-                if t > end:
-                    frame = _dim(frame, max(0.0, 1 - (t - end) / OUTRO))
+            lt = t - row["start"]
+            frame = shot(i).frame(min(lt, row["dur"]))
+            nxt = row["start"] + row["dur"]
+            if i + 1 < len(rows) and t > nxt - FADE:             # mờ ra đen ...
+                frame = _dim(frame, max(0.0, (nxt - t) / FADE))
+            elif lt < FADE:                                      # ... rồi hiện cảnh mới
+                frame = _dim(frame, max(0.0, lt / FADE))
+            if row.get("hook"):                                  # móc câu: màu như ký ức
+                frame = hook_look(frame)
+            if sub_on:
+                while si < len(subs_plan) - 1 and subs_plan[si][1] < t:
+                    si += 1
+                for k in range(max(0, si - 1), min(len(subs_plan), si + 2)):
+                    a0, a1, txt = subs_plan[k]
+                    if a0 <= t < a1:
+                        if txt not in sub_cache:
+                            if len(sub_cache) > 10:
+                                sub_cache.clear()
+                            sub_cache[txt] = _subtitle(size, txt)
+                        frame = _over(frame, sub_cache[txt])
+                        break
+            end = total - OUTRO
+            if t > end:
+                frame = _dim(frame, max(0.0, 1 - (t - end) / OUTRO))
             proc.stdin.write(np.ascontiguousarray(frame).tobytes())
             if fi % max(1, n_frames // 60) == 0:
                 say(0.05 + 0.85 * fi / n_frames, f"dựng hình {int(t // 60)}:{int(t % 60):02d} / "

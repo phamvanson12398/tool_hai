@@ -631,8 +631,9 @@ AI dựng video theo mạch rõ ràng (cả Kể chuyện và Phim):
 - **Móc câu (hook)** 15–30 giây đầu: hé lộ trước khoảnh khắc gay cấn / xúc động
   nhất (vd lão Hạc oà khóc "Cậu Vàng đi đời rồi ông giáo ạ!") hoặc một câu hỏi bí
   ẩn, không nói ra kết cục, rồi người kể dẫn về "Mọi chuyện bắt đầu từ...". Cảnh
-  móc câu hơi nhạt màu, tối viền như đoạn trích; hết móc câu có tiếng "vút" rồi
-  **tên truyện mới hiện ra** và câu chuyện kể từ đầu.
+  móc câu hơi nhạt màu, tối viền như đoạn trích; hết móc câu có tiếng "vút" rồi câu
+  chuyện kể từ đầu (Kể chuyện: tên truyện hiện sau móc câu; Phim: không có chữ giới
+  thiệu).
 - **Mở đầu**: nhân vật, hoàn cảnh, gieo mầm mâu thuẫn. **Thân**: biến cố nối nhau
   theo nguyên nhân – kết quả, dồn lên **cao trào** (diễn trọn khoảnh khắc móc câu
   đã hé lộ); cuối mỗi chương để một gút cho người xem muốn xem tiếp.
@@ -743,11 +744,13 @@ lúc giọng đọc tới câu đó.
     điếu luôn ở trước chó; người đứng cách nhau theo bề ngang (chó dài hơn người).
   - Máy quay không cắt ai làm đôi ở mép khung; người ngoài khung không lòi đồ cầm vào mép.
   - Chuyển cảnh **mờ qua màn đen** (không còn "bóng ma" hai cảnh chồng nhau).
-  - Chỉ **giới thiệu tên truyện một lần** ở đầu video (phía trên khung, nền nhạt,
-    không che mặt); các chương nối liền mạch, không hiện thẻ chương. Nhân vật lần
-    đầu lên hình có **thẻ tên** nhỏ trên đầu 2,5 giây.
+  - **Không có chữ giới thiệu** tên truyện hay thẻ chương: vào thẳng cảnh đầu, các
+    chương nối liền mạch. Nhân vật lần đầu lên hình có **thẻ tên** nhỏ trên đầu 2,5 giây.
   - Uống trà: chén đưa kề đúng miệng; hút điếu cày: miệng kề đúng đầu ống điếu;
     ăn: tay và lên tận miệng.
+  - **Cho chó / mèo ăn**: người chìa bát, đặt bát xuống đất trước mõm, con vật mừng
+    rồi cúi đầu ăn, nhai nhóp nhép (ăn tới khi có việc khác, vuốt ve cũng không làm
+    nó bỏ ăn). Nhịp "eat" cho chó mèo tự ăn thì tool tự đặt bát trước mõm.
   - Tên chương có "đêm / tối" thì cảnh là ban đêm (trừ lời kể nói rõ sáng, trưa).
   - Cảnh không bao giờ trống: ai cũng đến sau thì người đầu tiên đi vào ngay.
   - Cánh đồng có lúa (gặt mới hợp).

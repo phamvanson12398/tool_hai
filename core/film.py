@@ -341,12 +341,14 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
     activity: dict = {}                       # việc đang làm dở của từng người
     auto_prop: dict = {}                      # đồ tự cầm theo việc (cuốc khi cuốc đất...)
     sfx: list = []                            # (t, tên, âm lượng)
+    floor: list = []                          # đồ đặt dưới đất: (từ lúc, x, tên) — bát cơm cho chó
 
     def hold(cid, t, act):
         """Việc cần đồ: cầm từ lúc bắt đầu tới khi đổi việc; đổi việc thì bỏ xuống."""
         tr = tracks[cid]
         want = film_act.ACT_PROP.get(act)
         cur = tr.last(tr.props, t)
+        cur = None if cur == "none" else cur
         if want and (cur is None or cur == auto_prop.get(cid)):
             if cur != want:
                 tr.props.append((t, want))
@@ -469,7 +471,26 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
                 hold(who, t, act)
                 if act in film_act.CONTINUOUS:
                     activity[who] = act
-                if act in ANIMAL_LIKE and to in tracks and species.get(to) != "human":
+                if act == "eat" and species.get(who) != "human" and \
+                        not any(abs(fx - tr.x_at(t + walk)) < T * 0.6 for _t0, fx, _n in floor):
+                    ax = tr.x_at(t + walk)                       # chó tự ăn: có bát trước mõm
+                    near = [o.x_at(t) for c, o in tracks.items() if c != who]
+                    side = (1 if near and min(near, key=lambda v: abs(v - ax)) > ax else -1) if near else \
+                        (1 if ax < W / 2 else -1)
+                    floor.append((t + walk, ax + side * T * 0.3, "bowl"))
+                if act == "feed" and to in tracks and species.get(to) != "human":
+                    # cho chó / mèo ăn: chìa bát, đặt xuống đất trước mõm, con vật mừng rồi cúi ăn
+                    put = t + walk + 0.9
+                    tracks[to].acts.append((t + walk, put, "happy", who))
+                    tracks[to].acts.append((put, 1e9, "eat", who))
+                    tracks[to].reacts.add(t + walk)
+                    ax, hx = tracks[to].x_at(put), tracks[who].x_at(put)
+                    floor.append((put, ax + (T * 0.3 if hx > ax else -T * 0.3), "bowl"))
+                    tr.props.append((put, "none"))               # bát đã đặt xuống, tay không
+                    auto_prop.pop(who, None)
+                    sfx.append((put, "thud", 0.12))
+                elif act in ANIMAL_LIKE and to in tracks and species.get(to) != "human" and \
+                        not any(x[2] == "eat" and x[0] <= t + walk for x in tracks[to].acts):
                     tracks[to].acts.append((t + walk, t + d, "happy", who))   # chó được vuốt ve thì mừng
                     tracks[to].reacts.add(t + walk)
                 if act == "give" and to in tracks:
@@ -492,6 +513,10 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
         acts = sorted(tr.acts, key=lambda a: a[0])
         new = []
         for k, (t0, t1, a, to) in enumerate(acts):
+            if a == "eat" and t1 >= 1e8:          # con vật ăn tới khi có việc khác
+                nxt = [x[0] for x in acts[k + 1:] if x[0] > t0 and x[0] not in tr.reacts]
+                stops = [m[0] for m in tr.moves if m[0] > t0]
+                t1 = min(nxt + stops) if nxt + stops else total
             if a in film_act.CONTINUOUS and t1 < 1e8:
                 # phản ứng ngắn khi nghe người khác nói không cắt việc đang làm
                 # (act_at chọn cái bắt đầu muộn nhất, xong phản ứng thì làm tiếp)
@@ -520,6 +545,12 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
                 k += step
         for t0, t1, a, _to in tr.acts:
             t1 = min(t1, total)
+            if sp != "human" and a == "eat":
+                k = t0 + 0.1
+                while k < t1:
+                    sfx.append((k, "nom", 0.12 if talking(k) else 0.3))
+                    k += 0.9
+                continue
             if sp in ("dog", "cat") and a in ("jump", "happy", "angry", "wave", "hands_up"):
                 sfx.append((t0 + 0.15, "bark" if sp == "dog" else "meow", 0.55))
                 continue
@@ -553,7 +584,7 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
                 sfx.append((b["t0"], "door", 0.25))
     sfx.sort()
     return {"tracks": tracks, "beats": beats, "dur": total, "W": W, "T": T, "furniture": furn,
-            "sfx": sfx}
+            "sfx": sfx, "floor": floor}
 
 
 # ---------------------------------------------------------------- máy quay
@@ -817,9 +848,11 @@ class FilmShot:
                 x = seat_x
             if seat_h is not None:
                 p["seat_h"] = seat_h
-        p.update(x=x, y=y, dir=d, look=look, mouth=self._mouth(cid, t), blink=blink)
+        p.update(x=x, y=y, dir=d, look=look, mouth=self._mouth(cid, t) or bool(p.get("chew")), blink=blink)
         dflt = p.get("prop_default")
-        if prop:
+        if prop == "none":                          # vừa đặt đồ xuống: tay không
+            p.pop("prop_default", None)
+        elif prop:
             p["prop"] = dflt if dflt and dflt[0] == prop else (prop, 0)
         elif dflt and posture != "lie":
             p["prop"] = dflt
@@ -863,8 +896,14 @@ class FilmShot:
             sx, sy = cam[0, 0] * p["x"] + cam[0, 2], cam[1, 1] * p["y"] + cam[1, 2]
             self._shadow(frame, sx, sy, w)
         night = (0.78, 0.8, 0.95) if self.night else None
+        floor_done = False
         for cid in order:
             p = poses[cid]
+            if p["_human"] and not floor_done:               # bát cơm dưới đất: trước người, mõm chó
+                floor_done = True                            # thì cắm vào bát
+                for t0, fx, name in self.plan.get("floor") or []:
+                    if t >= t0:
+                        self._floor_item(frame, name, fx, cam, z)
             cxw = p["x"] - (0.5 * T if p["_lie"] else 0.0)
             if not (vx0 - 0.05 * T < cxw < vx1 + 0.05 * T):   # ở ngoài khung: cả người lẫn đồ cầm
                 continue
@@ -878,6 +917,10 @@ class FilmShot:
             tag = self.tags.get(cid)
             if tag and tag[0] <= t < tag[1]:
                 self._tag(frame, cid, hx, hy - info["r"] * 1.25, t - tag[0], tag[1] - t)
+        if not floor_done:
+            for t0, fx, name in self.plan.get("floor") or []:
+                if t >= t0:
+                    self._floor_item(frame, name, fx, cam, z)
         if self.rain:
             self._rain(frame, t)
         return frame
@@ -903,6 +946,23 @@ class FilmShot:
             fold = np.array([[xx, bot - hgt * 0.85], [xx + T * 0.03, bot - T * 0.02]], np.float32)
             cv2.polylines(frame, [(fold * 4).astype(np.int32)], False, (150, 90, 84), max(1, lw // 2),
                           cv2.LINE_AA, shift=2)
+
+    def _floor_item(self, frame, name, x, cam, z):
+        key = ("floor", name, round(z * 8) / 8)
+        if key not in self._furn:
+            got = film_rig.prop_image(name, self.plan["T"] * 0.16 * z)
+            if got:
+                img = got[0]
+                bb = img.getbbox() or (0, 0, img.width, img.height)
+                got = (film_rig._premul(img), ((bb[0] + bb[2]) / 2, bb[3]))
+            self._furn[key] = got
+        got = self._furn[key]
+        if not got:
+            return
+        arr, (ax, ay) = got
+        sx, sy = cam[0, 0] * x + cam[0, 2], cam[1, 1] * self.floor + cam[1, 2]
+        film_rig.paste(frame, arr, film_rig._tr(sx - ax, sy - ay + 2),
+                       (0.78, 0.8, 0.95) if self.night else None)
 
     def _tag(self, frame, cid, x, y, since, left):
         """Thẻ tên nhỏ trên đầu lúc nhân vật mới xuất hiện (biết ai là ai)."""
