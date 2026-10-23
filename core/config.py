@@ -74,9 +74,18 @@ ZOOM_SCALE = 1.35
 
 # --- Ngôn ngữ ---
 LANGUAGES = {
-    "ko": {"label": "Tiếng Hàn", "market": "kr", "voice_lang": "Korean"},
-    "en": {"label": "Tiếng Anh", "market": "us", "voice_lang": "English"},
+    "ko": {"label": "Tiếng Hàn", "market": "kr", "voice_lang": "Korean",
+           "lang_label": "tiếng Hàn", "lang_name": "Hàn"},
+    "en": {"label": "Tiếng Anh", "market": "us", "voice_lang": "English",
+           "lang_label": "tiếng Anh", "lang_name": "Anh"},
+    "vi": {"label": "Tiếng Việt", "market": "vn", "voice_lang": "Vietnamese",
+           "lang_label": "tiếng Việt", "lang_name": "Việt"},
 }
+
+
+def lang_info(code: str) -> dict:
+    """Thông tin một ngôn ngữ (mã lạ thì coi như tiếng Anh)."""
+    return LANGUAGES.get(code, LANGUAGES["en"])
 
 # --- Biểu cảm hỗ trợ ---
 EXPRESSIONS = [

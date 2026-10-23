@@ -22,10 +22,16 @@ EN_SEC_PER_WORD = 0.17
 EN_SEC_PER_LINE = 0.65
 KO_SEC_PER_SYLLABLE = 0.11
 KO_SEC_PER_LINE = 0.45
+# Tiếng Việt: mỗi chữ (cách nhau bằng dấu cách) là một âm tiết. Chưa có tập
+# tiếng Việt để đo, tạm lấy ~6,5 âm tiết/giây (OmniVoice đọc tiếng Anh, tiếng Hàn đều nhanh);
+# lệch thì Claude và bước giãn nghỉ khi dựng vẫn kéo về sát đích.
+VI_SEC_PER_SYLLABLE = 0.15
+VI_SEC_PER_LINE = 0.5
 SEC_PER_BREAK = 0.1
 
 _HANGUL = re.compile(r"[가-힣]")
 _WORD = re.compile(r"[A-Za-z0-9']+")
+_VI_SYL = re.compile(r"\w+")   # âm tiết tiếng Việt (chữ có dấu vẫn là \w)
 
 # Khoảng nghỉ thêm (giây) cộng vào khoảng cách cơ bản trong Cài đặt
 INTERRUPT_GAP = 0.03        # câu trước kết thúc bằng "—" / "-": bị cắt lời
@@ -49,6 +55,8 @@ def speech_seconds(text: str, language: str) -> float:
         # chữ Latin lẫn trong câu tiếng Hàn: tính như từ tiếng Anh
         rest = len(_WORD.findall(_HANGUL.sub(" ", t)))
         sec = KO_SEC_PER_LINE + n * KO_SEC_PER_SYLLABLE + rest * EN_SEC_PER_WORD
+    elif language == "vi":
+        sec = VI_SEC_PER_LINE + len(_VI_SYL.findall(t)) * VI_SEC_PER_SYLLABLE
     else:
         sec = EN_SEC_PER_LINE + len(_WORD.findall(t)) * EN_SEC_PER_WORD
     return max(0.4, sec + breaks * SEC_PER_BREAK)
@@ -128,6 +136,9 @@ def length_budget(duration: float, language: str) -> dict:
     if language == "ko":
         amount = round((speech - lines * KO_SEC_PER_LINE) / KO_SEC_PER_SYLLABLE)
         unit = "âm tiết Hangul (không tính dấu cách, dấu câu)"
+    elif language == "vi":
+        amount = round((speech - lines * VI_SEC_PER_LINE) / VI_SEC_PER_SYLLABLE)
+        unit = "chữ tiếng Việt (mỗi âm tiết một chữ)"
     else:
         amount = round((speech - lines * EN_SEC_PER_LINE) / EN_SEC_PER_WORD)
         unit = "từ tiếng Anh"
@@ -137,4 +148,6 @@ def length_budget(duration: float, language: str) -> dict:
 def count_amount(text: str, language: str) -> int:
     if language == "ko":
         return len(_HANGUL.findall(text))
+    if language == "vi":
+        return len(_VI_SYL.findall(text))
     return len(_WORD.findall(text))

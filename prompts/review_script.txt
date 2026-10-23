@@ -8,7 +8,7 @@ Rà soát kịch bản video hài ngắn sau. CHỈ đưa ra góp ý, TUYỆT Đ
 ### Kiểm tra
 1. Câu chốt có đủ bất ngờ không, nhịp có lê thê không.
 2. Tiếng {{lang_name}} có tự nhiên không; kiểu hài có hợp với khán giả {{market_label}} không.
-3. Độ dài dự kiến có nằm trong 30–90 giây không.
+3. Độ dài: {{length_rule}}
 4. Có dùng nhân vật, biểu cảm hoặc tiếng động không tồn tại không.
 5. Có nội dung dễ vi phạm quy định của TikTok không.
 6. Có bị trùng kiểu hài hoặc cách chốt với các tập gần đây không:

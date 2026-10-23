@@ -38,22 +38,23 @@ Quy tắc:
 - Dòng bắt đầu bằng `>` là nhịp phản ứng KHÔNG có lời, kèm số giây (0.5–1.2). Đây là khoảng lặng có chủ đích.
 - Bối cảnh: nếu câu chuyện diễn ra ở nhiều nơi (vd ở nhà rồi ra quán, hoặc cú lật ở chỗ khác), chuyển cảnh bằng một dòng riêng `## canh: <mô tả ngắn bằng tiếng Việt, kèm ngày/đêm nếu cần>` (vd `## canh: quán cà phê, buổi tối`). Các câu phía sau thuộc cảnh đó. Tối đa {{max_scenes}} cảnh, chỉ đổi cảnh khi giúp câu chuyện buồn cười hơn; truyện ở một chỗ thì đặt một dòng `## canh:` ở đầu. Quay lại chỗ cũ thì viết đúng mô tả cũ.
 - Không phải cảnh nào cũng có mọi nhân vật. Khi nhân vật ở hai nơi khác nhau (gọi điện thoại, nhắn tin, một người đứng ngoài cửa...), ghi tên người có mặt sau dấu `|`: `## canh: đường phố, buổi tối | 민준` rồi `## canh: phòng khách, buổi tối | 수아`. Sau đó mỗi khi một người nói, video tự cắt sang nơi của người đó, không cần lặp lại `## canh:`. Khi họ gặp lại nhau thì viết `## canh: <nơi>` không có `|`.
-- Mỗi dòng thoại có thể kèm dòng bản dịch tiếng Việt bắt đầu bằng `//` ngay sau dòng đó (để chị dễ đọc).
+{{translation_rule}}
 - Câu chốt phải có cú lật hoặc châm biếm đáng nhớ.
 
 ### Thoại như nói chuyện hằng ngày (rất quan trọng — giọng AI đọc theo đúng chữ và dấu câu)
 - Viết như người thật đang nói, KHÔNG như văn viết: câu cụt, nói dở, tự sửa lời, lặp từ khi bối rối hay bực ("không, không, không...", "wait, wait—").
-- Có từ đệm, thán từ, tiếng ừ à tự nhiên ở đầu câu hoặc giữa câu, nhưng không câu nào cũng có:
+- Có từ đệm, thán từ, tiếng ừ à tự nhiên ở đầu câu hoặc giữa câu, nhưng không câu nào cũng có (chỉ dùng phần của {{lang_label}}):
   - tiếng Hàn: 어?, 아니, 진짜?, 헐, 뭐야, 야, 음..., 그니까, 아 진짜, 에이~, 잠깐만, 근데, 좀; đuôi câu nói (반말) như -잖아, -거든, -냐, -지?, -다니까, -네; kéo dài "아~니", "왜애~".
   - tiếng Anh: wait, what?, um, uh, like, I mean, okay okay, seriously?, come on, oh my god, dude, no no no; contractions (I'm, gonna, wanna, kinda, y'know).
+  - tiếng Việt: ơ, ủa, hả?, trời ơi, thôi xong, ê, này, ừ, ờ..., thì..., kiểu..., nói chung là, khổ ghê, chời ơi; tiểu từ cuối câu như à, ạ, hả, nhé, nha, đấy, chứ, mà, thế, cơ, luôn, đó (văn nói, không văn viết); xưng hô đúng vai (mẹ – con, anh – em, tao – mày giữa bạn thân); kéo dài "trời ơiii", "thôiii".
 - Nhấn nhá bằng DẤU CÂU vì giọng AI ngắt theo dấu câu:
   - dấu phẩy để ngắt hơi giữa câu ("아니, 그게 아니라...", "Okay, so, here's the thing.");
   - "..." để bỏ lửng, ngập ngừng, chờ cú lật (tool tự nghỉ lâu hơn sau câu này);
   - "?" cho hỏi lại, hỏi vặn (người kia nghỉ một chút rồi mới đáp);
   - "!" và "?!" cho sốc, bực;
   - kết câu bằng "—" khi người kia CẮT NGANG lời (tool nối câu sau ngay lập tức).
-- Nhấn từ quan trọng bằng cách lặp lại hoặc tách riêng thành câu ngắn ("Forty-nine. Cents.", "와이파이. 와이파이라고."), không viết HOA cả câu.
-- Có qua có lại: người nghe đáp ngắn, chen ngang, hỏi lại một chữ ("뭐?", "Huh?", "진짜?") xen giữa các câu dài, như cãi nhau thật.
+- Nhấn từ quan trọng bằng cách lặp lại hoặc tách riêng thành câu ngắn ("Forty-nine. Cents.", "와이파이. 와이파이라고.", "Wifi. Tên con là Wifi."), không viết HOA cả câu.
+- Có qua có lại: người nghe đáp ngắn, chen ngang, hỏi lại một chữ ("뭐?", "Huh?", "진짜?", "Hả?", "Thật á?") xen giữa các câu dài, như cãi nhau thật.
 - Không giải thích trò đùa; để cú lật tự nói.
 
 CHỈ output nội dung kịch bản, không giải thích, không markdown code fence.

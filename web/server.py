@@ -689,8 +689,9 @@ def api_lib_voice_design():
             "Mô tả giọng chưa khớp từ vựng OmniVoice hỗ trợ. Ví dụ: "
             "female, young adult, high pitch / male, elderly, low pitch."
         )
-    sample = ("안녕하세요, 목소리 테스트입니다." if language == "ko"
-              else "Hi there, this is a voice test.")
+    sample = {"ko": "안녕하세요, 목소리 테스트입니다.",
+              "vi": "Xin chào, đây là giọng đọc thử nhé."}.get(
+        language, "Hi there, this is a voice test.")
     try:
         wav, sr = voice_mod.synthesize(sample, language, instruct=", ".join(items))
     except Exception as e:  # noqa: BLE001
@@ -908,7 +909,8 @@ def api_project_review(pid):
     if not script.strip():
         return _err("Chưa có kịch bản để rà soát.")
     try:
-        sugg = claude_cli.review_script(script, data.get("language", "ko"))
+        sugg = claude_cli.review_script(script, data.get("language", "ko"),
+                                        duration=data.get("duration"))
     except RuntimeError as e:
         return _err(str(e), 502)
     data["suggestions"] = sugg
@@ -1078,7 +1080,7 @@ def api_project_generate(pid):
             specs = {}
         style = config.load_settings().get("char_style") or "auto"
         if style not in character_kit.STYLES:      # "auto": theo ngôn ngữ của tập
-            style = "khand" if language == "ko" else "gray"
+            style = "khand" if language == "ko" else "gray"   # Anh, Việt -> người xám TikTok
         for i, name in enumerate(want_chars):
             spec_d = specs.get(name) or {}
             spec_d["name"] = name

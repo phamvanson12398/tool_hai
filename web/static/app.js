@@ -205,7 +205,7 @@
         s.appendChild(o);
       });
       if (!s.options.length) {
-        ["ko", "en"].forEach(function (c) {
+        ["ko", "en", "vi"].forEach(function (c) {
           var o = document.createElement("option");
           o.value = c; o.textContent = c; s.appendChild(o);
         });
@@ -2365,7 +2365,7 @@
   function loadMeta() {
     return api("/api/meta").then(function (m) {
       state.meta = m || {};
-      if (!state.meta.languages) state.meta.languages = [{ code: "ko", label: "Tiếng Hàn" }, { code: "en", label: "Tiếng Anh" }];
+      if (!state.meta.languages) state.meta.languages = [{ code: "ko", label: "Tiếng Hàn" }, { code: "en", label: "Tiếng Anh" }, { code: "vi", label: "Tiếng Việt" }];
       populateLanguages();
       populateSubtitleStyles();
       var cc = $("claude-calls");
@@ -2405,7 +2405,7 @@
       // vẫn render UI với defaults
       if (!state.meta) {
         state.meta = {
-          languages: [{ code: "ko", label: "Tiếng Hàn" }, { code: "en", label: "Tiếng Anh" }],
+          languages: [{ code: "ko", label: "Tiếng Hàn" }, { code: "en", label: "Tiếng Anh" }, { code: "vi", label: "Tiếng Việt" }],
           comedy_kinds: {}, subtitle_styles: ["yellow", "white", "green", "pink"],
           target_duration: [30, 90]
         };

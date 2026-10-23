@@ -9,6 +9,7 @@ from __future__ import annotations
 import json
 import logging
 import math
+import re
 import subprocess
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -39,7 +40,25 @@ FONT_CANDIDATES = [
 ]
 
 
-def find_font(bold: bool = True) -> str:
+# Chữ tiếng Việt có dấu (ă â đ ê ô ơ ư và các dấu thanh) — font Hàn Malgun
+# không vẽ đủ các chữ này nên phải dùng font Latin đầy đủ.
+_VI_CHARS = re.compile(r"[ăâđêôơưĂÂĐÊÔƠƯ\u1ea0-\u1ef9]")
+
+
+def has_vietnamese(text: str) -> bool:
+    return bool(_VI_CHARS.search(text or ""))
+
+
+def find_font(bold: bool = True, vietnamese: bool = False) -> str:
+    cands = [f for f in FONT_CANDIDATES if not (vietnamese and "malgun" in f)]
+    for f in cands:
+        if Path(f).exists():
+            if bold and "bd" not in f and "bold" not in f and "b.ttf" not in f:
+                continue
+            return f
+    for f in cands:
+        if Path(f).exists():
+            return f
     for f in FONT_CANDIDATES:
         if Path(f).exists():
             if bold and "bd" not in f and "bold" not in f and "b.ttf" not in f:
@@ -178,6 +197,7 @@ class Stage:
         self.subtitle_pos = "tren"          # tren | duoi
         self.font = find_font(bold=True)
         self.font_small = find_font(bold=False)
+        self.font_vi = find_font(bold=True, vietnamese=True)
         self._char_cache: dict[tuple, Image.Image] = {}
 
     # ------------------------------------------------------ bố cục theo khung
@@ -465,12 +485,16 @@ class Stage:
         self._char_cache[key] = size
         return size
 
+    def _font_for(self, text: str) -> str:
+        """Font Hàn mặc định; chữ tiếng Việt có dấu thì dùng font Latin đủ dấu."""
+        return self.font_vi if has_vietnamese(text) else self.font
+
     def draw_title(self, img: Image.Image) -> Image.Image:
         if not self.title:
             return img
         d = ImageDraw.Draw(img)
-        f = ImageFont.truetype(self.font, max(24, int(64 * self.unit)))
         txt = self.title
+        f = ImageFont.truetype(self._font_for(txt), max(24, int(64 * self.unit)))
         bbox = d.textbbox((0, 0), txt, font=f)
         tw = bbox[2] - bbox[0]
         x = (self.w - tw) // 2
@@ -493,7 +517,7 @@ class Stage:
         d = ImageDraw.Draw(img)
         st = self.subtitle_style
         size = max(24, int(st["size"] * self.unit))
-        f = ImageFont.truetype(self.font, size)
+        f = ImageFont.truetype(self._font_for(text), size)
         # tự xuống dòng nếu dài (khung ngang: không trải hết bề ngang)
         max_w = min(self.w - 120, int(self.h * 1.25))
         words = text.split(" ")

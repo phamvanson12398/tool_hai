@@ -295,12 +295,14 @@ def write_script(title: str, language: str, kind: str | None = None,
     """Claude viết kịch bản. Trả về nội dung kịch bản theo đúng quy cách.
 
     duration: độ dài tập mong muốn (giây); không có thì 30–90 giây."""
-    lang_label = "tiếng Hàn" if language == "ko" else "tiếng Anh"
+    lang_label = config.lang_info(language)["lang_label"]
     kind_name = ""
     if kind and kind in COMEDY_KINDS.get(language, {}):
         kind_name = COMEDY_KINDS[language][kind][0]
 
-    lang_name = "Korean" if language == "ko" else "English"
+    translation_rule = (
+        "- Mỗi dòng thoại có thể kèm dòng bản dịch tiếng Việt bắt đầu bằng `//` "
+        "ngay sau dòng đó (để chị dễ đọc).")
     if language == "ko":
         cast_hint = "Nhân vật nên có tên tiếng Hàn (ví dụ 지은, 수아)."
         sample = ("## canh: phòng khách, buổi sáng\n"
@@ -315,6 +317,16 @@ def write_script(title: str, language: str, kind: str | None = None,
                   'Mike (proud, khoanhtay): We named the baby... "WiFi".\n'
                   '> Sarah (shocked, zoom, boing) 0.8\n'
                   'Sarah (angry, chitay, rung): WHAT?!')
+    if language == "vi":
+        cast_hint = ("Nhân vật có tên Việt tự nhiên, ngắn gọn (ví dụ Tuấn, Linh, "
+                     "bà Tư, chú Ba), xưng hô đúng vai: anh/em, mẹ/con, tao/mày "
+                     "giữa bạn thân.")
+        sample = ("## canh: phòng khách, buổi sáng\n"
+                  "Linh (happy, vaytay): Trời ơi, em bé dễ thương quá! Đặt tên chưa?\n"
+                  "Tuấn (proud, khoanhtay): Tên con là... \"Wifi\".\n"
+                  "> Linh (shocked, zoom, boing) 0.8\n"
+                  "Linh (angry, chitay, rung): Hả?! Sao lại Wifi?!")
+        translation_rule = "- Kịch bản đã là tiếng Việt: KHÔNG thêm dòng dịch `//`."
 
     cast_txt = ""
     if cast:
@@ -337,9 +349,10 @@ def write_script(title: str, language: str, kind: str | None = None,
         language=language,
         gestures_block=gesture_catalog_text(),
         props_block=_props_catalog(),
-        cast_header=("지은=trai, 수아=phai" if language == "ko"
-                     else "Mike=left, Sarah=right"),
+        cast_header={"ko": "지은=trai, 수아=phai", "vi": "Tuấn=trai, Linh=phai"}.get(
+            language, "Mike=left, Sarah=right"),
         sample=sample,
+        translation_rule=translation_rule,
     )
 
     out = _run(prompt, timeout=TIMEOUT).strip()
@@ -356,7 +369,7 @@ def three_ideas(title: str, language: str) -> list[dict]:
     prompt = _load_prompt(
         "three_ideas",
         title=title,
-        lang_label="tiếng Hàn" if language == "ko" else "tiếng Anh",
+        lang_label=config.lang_info(language)["lang_label"],
         kind_lines=kind_lines,
         history_block=_history_block(language),
     )
@@ -370,16 +383,27 @@ def three_ideas(title: str, language: str) -> list[dict]:
 
 # ------------------------------------------------------------------ rà soát
 
-def review_script(script: str, language: str) -> list[dict]:
-    """Claude rà soát kịch bản, trả về danh sách góp ý (không tự sửa)."""
+def review_script(script: str, language: str,
+                  duration: float | None = None) -> list[dict]:
+    """Claude rà soát kịch bản, trả về danh sách góp ý (không tự sửa).
+
+    duration: thời lượng đích của tập (giây), để không góp ý cắt ngắn sai."""
     m = MARKETS.get(language, MARKETS["en"])
+    if duration:
+        length_rule = (f"thời lượng đích là {int(duration)} giây, tool tự đo độ dài "
+                       f"khi đọc; KHÔNG góp ý cắt bớt cho ngắn hơn đích, chỉ góp ý "
+                       f"đoạn nào lê thê hoặc thiếu nhịp.")
+    else:
+        lo, hi = config.TARGET_DURATION
+        length_rule = f"độ dài dự kiến có nằm trong {lo}–{hi} giây không."
     prompt = _load_prompt(
         "review_script",
         comedy_block=_comedy_block(language),
         script=script,
-        lang_name="Hàn" if language == "ko" else "Anh",
+        lang_name=config.lang_info(language)["lang_name"],
         market_label=m['label'],
         history_block=_history_block(language),
+        length_rule=length_rule,
     )
     data = _run_json(prompt, timeout=240)
     if isinstance(data, dict):
@@ -422,6 +446,15 @@ KOREAN_CAST_HINT = """- Tập tiếng Hàn: phối theo các vai quen thuộc c�
   · người yêu / bạn gái: outfit=dress hoặc cardigan
   Chọn vai đúng với nhân vật trong truyện, mỗi người một màu áo khác nhau."""
 
+VN_CAST_HINT = """- Tập tiếng Việt: phối theo các vai quen thuộc của hài Việt để khán giả nhận ra ngay:
+  · học sinh: outfit=school_uniform, body="child" nếu nhỏ tuổi
+  · dân văn phòng / sếp: outfit=suit, thêm glasses cho sếp
+  · mẹ, bà nội trợ: outfit=apron hoặc cardigan, hair_style=bun hoặc curly
+  · bố, chú bác: outfit=tshirt hoặc hiking, hair_style=buzz
+  · bà, ông: outfit=cardigan, hair_style=bun, accessory=glasses
+  · giới trẻ Gen Z: outfit=hoodie, tóc sidepart/long
+  Chọn vai đúng với nhân vật trong truyện, mỗi người một màu áo khác nhau."""
+
 US_CAST_HINT = """- Phối outfit theo vai trong truyện (suit cho dân văn phòng, hoodie cho sinh viên,
   apron cho người nấu ăn, dress/cardigan cho buổi hẹn...), mỗi người một màu áo khác nhau."""
 
@@ -451,7 +484,7 @@ def pick_character_specs(names: list[str], script: str,
         script=script[:3000],
         names=", ".join(names),
         example=example,
-        market_hint=(KOREAN_CAST_HINT if language == "ko" else US_CAST_HINT),
+        market_hint={"ko": KOREAN_CAST_HINT, "vi": VN_CAST_HINT}.get(language, US_CAST_HINT),
     )
     data = _run_json(prompt, timeout=180)
     if not isinstance(data, dict):
@@ -519,8 +552,8 @@ def describe_voices(names: list[str], script: str,
         vocab=vocab,
         script=script[:2500],
         names=", ".join(names),
-        accent_hint=('Nếu là tập tiếng Hàn, thêm "korean accent" khi phù hợp.'
-                     if language == "ko" else ""),
+        accent_hint={"ko": 'Nếu là tập tiếng Hàn, thêm "korean accent" khi phù hợp.',
+                     "vi": "Tập tiếng Việt: KHÔNG dùng cụm accent nào."}.get(language, ""),
         example='{{"{first}":"female, young adult, high pitch"}}'.replace(
             "{first}", names[0] if names else "A"
         ),

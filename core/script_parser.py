@@ -95,7 +95,7 @@ class Beat:
 @dataclass
 class Script:
     title: str = ""
-    language: str = "ko"           # "ko" | "en"
+    language: str = "ko"           # "ko" | "en" | "vi"
     cast: list[str] = field(default_factory=list)      # thứ tự xuất hiện
     sides: dict[str, str] = field(default_factory=dict)  # tên -> trai|phai|giua
     beats: list[Beat] = field(default_factory=list)
@@ -371,6 +371,9 @@ def parse_script(text: str) -> Script:
                     s.language = "ko"
                 elif lang in ("en", "eng", "english", "anh", "tiếng anh"):
                     s.language = "en"
+                elif lang in ("vi", "vn", "vie", "vietnamese", "việt", "viet",
+                              "tiếng việt", "tieng viet"):
+                    s.language = "vi"
                 else:
                     s.warnings.append(
                         f"Dòng {i}: ngôn ngữ '{val}' không rõ, mặc định tiếng Hàn."

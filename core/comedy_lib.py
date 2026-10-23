@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Thư viện kiểu hài theo thị trường (Hàn / Mỹ) + điều cần tránh.
+"""Thư viện kiểu hài theo thị trường (Hàn / Mỹ / Việt Nam) + điều cần tránh.
 
 Bổ sung dần được. Mỗi tập chọn một thị trường; Claude chỉ dùng thư viện của
 thị trường đó, không dịch truyện cười từ thị trường này sang thị trường kia.
@@ -30,6 +30,19 @@ MARKETS = {
             "chính trị đảng phái",
         ],
     },
+    "vi": {
+        "label": "Việt Nam",
+        "lang_id": "vi",
+        "voice_lang": "Vietnamese",
+        "trend_sources": ["TikTok", "Facebook Reels", "YouTube Shorts", "cộng đồng mạng Việt"],
+        "avoid": [
+            "chính trị, lãnh đạo, chủ quyền",
+            "phân biệt vùng miền (Bắc – Trung – Nam), chê giọng địa phương",
+            "chê ngoại hình, body shaming",
+            "tôn giáo, tín ngưỡng, chuyện tâm linh nhạy cảm",
+            "nói tục, chửi thề",
+        ],
+    },
 }
 
 # Kiểu hài theo thị trường: id -> (tên hiển thị, cách gây cười)
@@ -55,6 +68,19 @@ COMEDY_KINDS = {
         "office": ("Office / parenting chaos (công sở, nuôi con)", "Châm biếm công sở, chuyện nuôi con."),
         "pun": ("Pun / wordplay (chơi chữ)", "Chơi chữ tiếng Anh."),
         "rule3": ("Rule of three / callback (lặp ba lần, nhắc lại)", "Lặp 3 lần leo thang, hoặc nhắc lại câu đầu ở câu chốt."),
+    },
+    "vi": {
+        "choichu": ("Chơi chữ / nói lái", "Đồng âm, nói lái, hiểu sai nghĩa một từ; càng 'nhạt' càng buồn cười."),
+        "giadinh": ("Chuyện gia đình Việt", "Mẹ so sánh với 'con nhà người ta', bố tiết kiệm điện, bà nội ép ăn, họ hàng hỏi 'bao giờ cưới'."),
+        "tet": ("Tết và họ hàng", "Hỏi lương, hỏi người yêu, lì xì, dọn nhà, mâm cỗ, câu hỏi khó đỡ ngày Tết."),
+        "genz": ("Gen Z vs phụ huynh", "Thế hệ trẻ và bố mẹ nhìn cùng một chuyện khác nhau: điện thoại, công việc, yêu đương."),
+        "congso": ("Công sở, sếp và đồng nghiệp", "Họp hành, deadline, sếp nhắn lúc nửa đêm, đồng nghiệp 'ké' công."),
+        "hocsinh": ("Học sinh, sinh viên", "Kiểm tra bài cũ, thi cử, cô giáo chủ nhiệm, ở trọ, cuối tháng hết tiền."),
+        "dongcam": ("Hài đồng cảm đời thường", "Tình huống ai cũng gặp: kẹt xe, shipper gọi, đi chợ mặc cả, mất điện."),
+        "banbe": ("Bạn thân 'lầy lội'", "Hai đứa bạn cà khịa nhau, bày trò, hứa rồi 'bùng kèo'."),
+        "phongdai": ("Phóng đại vô lý", "Đẩy một chuyện nhỏ đời thường tới mức phi lý."),
+        "lattay": ("Cú lật cuối", "Dẫn khán giả nghĩ một đằng, câu chốt lật một nẻo."),
+        "trend": ("Bắt trend, câu nói hot", "Dùng đúng lúc câu nói, meme, từ lóng đang hot trên mạng Việt."),
     },
 }
 

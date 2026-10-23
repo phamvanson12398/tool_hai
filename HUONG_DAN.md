@@ -1,7 +1,7 @@
 # Hướng dẫn dùng tool tạo video hoạt hình hài thoại
 
 Tool biến một tiêu đề hoặc một kịch bản thành video hài thoại 9:16 hoàn chỉnh
-(30–90 giây), giọng và hình khớp nhau, bằng tiếng Hàn hoặc tiếng Anh.
+(30–90 giây), giọng và hình khớp nhau, bằng tiếng Hàn, tiếng Anh hoặc tiếng Việt.
 
 ---
 
@@ -104,8 +104,8 @@ Nhân vật hoặc giọng nào chị không tải lên thì tool tự chuyển 
 - **Trong ngoặc**: biểu cảm, có `zoom` hay không, tên tiếng động.
 - **Dòng bắt đầu bằng `>`**: nhịp phản ứng không lời, kèm số giây. Đây là
   khoảng lặng có chủ đích.
-- `# ngon_ngu`: `ko` (tiếng Hàn) hoặc `en` (tiếng Anh). Kịch bản, giọng và phụ
-  đề đều theo ngôn ngữ đó.
+- `# ngon_ngu`: `ko` (tiếng Hàn), `en` (tiếng Anh) hoặc `vi` (tiếng Việt).
+  Kịch bản, giọng và phụ đề đều theo ngôn ngữ đó.
 - `# nhan_vat`: `tên=trai`, `tên=phai`, `tên=giua`.
 - **Dòng `## canh: <mô tả>`**: chuyển sang bối cảnh khác. Các câu phía sau
   thuộc cảnh đó (xem mục 6b).
@@ -131,9 +131,17 @@ Nhân vật hoặc giọng nào chị không tải lên thì tool tự chuyển 
 Mỗi tập một kiểu hài khác nhau, không lặp mãi một khuôn.
 
 **Hài theo từng thị trường.** Ngôn ngữ của tập quyết định khán giả: tập tiếng Hàn
-viết cho người Hàn, tập tiếng Anh viết cho người Mỹ. Mỗi thị trường có thư viện
-kiểu hài, nguồn trend và điều cần tránh riêng. Claude không dịch một truyện cười
-từ thị trường này sang thị trường kia.
+viết cho người Hàn, tập tiếng Anh viết cho người Mỹ, tập tiếng Việt viết cho người
+Việt. Mỗi thị trường có thư viện kiểu hài, nguồn trend và điều cần tránh riêng.
+Claude không dịch một truyện cười từ thị trường này sang thị trường kia.
+
+**Hài Việt Nam** có sẵn các kiểu: chơi chữ / nói lái, chuyện gia đình Việt (con nhà
+người ta, bố tiết kiệm điện), Tết và họ hàng, Gen Z vs phụ huynh, công sở, học sinh
+– sinh viên, hài đồng cảm đời thường, bạn thân "lầy lội", phóng đại vô lý, cú lật
+cuối, bắt trend. Tránh: chính trị, phân biệt vùng miền, chê ngoại hình, tôn giáo,
+nói tục. Nhân vật tên Việt (Tuấn, Linh, bà Tư...), xưng hô đúng vai (mẹ – con,
+anh – em, tao – mày giữa bạn thân); tập tiếng Việt không cần dòng dịch `//`.
+Phụ đề tiếng Việt tự dùng font đủ dấu (Arial).
 
 **Chống lặp khuôn.** Tool lưu lịch sử các tập đã làm (kiểu hài, cách mở đầu, cách
 chốt). Khi viết, Claude tránh kiểu hài và cách chốt đã dùng trong 5 tập gần nhất,
@@ -248,7 +256,7 @@ ghi tên sau dấu `|`:
 
 | Kiểu | Trông thế nào |
 |---|---|
-| **Tự chọn theo ngôn ngữ** (mặc định) | Tập tiếng Anh → người xám TikTok, tập tiếng Hàn → vẽ tay kiểu Hàn |
+| **Tự chọn theo ngôn ngữ** (mặc định) | Tập tiếng Anh, tiếng Việt → người xám TikTok, tập tiếng Hàn → vẽ tay kiểu Hàn |
 | **Người xám kiểu TikTok Mỹ** | Đầu tròn xám, tóc đen khối, mắt trắng to con ngươi liếc ngang, thân xám mảnh; nữ có váy xoè; mũ lưỡi trai xám đội ngược |
 | **Vẽ tay kiểu Hàn** | Mắt lồi tròng nhỏ, mũi to, môi dày hồng, có tai, bụng tròn trong áo cổ V, quần đùi, chân trần có ngón; tóc ngắn nham nhở, ông bố hói vài sợi (`buzz`), ajumma tóc xoăn (`curly`) |
 | **Webtoon Hàn** | Đầu rất to, người ngắn; mặt kiểu meme Hàn: `^^` vui, `ㅠㅠ` khóc có dòng nước mắt, `-_-` chán, mắt trắng dã + vạch tím khi sốc, dấu nổi gân 💢 khi giận, `///` khi ngượng |
@@ -296,7 +304,9 @@ mọi biểu cảm × miệng mở/ngậm, luôn khớp nhau.
   chị sửa nếu sai.
 - **AI mô tả giọng**: OmniVoice tạo câu nghe thử; chị ưng thì lưu làm giọng mẫu.
 - Mọi câu đều nhân bản theo giọng mẫu, nên giọng nhất quán giữa các câu và các tập.
-- Mỗi nhân vật có giọng mẫu riêng cho tiếng Hàn và tiếng Anh.
+- Mỗi nhân vật có giọng mẫu riêng cho tiếng Hàn, tiếng Anh và tiếng Việt.
+- Tập tiếng Việt: nên **tải giọng mẫu tiếng Việt** (5–15 giây) để giọng tự nhiên
+  nhất; mô tả giọng vẫn dùng được nhưng không có cụm accent cho tiếng Việt.
 
 > **Mô tả giọng chỉ nhận một số cụm cố định** mà OmniVoice hiểu được:
 > `female` `male` · `child` `teenager` `young adult` `middle-aged` `elderly` ·
