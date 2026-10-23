@@ -365,6 +365,7 @@
             <select id="st-mode">
               <option value="story">Kể chuyện — người kể đọc, nhân vật diễn theo lời kể</option>
               <option value="film">Phim — nhân vật tự nói chuyện, đi lại, hành động; người kể chỉ nối cảnh</option>
+              <option value="sync">Ảnh theo lời — tải giọng có sẵn, AI vẽ ảnh từng câu, ảnh đổi đúng lúc lời tới</option>
             </select>
           </div>
           <div class="field-row">
@@ -372,15 +373,15 @@
             <div class="field"><label for="st-author">Tác giả</label><input type="text" id="st-author" placeholder="Nam Cao"></div>
           </div>
           <div class="field-row">
-            <div class="field"><label for="st-minutes">Thời lượng (phút)</label><input type="number" id="st-minutes" min="3" max="40" value="25"></div>
+            <div class="field st-nosync"><label for="st-minutes">Thời lượng (phút)</label><input type="number" id="st-minutes" min="3" max="40" value="25"></div>
             <div class="field"><label for="st-format">Khung</label>
               <select id="st-format"><option value="16:9">16:9 ngang (YouTube)</option><option value="9:16">9:16 dọc</option><option value="1:1">1:1 vuông</option></select></div>
-            <div class="field st-story-only"><label for="st-visual">Cách làm hình</label>
+            <div class="field st-story-only st-nosync"><label for="st-visual">Cách làm hình</label>
               <select id="st-visual">
                 <option value="tool">Tool tự vẽ &amp; nhân vật cử động (miễn phí)</option>
                 <option value="images">Tranh tự vẽ ở công cụ khác (xuất câu lệnh)</option>
               </select></div>
-            <div class="field st-img-only"><label for="st-style">Phong cách tranh</label><select id="st-style"></select></div>
+            <div class="field st-img-only st-nosync"><label for="st-style">Phong cách tranh</label><select id="st-style"></select></div>
             <div class="field st-tool-only"><label for="st-bgmode">Bối cảnh</label>
               <select id="st-bgmode">
                 <option value="draw">Vẽ tay (nhanh, có sẵn)</option>
@@ -388,12 +389,12 @@
               </select></div>
           </div>
           <div class="field-row">
-            <div class="field"><label for="st-voice">Giọng người kể (Thư viện)</label>
+            <div class="field st-nosync"><label for="st-voice">Giọng người kể (Thư viện)</label>
               <div class="st-voice-row"><select id="st-voice"></select>
                 <button class="btn btn-sm" id="st-clone" type="button" title="Tải một đoạn giọng (wav, mp3, m4a...) để clone làm giọng người kể">🎙 Clone</button>
                 <input type="file" id="st-clone-file" accept="audio/*,video/mp4,.wav,.mp3,.m4a,.ogg,.flac" hidden></div></div>
-            <div class="field"><label for="st-instruct">hoặc mô tả giọng</label><input type="text" id="st-instruct" placeholder="male, elderly, low pitch"></div>
-            <div class="field st-story-only"><label for="st-dialogue">Thoại nhân vật</label>
+            <div class="field st-nosync"><label for="st-instruct">hoặc mô tả giọng</label><input type="text" id="st-instruct" placeholder="male, elderly, low pitch"></div>
+            <div class="field st-story-only st-nosync"><label for="st-dialogue">Thoại nhân vật</label>
               <select id="st-dialogue">
                 <option value="some">Thỉnh thoảng xen thoại</option>
               </select></div>
@@ -401,12 +402,23 @@
               <select id="st-subs"><option value="0">Không</option><option value="1">Có</option></select></div>
           </div>
           <div class="field">
-            <label for="st-source">Nguyên văn truyện (không bắt buộc)</label>
+            <div class="st-sync-only st-sync-box">
+              <div class="field-row">
+                <div class="field"><label for="st-sync-file">File giọng đọc có sẵn (mp3, wav, m4a, mp4...)</label>
+                  <input type="file" id="st-sync-file" accept="audio/*,video/*,.mp3,.wav,.m4a,.mp4,.ogg,.flac">
+                  <span class="muted" id="st-sync-info">Chưa có file giọng</span></div>
+                <div class="field"><label for="st-sync-style">Phong cách ảnh AI vẽ</label>
+                  <select id="st-sync-style"></select></div>
+              </div>
+            </div>
+            <label for="st-source"><span class="st-nosync">Nguyên văn truyện (không bắt buộc)</span><span class="st-sync-only">Kịch bản đúng như giọng đọc (không bắt buộc — có thì phụ đề và câu chia đúng chữ hơn)</span></label>
             <textarea id="st-source" rows="6" placeholder="Dán nguyên văn để AI bám sát truyện gốc..."></textarea>
           </div>
           <div class="row-actions">
             <button class="btn" id="st-save" type="button">Lưu</button>
-            <button class="btn btn-primary" id="st-write" type="button">AI viết lời kể &amp; chia cảnh</button>
+            <button class="btn btn-primary st-nosync" id="st-write" type="button">AI viết lời kể &amp; chia cảnh</button>
+            <button class="btn btn-primary st-sync-only" id="st-sync-split" type="button">Nghe giọng, chia câu &amp; viết câu lệnh vẽ</button>
+            <button class="btn st-sync-only" id="st-sync-draw" type="button">AI vẽ ảnh còn thiếu</button>
           </div>
           <div class="progress-wrap" id="st-progress-wrap" hidden>
             <div class="progress"><div class="progress-bar" id="st-progress-bar"></div></div>
@@ -414,7 +426,7 @@
           </div>
         </section>
 
-        <section class="card">
+        <section class="card st-nosync">
           <h2 class="card-title">2. Nhân vật &amp; địa điểm</h2>
           <p class="hint st-tool-only">Tool vẽ nhân vật theo các lựa chọn (tóc, áo, râu, kính...) và vẽ bối cảnh theo mẫu. Đổi lựa chọn là ảnh xem trước vẽ lại ngay; nhân vật giống nhau ở mọi cảnh.</p>
           <p class="hint st-img-only">Mô tả ngoại hình cố định (tiếng Anh) được ghép vào mọi câu lệnh vẽ để nhân vật giống nhau ở mọi tranh. Sửa được.</p>

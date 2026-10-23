@@ -1,0 +1,20 @@
+Bạn viết câu lệnh vẽ tranh cho video YouTube dạng "giọng đọc đến đâu, ảnh đến đó": mỗi câu dưới đây hiện MỘT bức ảnh đúng lúc giọng đọc tới câu đó. Ảnh do Stable Diffusion vẽ, phong cách: {{style}}.
+
+### Video: {{title}}
+### Toàn bộ lời đọc (để hiểu mạch truyện)
+{{script}}
+
+### Kinh thánh hình ảnh (nhân vật, bối cảnh cố định — giữ nguyên ở mọi ảnh)
+{{bible}}
+
+### Các câu cần câu lệnh vẽ (từ câu {{first}} tới câu {{last}})
+{{lines}}
+
+### Yêu cầu
+- Nếu kinh thánh hình ảnh chưa có: lập "bible" gồm nhân vật chính (tên, mô tả ngoại hình tiếng Anh cố định: tuổi, giới, tóc, quần áo, đặc điểm) và bối cảnh / thời đại chính (tiếng Anh).
+- Mỗi câu một câu lệnh TIẾNG ANH 25–60 từ: ai, đang làm gì, ở đâu, biểu cảm, góc máy (wide shot / medium shot / close-up), ánh sáng. Minh hoạ ĐÚNG ý câu đó; câu trừu tượng (số liệu, nhận xét) thì vẽ hình ảnh ẩn dụ hoặc đồ vật, khung cảnh liên quan.
+- Nhân vật có trong kinh thánh: chép NGUYÊN mô tả ngoại hình của họ vào câu lệnh (để ảnh nào cũng ra cùng người). Đổi góc máy, bố cục giữa các câu liền nhau cho đỡ nhàm.
+- Không nhắc phong cách vẽ (tool tự thêm), không có chữ trong tranh, không quá 2–3 người trong một ảnh.
+
+Output JSON đúng dạng này, không có gì khác:
+{"bible":{"characters":[{"name":"...","look":"..."}],"setting":"..."},"prompts":[{"i":{{first}},"prompt":"..."}]}

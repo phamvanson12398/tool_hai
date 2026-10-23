@@ -630,6 +630,26 @@ hình có hai cách (ô **Cách làm hình**):
   động; người kể chỉ thỉnh thoảng nối cảnh ("Mấy hôm sau..."). Đổi kiểu video thì
   bấm **AI viết lời kể & chia cảnh** lại để AI viết theo kiểu mới.
 
+### Ảnh theo lời (voice đến đâu, ảnh đến đó)
+Ô **Kiểu video** chọn **Ảnh theo lời**: chị có sẵn file giọng đọc (tự thu,
+ElevenLabs...), tool chia thành từng câu và AI vẽ ảnh cho từng câu, ảnh đổi đúng
+lúc giọng đọc tới câu đó.
+
+1. Chọn **File giọng đọc có sẵn** (mp3, wav, m4a, mp4...) và **Phong cách ảnh AI vẽ**
+   (hoạt hình 3D, anime 2D, vẽ tay webtoon, màu nước, ảnh chân thực, sơn dầu).
+   Có kịch bản đúng như giọng đọc thì dán vào ô kịch bản (không bắt buộc) cho
+   phụ đề đúng chữ hơn.
+2. Bấm **Nghe giọng, chia câu & viết câu lệnh vẽ**: Whisper nghe từng chữ kèm thời
+   gian, chia thành câu / cụm câu khoảng 1,5–6,5 giây (câu dài tự cắt ở dấu phẩy
+   hoặc chỗ ngắt hơi), AI viết câu lệnh vẽ tiếng Anh cho từng câu và giữ nhân vật
+   giống nhau ở mọi ảnh.
+3. Bấm **AI vẽ ảnh còn thiếu** (cần cài **cai_3d.bat**; GTX 1080 mỗi ảnh khoảng
+   20–60 giây, video 10 phút ≈ 150 ảnh nên để máy chạy một lúc). Ảnh nào chưa ưng
+   thì sửa câu lệnh rồi bấm **Vẽ lại ảnh** ở câu đó; muốn dùng ảnh riêng thì tải
+   lên đúng số câu (scene_012.png) ở mục 4.
+4. Bấm **Dựng video**: ảnh còn thiếu được vẽ trước, rồi ghép đúng mốc lời đọc, máy
+   quay chuyển động nhẹ trên ảnh, chuyển ảnh nhanh, phụ đề và nhạc nền tuỳ chọn.
+
 ### Chế độ Phim
 - AI chuyển truyện thành **kịch bản phim**: mỗi chương nhiều cảnh, mỗi cảnh ở một
   địa điểm, gồm các **nhịp**:

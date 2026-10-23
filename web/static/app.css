@@ -156,6 +156,10 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 .st-patch { font-size: 12px; color: var(--text-dim); display: flex; align-items: center; gap: 4px; }
 .st-tool .st-img-only { display: none; }
 .st-film .st-story-only { display: none !important; }
+.st-sync .st-nosync { display: none !important; }
+#screen-story:not(.st-sync) .st-sync-only { display: none !important; }
+.st-sync-box { margin-bottom: 8px; }
+.st-sync-meta { font-variant-numeric: tabular-nums; }
 .st-fscene { background: var(--bg); border: 1px solid var(--line-soft); border-radius: var(--radius);
   padding: 10px; display: flex; flex-direction: column; gap: 8px; }
 .st-f-head { display: grid; grid-template-columns: 220px minmax(0, 1fr); gap: 12px; align-items: start; }

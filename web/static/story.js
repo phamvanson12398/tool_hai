@@ -89,7 +89,18 @@
     return pn[o] ? "★ " + pn[o] : (OPT_VI[o] || o);
   }
 
-  function isTool() { return $("st-visual").value !== "images"; }
+  function isTool() {
+    var m = $("st-mode") ? $("st-mode").value : "story";
+    if (m === "sync") return false;
+    if (m === "film") return true;
+    return $("st-visual").value !== "images";
+  }
+  function isSync() { return $("st-mode") && $("st-mode").value === "sync"; }
+
+  function fmtTime(t) {
+    t = Number(t) || 0;
+    return Math.floor(t / 60) + ":" + ("0" + (t % 60).toFixed(1)).slice(-4);
+  }
 
   function stamp() { return st.stamp || (st.stamp = Date.now()); }
 
@@ -161,6 +172,7 @@
       style: $("st-style").value,
       visual: $("st-visual").value,
       mode: $("st-mode").value,
+      sync_style: $("st-sync-style").value,
       bg_mode: $("st-bgmode").value,
       dialogue: $("st-dialogue").value,
       subtitles: $("st-subs").value === "1",
@@ -258,6 +270,14 @@
     sty.value = s.style || "doodle";
     $("st-visual").value = s.visual || "tool";
     $("st-mode").value = s.mode || "story";
+    var ss = $("st-sync-style");
+    ss.innerHTML = "";
+    (d.sync_styles || []).forEach(function (kv) { ss.appendChild(new Option(kv[1], kv[0])); });
+    ss.value = (d.sync && d.sync.style) || "3d";
+    var sy = d.sync || {};
+    $("st-sync-info").textContent = sy.audio
+      ? ("Đã có: " + (sy.name || "giọng") + " · " + fmtTime(sy.duration))
+      : "Chưa có file giọng";
     $("st-bgmode").value = s.bg_mode || "draw";
     applyVisual();
     showStyleRef(d);
@@ -463,6 +483,19 @@
                  { body: { places: places || [], force: !!force } });
     }).then(function () { toast("ok", "AI đang vẽ bối cảnh 3D", "Theo dõi tiến độ ở mục 1."); })
       .catch(fail("Không vẽ được bối cảnh 3D"));
+  }
+
+  function syncDraw(ids, force) {
+    if (!st.id) return;
+    if (st.data && !st.data.bg3d_installed) {
+      toast("warn", "Chưa cài phần vẽ ảnh AI", "Chạy cai_3d.bat một lần (tải khoảng 7 GB) rồi mở lại tool.");
+      return;
+    }
+    save(true).then(function () {
+      return api("/api/story/" + encodeURIComponent(st.id) + "/sync_draw", { body: { ids: ids || [], force: !!force } });
+    }).then(function () {
+      toast("ok", "AI đang vẽ ảnh", "Mỗi ảnh khoảng 20–60 giây; theo dõi tiến độ ở mục 1.");
+    }).catch(fail("Không vẽ được ảnh"));
   }
 
   function newPart() {
@@ -692,7 +725,10 @@
           thumb = el("div", "st-thumb", "scene_" + sc.id + "\nchưa có tranh");
         }
         var right = el("div", "");
-        var meta = el("div", "st-meta", "Cảnh " + sc.id + " · máy quay");
+        var meta = el("div", "st-meta", isSync()
+          ? "Câu " + sc.id + " · " + fmtTime(sc.t0) + "–" + fmtTime(sc.t1) + " · máy quay"
+          : "Cảnh " + sc.id + " · máy quay");
+        if (isSync()) meta.classList.add("st-sync-meta");
         var cam = document.createElement("select");
         cam.className = "st-cam";
         (d.cameras || []).forEach(function (c) { cam.appendChild(new Option(CAM_VI[c] || c, c)); });
@@ -709,7 +745,7 @@
         prompt.value = sc.prompt || "";
         right.appendChild(meta);
         right.appendChild(text);
-        right.appendChild(linesEditor(sc, s));
+        if (!isSync()) right.appendChild(linesEditor(sc, s));
         if (tool) {
           prompt.hidden = true;
           var names = {};
@@ -739,6 +775,12 @@
           right.appendChild(actRow);
         }
         right.appendChild(prompt);
+        if (isSync()) {
+          var rd = el("button", "btn btn-sm", have[sc.id] ? "Vẽ lại ảnh" : "Vẽ ảnh này");
+          rd.type = "button";
+          rd.addEventListener("click", function () { syncDraw([sc.id], true); });
+          right.appendChild(rd);
+        }
         row.appendChild(thumb);
         row.appendChild(right);
         box.appendChild(row);
@@ -751,6 +793,7 @@
     var scr = $("screen-story");
     var filmMode = $("st-mode").value === "film";
     if (scr) scr.classList.toggle("st-film", filmMode);
+    if (scr) scr.classList.toggle("st-sync", isSync());
     if (filmMode) tool = true;
     if (scr) scr.classList.toggle("st-tool", tool);
     if (scr) scr.classList.toggle("st-3d", tool && $("st-bgmode").value === "ai3d");
@@ -816,6 +859,36 @@
     });
     $("st-pick").addEventListener("change", function () { open(this.value); });
     $("st-part-make").addEventListener("click", newPart);
+    $("st-sync-file").addEventListener("change", function () {
+      var f = this.files && this.files[0];
+      if (!f) return;
+      var input = this;
+      var up = function () {
+        var fd = new FormData();
+        fd.append("file", f);
+        toast("ok", "Đang tải giọng lên…", f.name);
+        return api("/api/story/" + encodeURIComponent(st.id) + "/sync_audio", { body: fd })
+          .then(function (d) { render(d); toast("ok", "Đã nhận file giọng", fmtTime((d.sync || {}).duration)); input.value = ""; })
+          .catch(fail("Tải giọng thất bại"));
+      };
+      if (st.id) { save(true).then(up); return; }
+      api("/api/story", { body: { title: $("st-title").value.trim() || f.name.replace(/\.[^.]+$/, ""),
+                                   author: $("st-author").value.trim(), format: $("st-format").value || "16:9" } })
+        .then(function (d) { st.id = d.id; watch(); return loadList(d.id); })
+        .then(function () { return save(true); }).then(up)
+        .catch(fail("Không tạo được video"));
+    });
+    $("st-sync-split").addEventListener("click", function () {
+      if (!st.id || !(st.data && st.data.sync && st.data.sync.audio)) {
+        toast("warn", "Chưa có file giọng", "Chọn file giọng đọc trước."); return;
+      }
+      save(true).then(function () {
+        if ((st.data && st.data.scene_count) && !confirm("Chia lại sẽ thay toàn bộ câu và câu lệnh vẽ hiện có. Tiếp tục?")) return;
+        return api("/api/story/" + encodeURIComponent(st.id) + "/sync_split", { method: "POST" })
+          .then(function () { toast("ok", "Đang nghe giọng và chia câu", "Video dài cần vài phút."); });
+      }).catch(fail("Không chia câu được"));
+    });
+    $("st-sync-draw").addEventListener("click", function () { syncDraw([], false); });
     $("st-clone").addEventListener("click", function () {
       cloneVoice(function (name) {
         $("st-voice").value = name;

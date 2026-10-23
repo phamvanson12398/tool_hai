@@ -1774,6 +1774,9 @@ def _story_view(pid: str, data: dict) -> dict:
     out["visual"] = st.get("visual", "tool")
     from core import doodle_parts, film as film_m, film_rig
     out["mode"] = st.get("mode", "story")
+    from core import sync as sync_m
+    out["sync_styles"] = [[k, v[0]] for k, v in sync_m.STYLES.items()]
+    out["sync"] = {k: v for k, v in (st.get("sync") or {}).items() if k != "bible"}
     out["film_acts"] = [[k, v[0] if isinstance(v, tuple) else v] for k, v in film_m.all_actions().items()]
     out["spots"] = [[k, v] for k, v in film_m.SPOT_VI.items()]
     out["props"] = [[k, v] for k, v in film_rig.PROPS.items()] + \
@@ -1864,8 +1867,12 @@ def api_story_save(pid):
         st["bg_mode"] = body["bg_mode"]
     if body.get("dialogue") in story_mod.DIALOGUE:
         st["dialogue"] = body["dialogue"]
-    if body.get("mode") in ("story", "film"):
+    if body.get("mode") in ("story", "film", "sync"):
         st["mode"] = body["mode"]
+    if isinstance(body.get("sync_style"), str):
+        from core import sync as sync_m
+        if body["sync_style"] in sync_m.STYLES:
+            st.setdefault("sync", {})["style"] = body["sync_style"]
     if "minutes" in body:
         try:
             st["minutes"] = max(3, min(40, int(float(body["minutes"]))))
@@ -2129,6 +2136,110 @@ def api_story_image(pid, sid):
     return send_file(str(p))
 
 
+@app.post("/api/story/<pid>/sync_audio")
+def api_story_sync_audio(pid):
+    """Ảnh theo lời: nhận file giọng có sẵn (mp3, wav, m4a, mp4...)."""
+    from core import sync as sync_m
+    try:
+        data, st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return _err("Chưa chọn file giọng.")
+    tmp = config.DATA / "tmp" / uuid.uuid4().hex[:8]
+    tmp.mkdir(parents=True, exist_ok=True)
+    p = tmp / Path(f.filename).name
+    f.save(str(p))
+    try:
+        info = sync_m.save_audio(config.project_dir(pid), p)
+    except Exception as e:  # noqa: BLE001
+        return _err(_short_err(e))
+    finally:
+        import shutil
+        shutil.rmtree(tmp, ignore_errors=True)
+    st["sync"] = dict(st.get("sync") or {}, **info)
+    _save_project(pid, data)
+    return jsonify(_story_view(pid, data))
+
+
+@app.post("/api/story/<pid>/sync_split")
+def api_story_sync_split(pid):
+    """Nghe giọng, chia câu, AI viết câu lệnh vẽ (chạy nền)."""
+    from core import sync as sync_m
+    try:
+        data, st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    if not (st.get("sync") or {}).get("audio"):
+        return _err("Tải file giọng lên trước.")
+    if _status(pid).get("state") in ("writing", "rendering", "drawing"):
+        return jsonify({"ok": True, "already": True})
+    with JOBS_LOCK:
+        JOBS[pid] = {"state": "writing", "progress": 0.0, "message": "bắt đầu", "log": []}
+
+    def work():
+        try:
+            sync_m.build(st, config.project_dir(pid), data.get("language") or "vi",
+                         progress=lambda f, m: _set_status(pid, progress=round(float(f), 3),
+                                                           message=str(m)))
+            d2, _ = _load_story(pid)
+            d2["story"] = st
+            _save_project(pid, d2)
+            _set_status(pid, state="written", progress=1.0,
+                        message=f"đã chia {len(story_count(st))} câu")
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            _set_status(pid, state="error", message=f"Chia câu lỗi: {_short_err(e, 400)}")
+
+    threading.Thread(target=work, daemon=True).start()
+    return jsonify({"ok": True})
+
+
+def story_count(st):
+    from core import story as story_mod
+    return story_mod.all_scenes(st)
+
+
+@app.post("/api/story/<pid>/sync_draw")
+def api_story_sync_draw(pid):
+    """Stable Diffusion vẽ ảnh từng câu (chạy nền). body: ids (không có = câu
+    chưa có ảnh), force (vẽ lại)."""
+    from core import bg3d, sync as sync_m
+    try:
+        data, st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    if not bg3d.installed():
+        return _err("Chưa cài phần vẽ ảnh AI. Chạy cai_3d.bat một lần (tải khoảng 7 GB).")
+    if _status(pid).get("state") in ("writing", "rendering", "drawing"):
+        return jsonify({"ok": True, "already": True})
+    body = request.get_json(silent=True) or {}
+    only = [str(x) for x in body.get("ids") or []] or None
+    with JOBS_LOCK:
+        JOBS[pid] = {"state": "drawing", "progress": 0.0,
+                     "message": "nạp mô hình vẽ (lần đầu mất 1–2 phút)", "log": []}
+
+    def work():
+        try:
+            made = sync_m.draw(st, config.project_dir(pid), config.frame_size(data.get("format") or "16:9"),
+                               only, bool(body.get("force")),
+                               progress=lambda f, m: _set_status(pid, progress=round(float(f), 3),
+                                                                 message=str(m)))
+            d2, _ = _load_story(pid)
+            d2["story"] = st
+            _save_project(pid, d2)
+            _set_status(pid, state="drawn", progress=1.0, message=f"đã vẽ {len(made)} ảnh")
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            _set_status(pid, state="error", message=f"Vẽ ảnh lỗi: {_short_err(e, 400)}")
+        finally:
+            bg3d.unload()
+
+    threading.Thread(target=work, daemon=True).start()
+    return jsonify({"ok": True})
+
+
 @app.post("/api/story/<pid>/bg3d")
 def api_story_bg3d(pid):
     """Vẽ bối cảnh 3D cho các địa điểm (chạy nền). body: places (id, không có =
@@ -2217,6 +2328,26 @@ def api_story_render(pid):
                                              "dùng bối cảnh vẽ tay cho chỗ còn thiếu.")
                 finally:
                     bg3d.unload()                    # trả bộ nhớ card cho OmniVoice
+            if st.get("mode") == "sync":
+                from core import bg3d, sync as sync_m
+                if bg3d.installed():                     # ảnh còn thiếu: vẽ trước
+                    try:
+                        sync_m.draw(st, pdir, config.frame_size(data.get("format") or "16:9"),
+                                    progress=lambda f, m: _set_status(pid, progress=0.0, message=str(m)))
+                    except Exception as e:  # noqa: BLE001
+                        traceback.print_exc()
+                        _set_status(pid, message=f"Không vẽ được ảnh ({_short_err(e)}); ảnh thiếu "
+                                                 "sẽ hiện khung chữ tạm.")
+                    finally:
+                        bg3d.unload()
+                mp4 = sync_m.render(st, pdir, data.get("format") or "16:9", settings,
+                                    progress=lambda f, m: _set_status(
+                                        pid, progress=round(float(f), 3), message=str(m)))
+                d2, _ = _load_story(pid)
+                d2["result"] = {"video": str(mp4)}
+                _save_project(pid, d2)
+                _set_status(pid, state="done", progress=1.0, message="xong")
+                return
             if st.get("mode") == "film":
                 from core import film_render
                 faud = film_render.voices(st, pdir, lang, progress=lambda f, m: _set_status(
