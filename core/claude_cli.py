@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-"""Gọi Claude CLI (headless) để viết kịch bản, rà soát, bắt trend, vẽ mô tả.
+"""Gọi Claude CLI / Gemini CLI (headless) để viết kịch bản, rà soát, bắt trend,
+chọn nhân vật, bối cảnh, giọng. Mỗi việc chọn được AI riêng (AI_TASKS).
 
 Dùng `claude -p` (print mode) với --output-format json để lấy kết quả có cấu trúc.
 Mọi lời gọi đều là subprocess, nên tool chạy được ngoài mạng tuần tự và an toàn.
@@ -49,8 +50,70 @@ def _load_prompt(name: str, **kwargs) -> str:
     return text.strip()
 
 
-def _run(prompt: str, *, allowed_tools: list[str] | None = None,
+# --------------------------------------------------- chọn AI cho từng việc
+
+# Việc nào dùng AI nào (Cài đặt > Trợ lý AI). Mặc định: Claude cho các bước
+# quyết định chất lượng hài, Gemini cho việc phụ để đỡ tốn hạn mức Claude.
+AI_TASKS = {
+    "write": ("Viết kịch bản (kể cả tự thêm/bớt cho đúng thời lượng)", "claude"),
+    "review": ("Rà soát kịch bản", "claude"),
+    "apply": ("Áp dụng góp ý vào kịch bản", "claude"),
+    "ideas": ("3 hướng khác", "gemini"),
+    "trends": ("Bắt trend", "gemini"),
+    "characters": ("Chọn nhân vật (bộ ghép)", "gemini"),
+    "background": ("Chọn bối cảnh", "gemini"),
+    "voices": ("Mô tả giọng", "gemini"),
+}
+ENGINES = {"claude": "Claude", "gemini": "Gemini"}
+
+
+def engine_for(task: str) -> str:
+    """AI được chọn cho một việc (theo Cài đặt, không có thì mặc định)."""
+    chosen = (config.load_settings().get("ai_engines") or {}).get(task)
+    if chosen in ENGINES:
+        return chosen
+    return AI_TASKS.get(task, ("", "claude"))[1]
+
+
+def _run(prompt: str, *, task: str = "write",
+         allowed_tools: list[str] | None = None,
          append_system: str | None = None, timeout: int = TIMEOUT) -> str:
+    """Chạy AI đã chọn cho việc `task`; lỗi (chưa cài, hết hạn mức...) thì
+    tự chuyển sang AI còn lại nếu Cài đặt cho phép."""
+    from . import gemini_cli
+
+    first = engine_for(task)
+    order = [first]
+    if config.load_settings().get("ai_fallback", True):
+        order += [e for e in ENGINES if e != first]
+    errors = []
+    for eng in order:
+        _count(eng)
+        try:
+            if eng == "gemini":
+                return gemini_cli.run(prompt, timeout=timeout)
+            return _run_claude(prompt, allowed_tools=allowed_tools,
+                               append_system=append_system, timeout=timeout)
+        except RuntimeError as e:
+            errors.append(f"{ENGINES[eng]}: {e}")
+            _log_fallback(task, eng, e)
+    raise RuntimeError(" | ".join(errors))
+
+
+def _log_fallback(task: str, eng: str, err: Exception) -> None:
+    try:
+        d = config.DATA / "logs"
+        d.mkdir(parents=True, exist_ok=True)
+        from datetime import datetime
+        with open(d / "ai_calls.log", "a", encoding="utf-8") as f:
+            f.write(f"{datetime.now():%Y-%m-%d %H:%M:%S} [{task}] {ENGINES[eng]} lỗi: "
+                    f"{str(err)[:300]}\n")
+    except Exception:  # noqa: BLE001
+        pass
+
+
+def _run_claude(prompt: str, *, allowed_tools: list[str] | None = None,
+                append_system: str | None = None, timeout: int = TIMEOUT) -> str:
     """Chạy claude -p và trả về phần text của kết quả."""
     cmd = [_cli_path(), "-p", prompt, "--output-format", "text"]
     if allowed_tools is not None:
@@ -126,39 +189,48 @@ def _extract_json(text: str) -> object:
                         return json.loads(t[start:i + 1])
                     except json.JSONDecodeError:
                         break
-    raise RuntimeError("Claude không trả về JSON hợp lệ:\n" + text[:800])
+    raise RuntimeError("AI không trả về JSON hợp lệ:\n" + text[:800])
 
 
-# --- đếm số lần gọi Claude trong phiên làm việc ---
+# --- đếm số lần gọi Claude / Gemini trong phiên làm việc ---
 
-_CALL_COUNT = 0
+_CALLS = {"claude": 0, "gemini": 0}
 _CALL_COUNT_LOCK = threading.Lock()
+
+
+def _count(engine: str) -> None:
+    with _CALL_COUNT_LOCK:
+        _CALLS[engine] = _CALLS.get(engine, 0) + 1
 
 
 def call_count() -> int:
     """Số lần đã gọi Claude trong phiên hiện tại của server."""
     with _CALL_COUNT_LOCK:
-        return _CALL_COUNT
+        return _CALLS["claude"]
+
+
+def call_counts() -> dict:
+    """Số lần gọi từng AI trong phiên hiện tại: {"claude": n, "gemini": m}."""
+    with _CALL_COUNT_LOCK:
+        return dict(_CALLS)
 
 
 def reset_call_count() -> None:
     with _CALL_COUNT_LOCK:
-        global _CALL_COUNT
-        _CALL_COUNT = 0
+        for k in _CALLS:
+            _CALLS[k] = 0
 
 
-def _run_json(prompt: str, *, timeout: int = TIMEOUT,
+def _run_json(prompt: str, *, task: str, timeout: int = TIMEOUT,
               allowed_tools: list[str] | None = None,
               retry_hint: str = "") -> object:
-    """Gọi Claude, bóc JSON. Nếu JSON sai thì thử lại đúng 1 lần rồi mới báo lỗi."""
-    global _CALL_COUNT
+    """Gọi AI, bóc JSON. Nếu JSON sai thì thử lại đúng 1 lần rồi mới báo lỗi."""
     last_error = ""
 
     for attempt in range(2):
-        with _CALL_COUNT_LOCK:
-            _CALL_COUNT += 1
         try:
-            out = _run(prompt, timeout=timeout, allowed_tools=allowed_tools)
+            out = _run(prompt, task=task, timeout=timeout,
+                       allowed_tools=allowed_tools)
         except RuntimeError as e:
             last_error = str(e)
             if attempt == 0:
@@ -175,7 +247,7 @@ def _run_json(prompt: str, *, timeout: int = TIMEOUT,
                           "Trả lại CHỈ JSON hợp lệ, không giải thích, không code fence."))
 
     raise RuntimeError(
-        "Claude không trả về JSON hợp lệ sau 2 lần thử. Lỗi cuối: " + last_error[:600]
+        "AI không trả về JSON hợp lệ sau 2 lần thử. Lỗi cuối: " + last_error[:600]
     )
 
 
@@ -276,7 +348,7 @@ def _fix_length(script: str, language: str, duration: float | None) -> str:
               f"CHỈ output kịch bản hoàn chỉnh, không giải thích, không code fence.\n\n"
               f"{script}")
     try:
-        fixed = _run(prompt, timeout=TIMEOUT).strip()
+        fixed = _run(prompt, task="write", timeout=TIMEOUT).strip()
     except RuntimeError:
         return script
     try:
@@ -355,7 +427,7 @@ def write_script(title: str, language: str, kind: str | None = None,
         translation_rule=translation_rule,
     )
 
-    out = _run(prompt, timeout=TIMEOUT).strip()
+    out = _run(prompt, task="write", timeout=TIMEOUT).strip()
     return _fix_length(out, language, duration)
 
 
@@ -373,7 +445,7 @@ def three_ideas(title: str, language: str) -> list[dict]:
         kind_lines=kind_lines,
         history_block=_history_block(language),
     )
-    data = _run_json(prompt, timeout=180)
+    data = _run_json(prompt, task="ideas", timeout=180)
     if isinstance(data, dict):
         data = data.get("ideas", [])
     if not isinstance(data, list):
@@ -405,7 +477,7 @@ def review_script(script: str, language: str,
         history_block=_history_block(language),
         length_rule=length_rule,
     )
-    data = _run_json(prompt, timeout=240)
+    data = _run_json(prompt, task="review", timeout=240)
     if isinstance(data, dict):
         data = data.get("suggestions", [])
     if not isinstance(data, list):
@@ -430,7 +502,7 @@ def apply_suggestions(script: str, suggestions: list[dict]) -> str:
         items=items,
         script=script,
     )
-    return _run(prompt, timeout=240).strip()
+    return _run(prompt, task="apply", timeout=240).strip()
 
 
 # ------------------------------------------------------------------- trend
@@ -486,7 +558,7 @@ def pick_character_specs(names: list[str], script: str,
         example=example,
         market_hint={"ko": KOREAN_CAST_HINT, "vi": VN_CAST_HINT}.get(language, US_CAST_HINT),
     )
-    data = _run_json(prompt, timeout=180)
+    data = _run_json(prompt, task="characters", timeout=180)
     if not isinstance(data, dict):
         return {}
     # chỉ giữ giá trị hợp lệ
@@ -515,7 +587,7 @@ def design_background(script: str, language: str, desc: str = "") -> dict:
         desc=desc or "(cả tập dùng một bối cảnh — chọn theo nội dung kịch bản)",
         kinds=kinds_catalog(),
     )
-    data = _run_json(prompt, timeout=150)
+    data = _run_json(prompt, task="background", timeout=150)
     if not isinstance(data, dict):
         return {}
 
@@ -558,7 +630,7 @@ def describe_voices(names: list[str], script: str,
             "{first}", names[0] if names else "A"
         ),
     )
-    data = _run_json(prompt, timeout=150)
+    data = _run_json(prompt, task="voices", timeout=150)
     if not isinstance(data, dict):
         return {}
     return {str(k): str(v) for k, v in data.items() if isinstance(v, str)}
@@ -575,7 +647,8 @@ def find_trends(language: str, title: str = "") -> list[dict]:
         sources=sources,
         topic=topic,
     )
-    data = _run_json(prompt, timeout=300, allowed_tools=["WebSearch", "WebFetch"])
+    data = _run_json(prompt, task="trends", timeout=300,
+                     allowed_tools=["WebSearch", "WebFetch"])
     if isinstance(data, dict):
         data = data.get("ideas", data.get("trends", []))
     if not isinstance(data, list):

@@ -4,6 +4,7 @@ Nguồn cần tra: {{sources}}
 
 {{topic}}
 Yêu cầu:
+- Dùng công cụ tìm kiếm web để tra thật, không tự bịa trend hay đường dẫn.
 - Mỗi ý tưởng ghi rõ ngày tìm thấy (định dạng YYYY-MM-DD) để biết nó còn "nóng" không.
 - Chỉ mượn ý tưởng và FORMAT. KHÔNG chép nguyên câu thoại, nhân vật hay âm thanh có bản quyền.
 - Ưu tiên mẫu format đang phổ biến trên TikTok/Reels/Shorts.

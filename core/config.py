@@ -122,6 +122,12 @@ DEFAULT_SETTINGS = {
     "title_text": "",
     "review_before_render": True,
     "claude_bin": "",           # rỗng = dùng mặc định "claude"
+    "gemini_bin": "",           # rỗng = dùng mặc định "gemini"
+    "gemini_model": "",         # rỗng = model mặc định của Gemini CLI
+    # Trợ lý AI cho từng việc: {việc: "claude" | "gemini"}; thiếu việc nào thì
+    # dùng mặc định trong core/claude_cli.AI_TASKS
+    "ai_engines": {},
+    "ai_fallback": True,        # AI đã chọn lỗi / chưa cài thì thử AI còn lại
     "ffmpeg_bin": "",           # rỗng = dùng mặc định "ffmpeg"
     "tts_engine": "",           # rỗng = dùng mặc định "omnivoice"
     # --- Cử động nhân vật (Bước D) ---

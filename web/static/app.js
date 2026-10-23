@@ -1887,6 +1887,10 @@
     }
     $("s-title-text").value = s.title_text || "";
     $("s-claude-bin").value = s.claude_bin || "";
+    $("s-gemini-bin").value = s.gemini_bin || "";
+    $("s-gemini-model").value = s.gemini_model || "";
+    $("s-ai-fallback").value = s.ai_fallback === false ? "0" : "1";
+    renderAiEngines(s.ai_engines || {});
     $("s-ffmpeg-bin").value = s.ffmpeg_bin || "";
     $("s-enable-rig").value = s.enable_rig === false ? "0" : "1";
     $("s-auto-camera").value = s.auto_camera === false ? "0" : "1";
@@ -1899,6 +1903,46 @@
       s.capcut_drafts_root || "(để trống = dùng mặc định của CapCut)";
     updateSubtitleSwatch();
     updateStageFromProject();
+  }
+
+  /* --------------------- Trợ lý AI cho từng việc ---------------------- */
+
+  function renderAiEngines(chosen) {
+    var box = $("ai-engine-list");
+    if (!box) return;
+    box.innerHTML = "";
+    var engines = (state.meta && state.meta.ai_engines) || [];
+    ((state.meta && state.meta.ai_tasks) || []).forEach(function (t) {
+      var f = el("div", "field");
+      var lb = el("label", "", t.label);
+      lb.setAttribute("for", "ai-task-" + t.id);
+      var sel = document.createElement("select");
+      sel.id = "ai-task-" + t.id;
+      sel.setAttribute("data-task", t.id);
+      engines.forEach(function (e) { sel.appendChild(new Option(e.label, e.id)); });
+      sel.value = chosen[t.id] || t["default"];
+      f.appendChild(lb);
+      f.appendChild(sel);
+      box.appendChild(f);
+    });
+  }
+
+  function collectAiEngines() {
+    var out = {};
+    var box = $("ai-engine-list");
+    var sels = box ? box.querySelectorAll("select[data-task]") : [];
+    // danh sách chưa hiện (meta chưa tải xong): giữ nguyên lựa chọn cũ
+    if (!sels.length) return (state.settings && state.settings.ai_engines) || {};
+    box.querySelectorAll("select[data-task]").forEach(function (s) {
+      out[s.getAttribute("data-task")] = s.value;
+    });
+    return out;
+  }
+
+  function showAiCalls(counts) {
+    var cc = $("claude-calls");
+    if (!cc || !counts) return;
+    cc.textContent = "Claude " + (counts.claude || 0) + " · Gemini " + (counts.gemini || 0);
   }
 
   /* --------------------- Xuất dự án CapCut ---------------------- */
@@ -1948,6 +1992,10 @@
       sfx_volume: parseFloat($("s-sfx-volume").value) || 0,
       title_text: $("s-title-text").value,
       claude_bin: $("s-claude-bin").value.trim(),
+      gemini_bin: $("s-gemini-bin").value.trim(),
+      gemini_model: $("s-gemini-model").value.trim(),
+      ai_engines: collectAiEngines(),
+      ai_fallback: $("s-ai-fallback").value === "1",
       ffmpeg_bin: $("s-ffmpeg-bin").value.trim(),
       enable_rig: $("s-enable-rig").value === "1",
       auto_camera: $("s-auto-camera").value === "1",
@@ -2357,6 +2405,7 @@
 
   function updateClaudeCalls() {
     api("/api/claude-calls").then(function (d) {
+      if (d && d.counts) { showAiCalls(d.counts); return; }
       var el = $("claude-calls");
       if (el && d) el.textContent = d.count || 0;
     }).catch(function () {});
@@ -2370,6 +2419,8 @@
       populateSubtitleStyles();
       var cc = $("claude-calls");
       if (cc && typeof state.meta.claude_calls === "number") cc.textContent = state.meta.claude_calls;
+      if (state.meta.ai_calls) showAiCalls(state.meta.ai_calls);
+      if (state.settings) renderAiEngines(state.settings.ai_engines || {});
       return state.meta;
     });
   }

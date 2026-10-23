@@ -39,6 +39,14 @@ if errorlevel 1 (
     echo.
 )
 
+REM Kiem tra Gemini CLI (tuy chon, cho cac viec phu)
+gemini --version >nul 2>&1
+if errorlevel 1 (
+    echo   [GHI CHU] Chua cai Gemini CLI. Cac viec chon Gemini se tu dung Claude.
+    echo   Cai bang: npm install -g @google/gemini-cli  roi chay "gemini" de dang nhap.
+    echo.
+)
+
 echo   Dang chay server. Dong cua so nay la tat tool.
 echo.
 start "" cmd /c "timeout /t 3 >nul & start http://127.0.0.1:8766"

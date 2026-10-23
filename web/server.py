@@ -229,6 +229,10 @@ def static_files(name):
 def api_meta():
     return jsonify({
         "claude_calls": claude_cli.call_count(),
+        "ai_calls": claude_cli.call_counts(),
+        "ai_tasks": [{"id": k, "label": v[0], "default": v[1]}
+                     for k, v in claude_cli.AI_TASKS.items()],
+        "ai_engines": [{"id": k, "label": v} for k, v in claude_cli.ENGINES.items()],
         "languages": [{"code": k, "label": v["label"]}
                       for k, v in config.LANGUAGES.items()],
         "expressions": sorted(VALID_EXPRESSIONS),
@@ -254,7 +258,8 @@ def api_meta():
 @app.get("/api/claude-calls")
 def api_claude_calls():
     """Số lần đã gọi Claude trong phiên làm việc của server."""
-    return jsonify({"count": claude_cli.call_count()})
+    return jsonify({"count": claude_cli.call_count(),
+                    "counts": claude_cli.call_counts()})
 
 
 @app.get("/api/settings")
@@ -285,7 +290,7 @@ def api_set_settings():
 
 @app.get("/api/check-system")
 def api_check_system():
-    """Kiểm tra: GPU NVIDIA, ffmpeg, claude CLI."""
+    """Kiểm tra: GPU NVIDIA, ffmpeg, Claude CLI, Gemini CLI."""
     import subprocess
     import os
 
@@ -385,6 +390,21 @@ def api_check_system():
             "status": "error",
             "message": f"Không kiểm tra được: {e}"
         })
+
+    # 4. Gemini CLI (cho các việc chọn Gemini ở mục Trợ lý AI)
+    from core import gemini_cli
+    ok, msg = gemini_cli.version()
+    uses = [v[0] for k, v in claude_cli.AI_TASKS.items()
+            if claude_cli.engine_for(k) == "gemini"]
+    results.append({
+        "item": "Gemini CLI",
+        "status": "ok" if ok else ("error" if uses else "warn"),
+        "message": (f"Có — {msg}" if ok else
+                    msg + (" (đang được chọn cho: " + ", ".join(uses) +
+                           ("; tạm thời tool sẽ dùng Claude thay)"
+                            if settings.get("ai_fallback", True) else ")")
+                           if uses else "")),
+    })
 
     return jsonify({"checks": results})
 
