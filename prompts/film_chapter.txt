@@ -27,6 +27,17 @@ Chương dài khoảng {{minutes}} phút ≈ {{beats}} nhịp (mỗi câu thoạ
 - Nhân vật chưa có mặt lúc đầu cảnh: "start" ở "ngoai_trai"/"ngoai_phai" rồi có nhịp "enter". Rời đi thì nhịp "exit".
 - "chars" của cảnh: mọi nhân vật xuất hiện trong cảnh (tối đa 4).
 
+### Cho HAY, không đơn điệu (quan trọng nhất)
+- Mỗi cảnh có MỘT mục đích rõ (một chuyện xảy ra / một điều được hé lộ / một cảm xúc đổi chiều) và có xung đột nhỏ: người muốn – người ngăn, giấu – lộ, mong – thất vọng. Cảnh không có gì thay đổi thì bỏ.
+- Mở cảnh vào ngay giữa chuyện (đang làm, đang nói dở), không chào hỏi lê thê; kết cảnh ở một câu / hành động "đắt" (câu bỏ lửng, cử chỉ lặng, tiếng động) để kéo sang cảnh sau.
+- Thoại có "chất": mỗi nhân vật một giọng riêng (từ ngữ, câu cửa miệng, cách xưng hô, tính khí); nói có ẩn ý, né tránh, nói một đằng nghĩ một nẻo; câu dài câu ngắn xen nhau, có câu cụt, câu hỏi vặn, câu đùa đắng. Không để hai người nói qua lại đều đều kiểu hỏi – đáp – hỏi – đáp.
+- Đổi nhịp liên tục: căng → lắng → bật cười → nghẹn ngào. Xen chút hài đời thường (tính lẩm cẩm, con chó tinh nghịch, câu nói ngô nghê) để cảnh buồn càng thấm.
+- Cho thấy hơn là kể: dùng hành động, đồ vật, im lặng để nói cảm xúc (lão lặng lẽ rít điếu cày thay cho câu "tôi buồn lắm"; tay run khi đưa bát cơm).
+- Chi tiết cụ thể, đời sống thật của thời đại (món ăn, tiếng gà, mùa vụ, giá cả, tiếng chửi đổng, câu ca dao), không chung chung.
+- Gieo – gặt: cài một chi tiết sớm (cái bát, câu nói, thói quen) rồi trả lại ở cao trào / kết cho người xem "à" lên.
+- Đa dạng: cử chỉ khi nói đổi liên tục (chỉ tay, gãi đầu, khoanh tay, chống nạnh, vỗ đùi, lắc đầu...), đừng để "talk" mãi; đổi chỗ đứng, đổi việc, ngồi xuống đứng lên; cảnh sau khác cảnh trước về nơi chốn / giờ giấc / không khí. Không lặp lại câu thoại hay ý đã nói.
+- Người kể (ít) nhưng câu nào cũng đắt: gợi tò mò, đặt câu hỏi, hoặc một nhận xét sâu lắng.
+
 ### Cho phim liền mạch, sinh động
 - Cho nhân vật VIỆC ĐANG LÀM hợp hoàn cảnh (cuốc đất, quét sân, bổ củi, gánh hàng, hút điếu cày, phe phẩy quạt, nấu ăn, cho gà ăn, đọc sách...): ghi một nhịp "act" với việc đó, nhân vật sẽ TIẾP TỤC làm cả lúc người khác nói và cả lúc chính họ nói (câu thoại để "act":"talk"), tới khi có hành động khác. Đừng để ai đứng không suốt cảnh.
 - Đạo cụ tự có theo việc (cuốc khi cuốc đất, chổi khi quét, rìu khi bổ củi, đòn gánh khi gánh, điếu cày khi hút, quạt nan khi quạt...).

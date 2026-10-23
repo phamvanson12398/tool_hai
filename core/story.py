@@ -287,12 +287,72 @@ def _write_film_chapter(st, i, c, outline, chars_txt, places_txt, block, per_min
     if not scenes:
         raise RuntimeError(f"AI không viết được chương {i + 1}.")
     known = {ch["id"] for ch in st.get("characters") or []}
+    species = {ch["id"]: (ch.get("kit") or {}).get("species", "human") for ch in st.get("characters") or []}
     return {"title": str(c.get("title") or f"Chương {i + 1}"),
-            "scenes": [s for s in (clean_film_scene(x, known) for x in scenes if isinstance(x, dict))
+            "scenes": [s for s in (clean_film_scene(x, known, species) for x in scenes if isinstance(x, dict))
                        if s["beats"]]}
 
 
-def clean_film_scene(s: dict, known: set | None = None) -> dict:
+_CUES = [  # (từ trong câu nói, cử chỉ) — xét theo thứ tự
+    (r"\b(ha ha|hà hà|khà khà|hì hì|hề hề)\b", "laugh"),
+    (r"\b(hu hu|huhu)\b|khóc", "cry"),
+    (r"^(chào|chào ông|chào bà|chào cụ)\b", "wave"),
+    (r"\b(cảm ơn|đội ơn|xin phép)\b", "bow"),
+    (r"\b(trời ơi|giời ơi|chết thật|chết rồi|ối)\b", "facepalm"),
+    (r"^(không|chẳng|đâu có|làm gì có)\b", "shake_head"),
+    (r"^(vâng|ừ|dạ|phải|đúng)\b", "nod"),
+    (r"\b(kia|đây này|nhìn xem|đằng kia|cái này)\b", "point"),
+]
+_TALK_MIX = ["talk", "point", "talk", "cross_arms", "talk", "think", "talk", "nod"]
+
+
+def liven(beats: list, species: dict | None = None) -> list:
+    """Cho phim đỡ đơn điệu: câu thoại "talk" đổi sang cử chỉ hợp lời (hỏi thì gãi đầu /
+    suy nghĩ, chào thì vẫy, cảm ơn thì cúi, "trời ơi" thì đập trán...), không để một
+    người "talk" mãi; người nghe thỉnh thoảng phản ứng. Người đang làm dở việc (cuốc,
+    hút điếu...) thì vẫn vừa làm vừa nói."""
+    from . import film_act
+    species = species or {}
+    busy: dict = {}
+    last_act: dict = {}
+    n_line = 0
+    for b in beats:
+        who = b.get("who")
+        if b.get("t") == "act":
+            a = b.get("act")
+            if a in film_act.CONTINUOUS:
+                busy[who] = a
+            elif a not in ("talk",):
+                busy.pop(who, None)
+            continue
+        if b.get("t") != "line" or species.get(who, "human") != "human":
+            continue
+        n_line += 1
+        text = (b.get("text") or "").strip().lower()
+        if b.get("act", "talk") == "talk" and not busy.get(who):
+            pick = next((a for rx, a in _CUES if re.search(rx, text)), None)
+            if pick is None and text.endswith("?"):
+                pick = ["think", "scratch_head", "talk"][n_line % 3]
+            if pick is None and last_act.get(who) == "talk":
+                pick = _TALK_MIX[(n_line * 3 + len(text)) % len(_TALK_MIX)]
+            if pick:
+                b["act"] = pick
+        elif b.get("act") in film_act.CONTINUOUS and b.get("act") not in ("cry", "sad", "think"):
+            busy[who] = b["act"]
+        last_act[who] = b.get("act", "talk")
+        # người nghe phản ứng (thưa thôi, không phải câu nào cũng phản ứng)
+        to = b.get("to")
+        if to and to != who and not b.get("react") and n_line % 3 == 0:
+            if text.endswith("!") and re.search(r"chết|bán|mất|đi rồi|trời|thật à|sao", text):
+                b["react"] = {to: "hands_up"}
+            elif text.endswith("?"):
+                b["react"] = {to: "think" if species.get(to, "human") == "human" else "happy"}
+            elif species.get(to, "human") == "human":
+                b["react"] = {to: "nod"}
+    return beats
+
+
+def clean_film_scene(s: dict, known: set | None = None, species: dict | None = None) -> dict:
     """Kiểm tra một cảnh phim: nhịp hợp lệ, người nói có trong cảnh."""
     from . import film, film_act
     acts = film.all_actions()
@@ -343,6 +403,7 @@ def clean_film_scene(s: dict, known: set | None = None) -> dict:
     for k, v in (s.get("start") or {}).items():
         if v in film.SPOTS and _slug(k) in chars:
             start[_slug(k)] = v
+    liven(beats, species)
     out = {"place": _slug(s.get("place")) if s.get("place") else "", "chars": chars,
            "start": start, "beats": beats, "camera": "still", "text": ""}
     if s.get("time") in ("ngay", "dem"):

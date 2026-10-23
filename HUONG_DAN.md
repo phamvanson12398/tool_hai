@@ -640,6 +640,15 @@ AI dựng video theo mạch rõ ràng (cả Kể chuyện và Phim):
   đọng lại kèm một câu người kể khép chuyện.
 - Mục 3 ghi vai từng chương (Mở đầu / Thân / Cao trào / Kết) và đánh dấu cảnh
   **MÓC CÂU mở video**.
+- **Cho hay, không đơn điệu**: AI được dặn mỗi cảnh phải có chuyện mới hoặc cảm
+  xúc đổi chiều, vào thẳng chuyện, kết cảnh bằng câu / cử chỉ "đắt"; thoại mỗi người
+  một giọng, có ẩn ý, không hỏi – đáp đều đều; nhịp căng – lắng – cười – nghẹn xen
+  nhau, có chút hài đời thường; cho thấy bằng hành động, đồ vật thay vì kể; chi tiết
+  thật của thời đại; gieo chi tiết sớm rồi trả lại ở kết; không lặp câu, lặp ý.
+- Phim: tool tự đổi cử chỉ khi nói theo lời (hỏi thì gãi đầu / suy nghĩ, chào thì
+  vẫy, cảm ơn thì cúi, "trời ơi" thì đập trán, "vâng" thì gật, "không" thì lắc đầu,
+  cười "ha ha" thì cười ôm bụng...), không để ai chỉ "nói" mãi; người nghe thỉnh
+  thoảng gật, suy nghĩ, sững sờ. Người đang làm dở việc thì vẫn vừa làm vừa nói.
 
 ### Kiểu nhân vật (Kể chuyện tool vẽ và Phim)
 Ô **Kiểu nhân vật**:
