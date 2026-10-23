@@ -283,6 +283,15 @@ chỗ một dòng:
 - AI vẽ theo các mẫu có sẵn: phòng khách, nhà bếp, phòng ngủ, văn phòng, lớp
   học, quán cà phê, cửa hàng, đường phố, công viên, bãi biển, nền sân khấu —
   có cả ban ngày và ban đêm, màu chọn theo không khí từng cảnh.
+- Mỗi cảnh có **đồ đời thường như thật**: đèn trần, điều hoà, ổ điện, công tắc,
+  thảm, dép, khung ảnh gia đình, kệ sách, lịch treo tường; bếp có bếp ga, hút
+  mùi, lò vi sóng, nồi cơm, ống đũa, móc treo dụng cụ; văn phòng có bảng trắng,
+  bảng ghim giấy nhớ, máy in; lớp học có quạt trần, tủ sách, chổi; quán cà phê
+  có kệ ly, dây đèn trang trí; cửa hàng có tủ mát nước ngọt; đường phố có dây
+  điện chằng chịt, xe tay ga, cục nóng điều hoà, biển hiệu; công viên có hàng
+  rào, cột đèn, bụi hoa; bãi biển có ghế nằm, thuyền buồm, bóng. Đồ được xếp
+  riêng cho khung dọc và khung ngang, màu sách và đồ trên kệ đổi theo từng cảnh
+  nên các tập không giống hệt nhau.
 - Trong video, vào cảnh mới có chuyển mờ ngắn (khoảng 0,35 giây); quay lại
   nơi đã có thì cắt thẳng.
 

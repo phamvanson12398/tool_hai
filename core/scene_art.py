@@ -337,8 +337,7 @@ def _draw_kind(p: _Pen, kind: str, wall, floor, accent, night: bool, rng):
             p.rect("r", xx, 10, xx + 54, 78, _shade(cab, 0.92), r=2)
             p.circle("r", xx + 27, 66, 3, OUT, outline=False)
         p.rect("r", -260, 150, 4, 222, cab, r=3)               # tủ treo
-        p.ell("r", -200, 94, -150, 118, (80, 80, 92))          # nồi
-        p.rect("r", -96, 94, -84, 124, (250, 250, 250), r=3)   # chai
+        # bếp ga, nồi cơm, lò vi sóng... vẽ ở core/scene_decor.py
     elif kind == "phong_ngu":
         _room_base(p, wall, floor)
         _window(p, "r", -150, 110, 100, 120, night, curtain=accent)
@@ -542,7 +541,11 @@ def render_scene(kind: str = "phong_khach", time: str = "ngay",
         wall, floor = _mix(wall, (40, 44, 80), 0.45), _mix(floor, (30, 30, 50), 0.4)
     w, h = size or (config.WIDTH, config.HEIGHT)
     img = Image.new("RGB", (w, h), wall)
-    _draw_kind(_Pen(img), kind, wall, floor, accent, night, random.Random(seed))
+    pen = _Pen(img)
+    _draw_kind(pen, kind, wall, floor, accent, night, random.Random(seed))
+    # đồ đời thường (đèn trần, điều hoà, kệ, thảm, xe máy...) cho giống thật
+    from . import scene_decor
+    scene_decor.decorate(pen, kind, wall, floor, accent, night, random.Random(seed + 7))
     if night:
         # phủ tối nhẹ cho cảnh đêm, giữ đồ vật vẫn rõ
         img = Image.blend(img, Image.new("RGB", (w, h), (20, 24, 60)), 0.18)
