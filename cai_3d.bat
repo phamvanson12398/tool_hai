@@ -28,9 +28,10 @@ if errorlevel 1 (
 echo.
 
 echo   [2/3] Cai thu vien ve anh (diffusers)...
+REM Khong dong vao transformers (OmniVoice dang dung); diffusers ban moi hop voi transformers moi
 python -c "import transformers" 2>nul
-if errorlevel 1 pip install "transformers>=4.44,<4.50"
-pip install diffusers==0.32.2 accelerate==1.2.1 peft==0.14.0 safetensors huggingface_hub
+if errorlevel 1 pip install transformers
+pip install -U "diffusers>=0.35.2" "accelerate>=1.2" "peft>=0.17"
 if errorlevel 1 (
     echo   [LOI] Cai thu vien that bai. Chi xem thong bao loi o tren.
     pause
@@ -41,7 +42,11 @@ echo.
 echo   [3/3] Tai mo hinh SDXL + SDXL-Lightning (khoang 7 GB, cho mot luc)...
 python -c "import sys; sys.path.insert(0,'.'); from core import bg3d; bg3d.download(); print('        OK')"
 if errorlevel 1 (
-    echo         Tai mo hinh chua xong. Chay lai cai_3d.bat, hoac lan dau ve 3D tool se tu tai tiep.
+    echo.
+    echo   [LOI] Chua tai / nap duoc mo hinh. Chup man hinh loi o tren gui lai nhe.
+    echo         Mang yeu thi chay lai cai_3d.bat, phan da tai se khong tai lai.
+    pause
+    exit /b 1
 )
 echo.
 

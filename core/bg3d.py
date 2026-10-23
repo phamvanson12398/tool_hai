@@ -70,6 +70,19 @@ def _settings():
             s.get("bg3d_lora_file", LORA_FILE), int(s.get("bg3d_steps") or STEPS))
 
 
+def _compat_transformers() -> None:
+    """transformers 5 bỏ các hằng số Flax mà diffusers cũ còn import: thêm lại
+    (chỉ là tên file, không dùng tới) để diffusers bản cũ vẫn chạy."""
+    try:
+        import transformers.utils as tu
+    except Exception:  # noqa: BLE001
+        return
+    for name, val in (("FLAX_WEIGHTS_NAME", "flax_model.msgpack"),
+                      ("FLAX_WEIGHTS_INDEX_NAME", "flax_model.msgpack.index.json")):
+        if not hasattr(tu, name):
+            setattr(tu, name, val)
+
+
 def _load():
     global _PIPE
     if _PIPE is not None:
@@ -77,6 +90,7 @@ def _load():
     if not installed():
         raise RuntimeError("Chưa cài phần vẽ 3D. Chạy cai_3d.bat một lần rồi mở lại tool.")
     import torch
+    _compat_transformers()
     from diffusers import AutoencoderKL, EulerDiscreteScheduler, StableDiffusionXLPipeline
     if not torch.cuda.is_available():
         raise RuntimeError("Vẽ 3D cần card NVIDIA (CUDA).")
