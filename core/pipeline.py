@@ -41,6 +41,48 @@ def _say(progress, frac: float, msg: str) -> None:
         progress(frac, msg)
 
 
+# Câu đọc để tạo giọng mẫu (~5 giây, giọng bình thường) cho nhân vật chưa có mẫu
+ANCHOR_TEXT = {
+    "vi": "Xin chào, hôm nay trời đẹp quá. Mình đi dạo một vòng rồi về ăn cơm nhé.",
+    "ko": "안녕하세요, 오늘 날씨 정말 좋네요. 잠깐 산책하고 와서 밥 먹을까요?",
+    "en": "Hi there, it's a really nice day today. Let's take a quick walk and then grab some lunch.",
+}
+
+
+def _seed_of(name: str) -> int:
+    import zlib
+    return zlib.crc32(name.encode("utf-8")) % 100000
+
+
+def voice_anchor(pdir: Path, name: str, language: str, instruct: str | None) -> dict | None:
+    """Giọng mẫu cố định cho nhân vật CHƯA có giọng mẫu tải lên.
+
+    Tạo giọng thẳng từ mô tả thì mỗi câu OmniVoice chọn ngẫu nhiên một giọng
+    mới khớp mô tả -> mỗi câu một giọng. Nên tạo MỘT đoạn mẫu (seed cố định
+    theo tên) rồi mọi câu nhân bản từ đoạn đó. Lưu trong thư mục tập để lần
+    dựng sau giữ đúng giọng; đổi mô tả giọng thì tạo lại."""
+    vdir = pdir / "audio" / "giong_mau"
+    vdir.mkdir(parents=True, exist_ok=True)
+    slug = assets.config_slug(name) or "nv"
+    wav_p, meta_p = vdir / f"{slug}_{language}.wav", vdir / f"{slug}_{language}.json"
+    text = ANCHOR_TEXT.get(language, ANCHOR_TEXT["en"])
+    want = {"instruct": instruct or "", "language": language, "text": text}
+    try:
+        if wav_p.exists() and meta_p.exists() and json.loads(meta_p.read_text("utf-8")) == want:
+            return {"ref": str(wav_p), "ref_text": text}
+        wav, sr = voice.synthesize(text, language, instruct=instruct or None,
+                                   seed=_seed_of(name))
+        wav = voice.trim_silence(np.asarray(wav, dtype=np.float32), sr)
+        if wav.size < sr:                        # dưới 1 giây: mẫu hỏng, bỏ
+            return None
+        sf.write(str(wav_p), wav, sr)
+        meta_p.write_text(json.dumps(want, ensure_ascii=False), encoding="utf-8")
+        return {"ref": str(wav_p), "ref_text": text}
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Không tạo được giọng mẫu cho %s: %s", name, e)
+        return None
+
+
 def synth_lines(script: Script, pdir: Path, voices: dict,
                 progress=None) -> list[dict]:
     """Tạo giọng từng câu. voices: {tên: {"ref": path|None, "ref_text": str,
@@ -48,6 +90,16 @@ def synth_lines(script: Script, pdir: Path, voices: dict,
     audio_dir = pdir / "audio"
     audio_dir.mkdir(parents=True, exist_ok=True)
     out = []
+    # nhân vật chưa có giọng mẫu: tạo một đoạn mẫu cố định, mọi câu nhân bản từ đó
+    voices = {k: dict(v) for k, v in voices.items()}
+    for name in dict.fromkeys(b.speaker for b in script.beats if b.kind == "line"):
+        vcfg = voices.setdefault(name, {})
+        if vcfg.get("ref") and Path(vcfg["ref"]).exists():
+            continue
+        _say(progress, 0.03, f"tạo giọng mẫu cố định cho {name}")
+        anchor = voice_anchor(pdir, name, script.language, vcfg.get("instruct"))
+        if anchor:
+            vcfg.update(anchor)
     beats = script.beats
     n_lines = len([b for b in beats if b.kind == "line"])
     done = 0
@@ -65,6 +117,7 @@ def synth_lines(script: Script, pdir: Path, voices: dict,
             ref_wav=Path(ref) if ref else None,
             ref_text=vcfg.get("ref_text") or None,
             instruct=vcfg.get("instruct") or None,
+            seed=_seed_of(b.speaker) + i,        # dựng lại vẫn ra đúng câu đó
         )
         wav = voice.trim_silence(np.asarray(wav, dtype=np.float32), sr)
         if wav.size == 0:

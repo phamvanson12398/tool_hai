@@ -398,6 +398,12 @@ mọi biểu cảm × miệng mở/ngậm, luôn khớp nhau.
   chị sửa nếu sai.
 - **AI mô tả giọng**: OmniVoice tạo câu nghe thử; chị ưng thì lưu làm giọng mẫu.
 - Mọi câu đều nhân bản theo giọng mẫu, nên giọng nhất quán giữa các câu và các tập.
+- Nhân vật **chưa có giọng mẫu** (chỉ có mô tả giọng): tool tự tạo **một đoạn
+  giọng mẫu cố định** (~5 giây, theo mô tả, cố định theo tên nhân vật) rồi mọi
+  câu nhân bản từ đoạn đó — không còn cảnh mỗi câu một giọng. Đoạn mẫu lưu ở
+  `projects/<tập>/audio/giong_mau/`; dựng lại vẫn đúng giọng cũ, đổi mô tả giọng
+  thì tool tạo lại. Ưng giọng nào có thể tải đoạn đó lên Thư viện làm giọng mẫu
+  để dùng cho các tập sau.
 - Mỗi nhân vật có giọng mẫu riêng cho tiếng Hàn, tiếng Anh và tiếng Việt.
 - Tập tiếng Việt: nên **tải giọng mẫu tiếng Việt** (5–15 giây) để giọng tự nhiên
   nhất; mô tả giọng vẫn dùng được nhưng không có cụm accent cho tiếng Việt.

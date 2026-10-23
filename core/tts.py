@@ -99,8 +99,12 @@ def synthesize(
     ref_text: Optional[str] = None,
     instruct: Optional[str] = None,
     speed: Optional[float] = None,
+    seed: Optional[int] = None,
 ) -> tuple[Optional[np.ndarray], int, Optional[str]]:
     """Tạo giọng cho một câu. Trả về (waveform, sample_rate, lỗi).
+
+    seed: cố định độ ngẫu nhiên của mô hình (cùng seed + cùng đầu vào -> cùng
+    giọng), dùng để giọng mẫu tạo từ mô tả không đổi giữa các lần dựng.
 
     Ba chế độ, ưu tiên theo thứ tự:
       1. ref_audio  -> nhân giọng từ mẫu (chính xác nhất, dùng mặc định)
@@ -130,6 +134,11 @@ def synthesize(
         kwargs["instruct"] = resolved
 
     try:
+        if seed is not None:
+            import torch
+            torch.manual_seed(int(seed))
+            if torch.cuda.is_available():
+                torch.cuda.manual_seed_all(int(seed))
         out = model.generate(text=text, **kwargs)
         audio = out[0] if isinstance(out, (list, tuple)) else out
         audio = np.asarray(audio, dtype=np.float32)

@@ -101,7 +101,8 @@ def trim_silence(a: np.ndarray, sr: int, thresh: float = 0.02,
 def synthesize(text: str, language: str, *, ref_wav: Optional[Path] = None,
                ref_text: Optional[str] = None,
                instruct: Optional[str] = None,
-               speed: Optional[float] = None) -> tuple[np.ndarray, int]:
+               speed: Optional[float] = None,
+               seed: Optional[int] = None) -> tuple[np.ndarray, int]:
     """Tạo giọng một câu. Ưu tiên: ref_wav > instruct > mặc định.
 
     Trả về (waveform float32, sample_rate).
@@ -116,6 +117,7 @@ def synthesize(text: str, language: str, *, ref_wav: Optional[Path] = None,
         ref_text=ref_text,
         instruct=instruct,
         speed=speed,
+        seed=seed,
     )
     if err or audio is None:
         raise RuntimeError(err or "Không tạo được giọng.")

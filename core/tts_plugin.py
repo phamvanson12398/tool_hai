@@ -31,6 +31,7 @@ class TTSEngine(ABC):
         ref_text: Optional[str] = None,
         instruct: Optional[str] = None,
         speed: Optional[float] = None,
+        seed: Optional[int] = None,
     ) -> tuple[Optional[np.ndarray], int, Optional[str]]:
         """Tạo giọng cho một câu.
 
@@ -88,6 +89,7 @@ class OmniVoiceEngine(TTSEngine):
         ref_text: Optional[str] = None,
         instruct: Optional[str] = None,
         speed: Optional[float] = None,
+        seed: Optional[int] = None,
     ) -> tuple[Optional[np.ndarray], int, Optional[str]]:
         from . import tts as tts_mod
 
@@ -98,6 +100,7 @@ class OmniVoiceEngine(TTSEngine):
             ref_text=ref_text,
             instruct=instruct,
             speed=speed,
+            seed=seed,
         )
 
     def is_ready(self) -> bool:
