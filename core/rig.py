@@ -477,6 +477,32 @@ def _stick_line(d: ImageDraw.ImageDraw, a, b, width: int = STICK_LW,
         d.ellipse([x - r, y - r, x + r, y + r], fill=fill)
 
 
+# Hướng mặt khi vẽ đầu: 0 nhìn thẳng, 1 quay hẳn sang phải màn hình, -1 sang
+# trái. Mắt mũi miệng dời về phía đó và khít lại; viền đầu, tóc giữ nguyên.
+_FACING = 0.0
+FACE_SHIFT = 0.36        # tâm mặt dời bao nhiêu phần bán kính đầu khi quay hẳn
+FACE_SQUEEZE = 0.26      # khoảng cách hai mắt hẹp lại bao nhiêu khi quay hẳn
+
+
+def _turn_fg(fg: dict) -> dict:
+    """Dời các nét mặt (dict hình học kiểu character_kit) theo hướng mặt."""
+    if not _FACING:
+        return fg
+    out = dict(fg)
+    out["head_cx"] = int(fg["head_cx"] + _FACING * FACE_SHIFT * fg["head_rx"])
+    out["eye_dx"] = int(fg["eye_dx"] * (1 - FACE_SQUEEZE * abs(_FACING)))
+    return out
+
+
+def _turn_g(g: Geometry) -> Geometry:
+    """Như _turn_fg nhưng cho Geometry (mặt kiểu người xám, vẽ tay Hàn)."""
+    if not _FACING:
+        return g
+    from dataclasses import replace
+    return replace(g, head_cx=int(g.head_cx + _FACING * FACE_SHIFT * g.head_rx),
+                   head_rx=int(g.head_rx * (1 - FACE_SQUEEZE * abs(_FACING))))
+
+
 def _face_geom(g: Geometry, spec: CharSpec) -> dict:
     """dict hình học cho các hàm vẽ mặt của character_kit."""
     if spec.style == "kchibi":
@@ -506,7 +532,8 @@ def _draw_face(img: Image.Image, spec: CharSpec, g: Geometry, expression: str,
     """Mắt, mày, miệng, má hồng/mồ hôi/nước mắt theo biểu cảm (bộ vẽ của
     character_kit), vẽ trên lớp riêng rồi đặt vào canvas có lề."""
     mood = ck.EXPRESSION_MAP.get(expression, ck.EXPRESSION_MAP["neutral"])
-    fg = _face_geom(g, spec)
+    fg0 = _face_geom(g, spec)
+    fg = _turn_fg(fg0)
     layer = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
     ck._draw_brows(d, fg, mood["brow"])
@@ -514,7 +541,21 @@ def _draw_face(img: Image.Image, spec: CharSpec, g: Geometry, expression: str,
     ck._draw_mouth(d, fg, mood["mouth"], mouth_open)
     extras_spec = spec if accessories else CharSpec.from_dict({**spec.to_dict(), "accessory": "none"})
     ck._draw_extras(d, extras_spec, fg, mood)
+    if _FACING:
+        _clip_cheeks(layer, fg0)
     img.alpha_composite(layer, (PAD_X, PAD_Y))
+
+
+def _clip_cheeks(layer: Image.Image, fg: dict) -> None:
+    """Mặt quay sang: bỏ phần má hồng, nước mắt... lòi ra ngoài viền đầu
+    (chỉ ở dải ngang má, không đụng mũ và kính)."""
+    from PIL import ImageChops
+    cx, cy, rx, ry = fg["head_cx"], fg["head_cy"], fg["head_rx"], fg["head_ry"]
+    keep = Image.new("L", layer.size, 255)
+    kd = ImageDraw.Draw(keep)
+    kd.rectangle([0, cy + ry * 0.02, layer.width, cy + ry * 0.95], fill=0)
+    kd.ellipse([cx - rx * 0.98, cy - ry * 0.98, cx + rx * 0.98, cy + ry * 0.98], fill=255)
+    layer.putalpha(ImageChops.multiply(layer.getchannel("A"), keep))
 
 
 def _stick_head(spec: CharSpec, g: Geometry, mouth_open: bool,
@@ -1018,12 +1059,14 @@ def _kchibi_head(spec: CharSpec, g: Geometry, mouth_open: bool,
                  expression: str = "neutral") -> Image.Image:
     """Đầu webtoon Hàn: tóc khối như kiểu phẳng, mặt kiểu meme Hàn."""
     img = draw_head(spec, g, mouth_open, "neutral", face=False)
-    fg = _face_geom(g, spec)
+    fg = _turn_fg(_face_geom(g, spec))
     layer = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
     d = ImageDraw.Draw(layer)
     _kchibi_face(d, spec, fg, expression, mouth_open)
     # phụ kiện (kính, mũ, lô cuốn…) dùng chung bộ vẽ, không vẽ lại cảm xúc
     ck._draw_extras(d, spec, fg, {})
+    if _FACING:
+        _clip_cheeks(layer, _face_geom(g, spec))
     img.alpha_composite(layer, (PAD_X, PAD_Y))
     return img
 
@@ -1330,9 +1373,11 @@ def _soft_head(spec: CharSpec, g: Geometry, mouth_open: bool,
     elif st == "bun":
         d.ellipse([cx - rx * 0.32, cy - ry * 1.42, cx + rx * 0.32, cy - ry * 0.78], fill=hair)
 
-    # tai (kiểu vẽ tay Hàn)
+    # tai (kiểu vẽ tay Hàn); quay mặt sang một bên thì tai phía đó khuất
     if not gray:
         for sgn in (-1, 1):
+            if _FACING and sgn * _FACING > 0.3:
+                continue
             x = cx + sgn * rx * 0.98
             d.ellipse([x - rx * 0.16, cy - ry * 0.05, x + rx * 0.16, cy + ry * 0.33], fill=skin)
     # mặt: tròn, kiểu Hàn hơi bành ở má
@@ -1403,12 +1448,13 @@ def _soft_head(spec: CharSpec, g: Geometry, mouth_open: bool,
 
     # mặt + phụ kiện
     if gray:
-        _gray_face(d, g, expression, mouth_open)
+        _gray_face(d, _turn_g(g), expression, mouth_open)
     else:
-        _khand_face(d, spec, g, expression, mouth_open)
-    fg = {"head_cx": cx, "head_cy": cy, "head_rx": rx, "head_ry": ry,
-          "eye_dx": int(rx * 0.32), "eye_y": int(cy - ry * 0.1), "eye_r": int(rx * 0.18),
-          "mouth_y": int(cy + ry * 0.5), "brow_y": int(cy - ry * 0.42)}
+        _khand_face(d, spec, _turn_g(g), expression, mouth_open)
+    fg = _turn_fg({"head_cx": cx, "head_cy": cy, "head_rx": rx, "head_ry": ry,
+                   "eye_dx": int(rx * 0.32), "eye_y": int(cy - ry * 0.1),
+                   "eye_r": int(rx * 0.18), "mouth_y": int(cy + ry * 0.5),
+                   "brow_y": int(cy - ry * 0.42)})
     if spec.accessory == "cap" and gray:               # mũ lưỡi trai xám đội ngược (ảnh mẫu)
         d.chord([cx - rx * 1.04, cy - ry * 1.1, cx + rx * 1.04, cy - ry * 0.02], 180, 360, fill=GRAY_DARK)
         d.rounded_rectangle([cx - rx * 1.45, cy - ry * 0.6, cx - rx * 0.5, cy - ry * 0.4],
@@ -1769,12 +1815,18 @@ def _crop_head_pair(dong: Image.Image, mo: Image.Image,
     return dong.crop(box), mo.crop(box), pivot
 
 
-def head_images(spec: CharSpec, expression: str = "neutral"):
-    """(ảnh đầu miệng ngậm, ảnh miệng mở, pivot) theo biểu cảm."""
+def head_images(spec: CharSpec, expression: str = "neutral", facing: float = 0.0):
+    """(ảnh đầu miệng ngậm, ảnh miệng mở, pivot) theo biểu cảm và hướng mặt
+    (0 nhìn thẳng, ±1 quay hẳn sang phải/trái màn hình)."""
+    global _FACING
     g = geometry(spec.body, spec.style)
     draw = _parts_for(spec, g)["head"]
-    return _crop_head_pair(draw(spec, g, False, expression),
-                           draw(spec, g, True, expression), _p(g.chin))
+    _FACING = 0.0 if expression == "__back__" else max(-1.0, min(1.0, facing))
+    try:
+        return _crop_head_pair(draw(spec, g, False, expression),
+                               draw(spec, g, True, expression), _p(g.chin))
+    finally:
+        _FACING = 0.0
 
 
 def build_parts(spec: CharSpec, expression: str = "neutral"
@@ -1904,7 +1956,8 @@ def load_rig(rig_path: Path) -> Rig:
 
 # Góc nghiêng 3/4: uốn ngang ảnh đầu (và thân, nhẹ hơn) để mắt mũi miệng dồn
 # về phía nhân vật đang nhìn, nửa mặt bên kia hẹp lại; viền ngoài giữ nguyên.
-TURN_BONES = {"dau": 1.0, "than": 0.45}
+TURN_BONES = {"than": 0.5}     # đầu không uốn: vẽ lại mặt theo hướng (head_images)
+FACE_STEPS = 2                 # bậc hướng mặt mỗi bên: nửa (3/4) và quay hẳn
 TURN_MAX = 0.3           # độ dồn lớn nhất (phần nửa bề ngang)
 TURN_STEPS = 5           # số bậc mỗi bên (cache ảnh đã uốn)
 
@@ -2088,18 +2141,21 @@ class RigRenderer:
                    ) -> tuple[str, tuple[float, float]]:
         """Ảnh đầu cho biểu cảm (vẽ lần đầu khi cần) và pivot của nó."""
         tag = "mo" if mouth_open else "dong"
-        if not expression or expression == "neutral" or not self.rig.spec:
+        q = int(round(self.turn * FACE_STEPS)) if self.rig.spec else 0
+        if (not expression or expression == "neutral" or not self.rig.spec) and not q:
             return f"dau_{tag}.png", b.pivot
-        name = f"dau_{expression}_{tag}.png"
+        expr = expression or "neutral"
+        suffix = f"_f{q}" if q else ""
+        name = f"dau_{expr}_{tag}{suffix}.png"
         if name not in self._head_pivots:
             try:
                 spec = CharSpec.from_dict(self.rig.spec)
-                dong, mo, pivot = head_images(spec, expression)
+                dong, mo, pivot = head_images(spec, expr, q / FACE_STEPS)
             except Exception:  # noqa: BLE001 - lỗi vẽ -> mặt bình thường
                 return f"dau_{tag}.png", b.pivot
             for t, im in (("dong", dong), ("mo", mo)):
-                self._cache[f"dau_{expression}_{t}.png"] = im
-                self._head_pivots[f"dau_{expression}_{t}.png"] = pivot
+                self._cache[f"dau_{expr}_{t}{suffix}.png"] = im
+                self._head_pivots[f"dau_{expr}_{t}{suffix}.png"] = pivot
         return name, self._head_pivots[name]
 
     def render(self, angles: dict[str, float] | None = None,
@@ -2402,6 +2458,11 @@ class CharacterAnimator:
 
         # 3b. Tu the cam do (dien thoai truoc nguc, bung noi...) — cu chi de len
         angles = merge(angles, hold_angles(self.props, self.prop_since, t))
+
+        # 3c. Quay sang nguoi kia: nguoi hoi nghieng ve phia do, hai tay khep
+        tv = getattr(self, "turn", 0.0)
+        if abs(tv) > 0.05:
+            angles = merge(angles, {"than": angles.get("than", 0.0) + math.radians(3.0) * tv})
 
         # 4. Tu the nen (dang ngoi/nam duoi cu chi tay), cu chi cu nhat dan,
         # cu chi hien tai

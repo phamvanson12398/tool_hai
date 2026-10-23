@@ -84,8 +84,10 @@ def _sit_geom(anim) -> tuple[float, float, float, float] | None:
     return out or None
 
 
-# Mức nghiêng 3/4 khi hai người nói chuyện (1 = nghiêng hết cỡ)
-TURN_TALK = 0.8
+# Mức quay khi hai người nói chuyện (1 = quay hẳn vào nhau)
+TURN_TALK = 1.0
+# Quay hẳn sang thì bề ngang người hẹp lại bấy nhiêu (trông như đứng nghiêng)
+BODY_SQUEEZE = 0.16
 
 
 def _sprite(img: Image.Image | None):
@@ -543,12 +545,14 @@ class Stage:
                     target_h = self.char_h(n, ch.scale)
                     sc = target_h / fh
                     cam_s = self.cam[0]
-                    im = im.resize((max(1, int(im.width * sc * cam_s)),
+                    # quay sang người kia: ép hẹp bề ngang cả người như đứng nghiêng
+                    sq = 1.0 - BODY_SQUEEZE * min(1.0, abs(getattr(anim, "turn", 0.0)))
+                    im = im.resize((max(1, int(im.width * sc * cam_s * sq)),
                                     max(1, int(im.height * sc * cam_s))), Image.LANCZOS)
                     bounce = int(2 * math.sin(t * 1.6))
                     # dịch cả người theo cử chỉ (vào/ra khung, nhảy lên...)
                     last = getattr(anim, "last_angles", None) or {}
-                    x = (cx - int(fw * sc) // 2 - int(ox * sc)
+                    x = (cx - int(fw * sc * sq) // 2 - int(ox * sc * sq)
                          + int(last.get("dich_x", 0.0) * self.w))
                     y = (base_y - target_h - int(oy * sc) - bounce
                          - int(last.get("dich_y", 0.0) * self.h)

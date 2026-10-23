@@ -236,9 +236,11 @@ Tuấn (shocked, dung_day, zoom): Hả?!
 `che_mieng` (đưa tay lên miệng), `chong_nanh` (chống nạnh), `lac_tay` (lắc ngón tay
 "không không").
 
-**Góc nghiêng 3/4** — khi hai người trở lên nói chuyện, người nghe quay mặt về phía
-người đang nói, người nói quay về phía người vừa nói với mình (mắt mũi miệng dồn
-sang một bên, quay dần trong ~0,3 giây). Cảnh một người thì nhìn thẳng. Tắt ở
+**Quay vào nhau khi nói chuyện** — khi hai người trở lên nói chuyện, người nghe
+quay hẳn về phía người đang nói, người nói quay về phía người vừa nói với mình:
+mặt vẽ lại theo hướng nhìn (mắt mũi miệng dồn sang, tai phía đó khuất), người
+hẹp lại như đứng nghiêng và hơi ngả về phía nhau, quay dần trong ~0,3 giây.
+Cảnh một người thì nhìn thẳng. Tắt ở
 **Cài đặt → Cử động nhân vật → Góc nghiêng 3/4**.
 
 **Góc máy** — tool **tự đổi góc như phim** (mở cảnh toàn cảnh, câu thường xen kẽ
