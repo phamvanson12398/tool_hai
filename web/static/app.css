@@ -361,7 +361,11 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 
 .item-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .item-title { font-size: 13.5px; font-weight: 700; }
-.item-body { font-size: 13px; color: var(--text-dim); line-height: 1.55; }
+.item-body { font-size: 13px; color: var(--text-dim); line-height: 1.55;
+  overflow-wrap: anywhere; }
+.item-body b { color: var(--text); font-weight: 600; }
+.item-head .pill { max-width: 100%; white-space: normal; }
+.item { min-width: 0; }
 .item-meta { font-size: 11.5px; color: var(--text-faint); }
 .item-quote {
   padding-left: 10px;
@@ -369,7 +373,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
   font-style: italic;
   color: var(--text-dim);
 }
-.item-sources { font-size: 11.5px; color: var(--text-faint); }
+.item-sources { font-size: 11.5px; color: var(--text-faint); overflow-wrap: anywhere; }
 
 .list-item {
   display: flex;

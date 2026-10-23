@@ -163,15 +163,14 @@
   }
 
   function emptyState(container, icon, text) {
-    container.appendChild(el("div", "empty",
-      (function () {
-        var s = el("span", "empty-icon", icon || "");
-        var wrap = document.createElement("div");
-        wrap.appendChild(s);
-        wrap.appendChild(document.createTextNode(text || "Chưa có gì"));
-        return wrap;
-      })()
-    ));
+    // el() chỉ nhận chữ (textContent): ghép phần tử con bằng appendChild,
+    // không truyền phần tử vào el() (sẽ hiện "[object HTMLDivElement]")
+    var box = el("div", "empty");
+    var wrap = document.createElement("div");
+    wrap.appendChild(el("span", "empty-icon", icon || ""));
+    wrap.appendChild(document.createTextNode(text || "Chưa có gì"));
+    box.appendChild(wrap);
+    container.appendChild(box);
   }
 
   /* ---------------------------- Meta ------------------------------- */
@@ -581,7 +580,7 @@
       item.appendChild(el("div", "item-body", idea.pitch || ""));
       item.appendChild(el("div", "item-meta", "Bấm để viết kịch bản theo hướng này"));
       item.addEventListener("click", function () {
-        withBusy(btn, function () {
+        withBusy($("btn-write"), function () {
           return doWrite("hướng hài: " + (idea.kind || idea.kind_id || "") + " — " + (idea.pitch || ""));
         }).catch(function (e) { errToast("Viết thất bại", e); });
       });
@@ -601,17 +600,36 @@
     list.forEach(function (t) {
       var item = el("div", "item is-clickable");
       var head = el("div", "item-head");
-      if (t.format) head.appendChild(el("span", "pill", t.format));
       head.appendChild(el("span", "item-title", t.title || "(không tên)"));
       item.appendChild(head);
-      if (t.why) item.appendChild(el("div", "item-body", t.why));
-      if (t.found_at) item.appendChild(el("div", "item-meta", "Tìm thấy: " + t.found_at));
+      // format là cả một đoạn mô tả: hiện như đoạn văn (xuống dòng được),
+      // không nhét vào nhãn nhỏ một dòng làm tràn khung
+      if (t.format) {
+        var fm = el("div", "item-body item-format");
+        fm.appendChild(el("b", "", "Cách làm: "));
+        fm.appendChild(document.createTextNode(t.format));
+        item.appendChild(fm);
+      }
+      if (t.why) {
+        var why = el("div", "item-body");
+        why.appendChild(el("b", "", "Vì sao đang lên: "));
+        why.appendChild(document.createTextNode(t.why));
+        item.appendChild(why);
+      }
+      var meta = el("div", "item-meta", (t.found_at ? "Tìm thấy: " + t.found_at + " · " : "") +
+                    "Bấm để viết kịch bản theo trend này");
+      item.appendChild(meta);
       if (t.sources && t.sources.length) {
         var src = el("div", "item-sources");
-        t.sources.forEach(function (u) {
+        src.appendChild(document.createTextNode("Nguồn: "));
+        t.sources.forEach(function (u, i) {
+          if (i) src.appendChild(document.createTextNode(" · "));
           var a = document.createElement("a");
           a.href = u;
-          a.textContent = "Nguồn";
+          var host = "";
+          try { host = new URL(u).hostname.replace(/^www\./, ""); } catch (e) { host = ""; }
+          a.textContent = host || ("nguồn " + (i + 1));
+          a.title = u;
           a.target = "_blank";
           a.rel = "noopener noreferrer";
           a.addEventListener("click", function (e) { e.stopPropagation(); });
@@ -620,7 +638,7 @@
         item.appendChild(src);
       }
       item.addEventListener("click", function () {
-        withBusy(btn, function () {
+        withBusy($("btn-write"), function () {
           return doWrite("bám trend: " + (t.title || "") + (t.format ? " (" + t.format + ")" : "") +
             (t.why ? " — " + t.why : ""));
         }).catch(function (e) { errToast("Viết thất bại", e); });
