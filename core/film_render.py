@@ -8,6 +8,7 @@ import json
 import logging
 import math
 import re
+import shutil
 import subprocess
 from pathlib import Path
 
@@ -288,6 +289,28 @@ def hook_look(frame: np.ndarray) -> np.ndarray:
     return np.clip(f * _VIG[(W, H)], 0, 255).astype(np.uint8)
 
 
+def _srt_time(t: float) -> str:
+    ms = int(round(max(0.0, t) * 1000))
+    return f"{ms // 3600000:02d}:{ms // 60000 % 60:02d}:{ms // 1000 % 60:02d},{ms % 1000:03d}"
+
+
+def write_capcut_files(out_dir: Path, total: float, lines: list, subs: list, burned: bool,
+                       size=(1920, 1080)) -> None:
+    """Để nút "Xuất CapCut" dùng: out/timeline.json (mỗi câu giọng: người nói, lúc bắt
+    đầu, dài bao lâu) + out/capcut_audio/line_###.wav; phụ đề out/phude.srt thành track
+    chữ sửa được trong CapCut (chỉ khi phụ đề chưa in sẵn lên hình, khỏi bị hai lớp chữ)."""
+    (out_dir / "timeline.json").write_text(
+        json.dumps({"total": total, "width": size[0], "height": size[1], "lines": lines, "beats": [],
+                    "mode": "film"}, ensure_ascii=False),
+        encoding="utf-8")
+    srt = out_dir / "phude.srt"
+    if burned or not subs:
+        srt.unlink(missing_ok=True)
+        return
+    rows = [f"{k}\n{_srt_time(a)} --> {_srt_time(b)}\n{txt}\n" for k, (a, b, txt) in enumerate(subs, 1)]
+    srt.write_text("\n".join(rows), encoding="utf-8")
+
+
 def plan_all(st: dict, size, audio: dict) -> list[dict]:
     """Mốc thời gian từng cảnh (đã mô phỏng)."""
     import soundfile as sf
@@ -344,6 +367,10 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict, progress
     sr = config.SAMPLE_RATE
     track = np.zeros(int(total * sr) + sr, dtype=np.float32)
     subs_plan = []                    # (t0, t1, chữ)
+    cc_dir = out_dir / "capcut_audio"  # từng câu (đã cân âm lượng) để xuất CapCut
+    shutil.rmtree(cc_dir, ignore_errors=True)
+    cc_dir.mkdir(parents=True, exist_ok=True)
+    cc_lines = []
     for row in rows:
         for b in row["plan"]["beats"]:
             p = b.get("path")
@@ -362,6 +389,11 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict, progress
             i0 = int(at * sr)
             track[i0:i0 + len(a)] += a[: max(0, len(track) - i0)]
             dur = len(a) / sr
+            idx = len(cc_lines) + 1
+            sf.write(str(cc_dir / f"line_{idx:03d}.wav"), a, sr)
+            who = (chars.get(b.get("who")) or {}).get("name") if b.get("t") == "line" else None
+            cc_lines.append({"idx": idx, "speaker": who or "Người kể", "start": round(at, 3),
+                             "duration": round(dur, 3), "text": b.get("text") or ""})
             if b.get("t") == "line":
                 name = (chars.get(b.get("who")) or {}).get("name") or b.get("who")
                 subs_plan.append((at, at + dur + 0.2, f"{name}: {b['text']}"))
@@ -373,17 +405,8 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict, progress
                     a0 = at + acc / tot * dur
                     acc += len(s)
                     subs_plan.append((a0, at + acc / tot * dur, s))
-    # tiếng động theo động tác + tiếng nền từng cảnh
-    from . import film_sfx
-    gain = float(settings.get("sfx_volume") if settings.get("sfx_volume") is not None else 0.8)
-    if gain > 0:
-        say(0.03, "thêm tiếng động")
-        for row in rows:
-            for at, name, vol in row["plan"].get("sfx") or []:
-                film_sfx.put(track, name, row["start"] + at, vol * gain)
-        if rows[0].get("hook") and len(rows) > 1:          # hết móc câu: vút về đầu chuyện
-            film_sfx.put(track, "swoosh", rows[1]["start"] - 0.25, 0.5 * gain)
-        # không lồng tiếng nền (chim, dế, mưa): chị muốn bỏ
+    # không lồng tiếng động / tiếng nền: chỉ có giọng (nhạc nền thêm ở Cài đặt nếu muốn)
+    write_capcut_files(out_dir, total, cc_lines, subs_plan, burned=bool(st.get("subtitles")), size=size)
     wav = tmp / "film_audio.wav"
     sf.write(str(wav), np.clip(track, -1, 1), sr)
 

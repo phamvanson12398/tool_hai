@@ -355,6 +355,7 @@
             <div class="row-actions" style="margin:0">
               <select id="st-pick" aria-label="Mở truyện đã làm"></select>
               <button class="btn btn-sm" id="st-new" type="button">+ Truyện mới</button>
+              <button class="btn btn-sm" id="st-delete" type="button" title="Xoá hẳn truyện / phim đang mở (kịch bản, giọng, ảnh, video)">🗑 Xoá</button>
             </div>
           </div>
           <p class="hint">Video kể chuyện dài (vd Lão Hạc — Nam Cao): một giọng người kể; hình do
@@ -519,7 +520,9 @@
             <div class="progress-label" id="st-render-label"></div>
           </div>
           <video id="st-video" controls hidden style="width:100%;margin-top:12px;border-radius:10px"></video>
-          <div class="row-actions"><a class="btn" id="st-download" href="#" download hidden>Tải mp4</a></div>
+          <div class="row-actions"><a class="btn" id="st-download" href="#" download hidden>Tải mp4</a>
+            <button class="btn" id="st-capcut" type="button" hidden title="Tạo dự án CapCut: video không tiếng + mỗi câu thoại một đoạn giọng, mỗi nhân vật một track, phụ đề sửa được">Xuất CapCut</button></div>
+          <p class="hint" id="st-capcut-msg" hidden></p>
         </section>
       </aside>
     </div>

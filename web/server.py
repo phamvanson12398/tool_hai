@@ -7,6 +7,7 @@ video, gọi Claude) chạy ở luồng nền để giao diện không bị treo
 from __future__ import annotations
 
 import json
+import re
 import sys
 import threading
 import traceback
@@ -55,6 +56,8 @@ def _project_file(pid: str) -> Path:
 
 
 def _load_project(pid: str) -> dict:
+    if not (config.PROJECTS / pid / "project.json").exists():   # đừng tạo lại thư mục tập đã xoá
+        raise FileNotFoundError(f"Không thấy tập '{pid}'")
     p = _project_file(pid)
     if not p.exists():
         raise FileNotFoundError(f"Không thấy tập '{pid}'")
@@ -1439,7 +1442,7 @@ def api_project_render(pid):
 @app.get("/api/project/<pid>/status")
 def api_project_status(pid):
     st = _status(pid)
-    out = config.project_dir(pid) / "out" / "video.mp4"
+    out = config.PROJECTS / pid / "out" / "video.mp4"      # chỉ đọc, không tạo lại thư mục đã xoá
     st["video_ready"] = out.exists()
     return jsonify(st)
 
@@ -1844,6 +1847,22 @@ def api_story_list():
             out.append({"id": d["id"], "title": d.get("title") or "(chưa đặt tên)",
                         "created_at": d.get("created_at")})
     return jsonify({"stories": out[:50]})
+
+
+@app.delete("/api/story/<pid>")
+def api_story_delete(pid):
+    """Xoá hẳn một truyện / phim (thư mục projects/<id>: kịch bản, giọng, ảnh, video)."""
+    import shutil
+    d = (config.PROJECTS / pid).resolve()
+    if not re.fullmatch(r"[A-Za-z0-9_\-]+", pid or "") or d.parent != config.PROJECTS.resolve() \
+            or not (d / "project.json").exists():
+        return _err("Không tìm thấy truyện này.", 404)
+    if _status(pid).get("state") in ("writing", "rendering", "drawing"):
+        return _err("Truyện đang chạy (viết / vẽ / dựng), đợi xong rồi hãy xoá.")
+    shutil.rmtree(d, ignore_errors=True)
+    with JOBS_LOCK:
+        JOBS.pop(pid, None)
+    return jsonify({"ok": True})
 
 
 @app.get("/api/story/<pid>")

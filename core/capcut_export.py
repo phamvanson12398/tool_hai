@@ -322,9 +322,11 @@ class CapCutExporter:
             video_dst = draft_folder / "video_khong_tieng.mp4"
             self._strip_audio(video_src, video_dst)
 
-        # Lấy danh sách giọng
+        # Lấy danh sách giọng (Phim: từng câu đã cân âm lượng ở out/capcut_audio)
         if audio_paths is None:
-            audio_dir = project_dir / "audio"
+            film_dir = project_dir / "out" / "capcut_audio"
+            audio_dir = film_dir if timeline.get("mode") == "film" and film_dir.is_dir() \
+                else project_dir / "audio"
             audio_paths = sorted(audio_dir.glob("*.wav"))
 
         if not audio_paths:

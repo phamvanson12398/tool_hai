@@ -873,6 +873,8 @@
       v.hidden = true;
       a.hidden = true;
     }
+    // CapCut: hiện cho Phim (có từng câu giọng riêng để xếp track)
+    $("st-capcut").hidden = !(ready && st.id && $("st-mode").value === "film");
   }
 
   /* ----------------------------------------------------------- việc nền */
@@ -920,6 +922,35 @@
         .catch(fail("Không tạo được truyện"));
     });
     $("st-pick").addEventListener("change", function () { open(this.value); });
+    $("st-delete").addEventListener("click", function () {
+      if (!st.id) { toast("error", "Chưa mở truyện nào để xoá"); return; }
+      var name = $("st-title").value.trim() || "truyện này";
+      if (!window.confirm("Xoá hẳn “" + name + "”? Kịch bản, giọng, ảnh và video của nó sẽ mất, không lấy lại được.")) return;
+      api("/api/story/" + encodeURIComponent(st.id), { method: "DELETE" })
+        .then(function () {
+          try { localStorage.removeItem(LS_STORY); } catch (e) {}
+          if (st.polling) { clearInterval(st.polling); st.polling = null; }
+          st.id = null;
+          toast("ok", "Đã xoá " + name);
+          return api("/api/story/list");
+        })
+        .then(function (d) {
+          var left = (d && d.stories) || [];
+          if (left.length) return loadList(left[0].id).then(function () { return open(left[0].id); });
+          window.location.reload();
+        })
+        .catch(fail("Không xoá được"));
+    });
+    $("st-capcut").addEventListener("click", function () {
+      var btn = this, msg = $("st-capcut-msg");
+      btn.disabled = true;
+      msg.hidden = false;
+      msg.textContent = "Đang tạo dự án CapCut...";
+      api("/api/project/" + encodeURIComponent(st.id) + "/capcut-export", { body: {} })
+        .then(function (d) { msg.textContent = d.message + " (" + d.path + ")"; toast("ok", "Đã xuất CapCut", d.name); })
+        .catch(function (e) { msg.textContent = e.message; fail("Không xuất được CapCut")(e); })
+        .then(function () { btn.disabled = false; });
+    });
     $("st-part-make").addEventListener("click", newPart);
     $("st-charstyle").addEventListener("change", function () {
       applyVisual();

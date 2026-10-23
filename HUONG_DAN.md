@@ -716,11 +716,15 @@ lúc giọng đọc tới câu đó.
   chén), chiếu, bếp lửa (lửa bập bùng), chum nước. Nhân vật **nằm** (ốm, ngủ, chết)
   tự đi tới nằm lên giường / chiếu (cảnh chưa có thì tool tự kê), **ngồi** tự ngồi
   lên chõng / ghế gần nhất. Kể chuyện cũng nằm trên giường / chiếu.
-- **Tiếng động**: bước chân khi đi / chạy, tiếng cuốc, chổi, rìu, liềm, vỗ tay,
-  nhai, rít điếu cày, chó sủa khi chó mừng / nói, mèo kêu, há hốc khi giật mình,
-  vút khi đưa đồ, phịch khi nằm xuống, cửa kẽo kẹt khi vào nhà. Cảnh "Trời mưa"
-  có mưa rơi trên hình (không lồng tiếng nền). Nhịp **Tiếng động** để thêm gà gáy, gõ cửa, sấm... Âm lượng theo Cài đặt →
-  tiếng động (đặt 0 để tắt).
+- **Âm thanh** chỉ có giọng nói (thoại + người kể): không lồng tiếng động, tiếng nền.
+  Muốn có nhạc nền thì chọn ở Cài đặt → Nhạc nền, hoặc thêm trong CapCut.
+- **Xuất CapCut** (nút cạnh "Tải mp4" khi phim đã dựng): tạo dự án CapCut gồm video
+  không tiếng, **mỗi câu thoại một đoạn giọng**, mỗi nhân vật (và người kể) một track
+  riêng, phụ đề thành track chữ sửa được (khi chưa bật phụ đề in sẵn lên hình). Cần
+  chọn dự án CapCut mẫu ở Cài đặt như khi xuất phim hài. Đóng CapCut rồi mở lại để
+  thấy dự án mới.
+- **Xoá truyện / phim**: nút **🗑 Xoá** cạnh "+ Truyện mới" xoá hẳn truyện đang mở
+  (kịch bản, giọng, ảnh, video); hỏi lại trước khi xoá, đang dựng thì không xoá được.
 - **Máy quay tự đổi góc**: toàn cảnh khi mở cảnh và khi người kể nói, hai người
   khi đối đáp, cận mặt người đang nói, lia theo người đi lại; đẩy máy rất chậm
   cho đỡ đơ.
@@ -766,9 +770,6 @@ lúc giọng đọc tới câu đó.
     tiếng sụt sịt.
   - Hai người nói qua lại có **khoảng nghỉ** để biết ai nói câu nào; miệng nhép cả
     lúc nói nhỏ.
-  - Tiếng động to ngang nhau (chó sủa "gâu gâu" rõ); lúc có người nói thì tiếng
-    cuốc, chổi nhỏ và thưa hẳn. Không lồng tiếng nền (chim, dế, mưa); muốn có nền
-    thì dùng nhạc nền trong Cài đặt.
 - AI viết kịch bản theo thêm luật: khách / hàng xóm không làm việc nhà người khác,
   mỗi câu thoại đúng một người nói, nhân vật đã bán / chết / đi xa không xuất hiện
   lại (trừ hồi tưởng), người đang ngủ không nói.
