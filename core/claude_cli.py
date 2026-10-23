@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Gọi Claude CLI / Gemini CLI (headless) để viết kịch bản, rà soát, bắt trend,
+"""Gọi Claude CLI / Antigravity CLI (headless) để viết kịch bản, rà soát, bắt trend,
 chọn nhân vật, bối cảnh, giọng. Mỗi việc chọn được AI riêng (AI_TASKS).
 
 Dùng `claude -p` (print mode) với --output-format json để lấy kết quả có cấu trúc.
@@ -53,23 +53,27 @@ def _load_prompt(name: str, **kwargs) -> str:
 # --------------------------------------------------- chọn AI cho từng việc
 
 # Việc nào dùng AI nào (Cài đặt > Trợ lý AI). Mặc định: Claude cho các bước
-# quyết định chất lượng hài, Gemini cho việc phụ để đỡ tốn hạn mức Claude.
+# quyết định chất lượng hài, Antigravity (model Gemini) cho việc phụ để đỡ tốn
+# hạn mức Claude.
 AI_TASKS = {
     "write": ("Viết kịch bản (kể cả tự thêm/bớt cho đúng thời lượng)", "claude"),
     "review": ("Rà soát kịch bản", "claude"),
     "apply": ("Áp dụng góp ý vào kịch bản", "claude"),
-    "ideas": ("3 hướng khác", "gemini"),
-    "trends": ("Bắt trend", "gemini"),
-    "characters": ("Chọn nhân vật (bộ ghép)", "gemini"),
-    "background": ("Chọn bối cảnh", "gemini"),
-    "voices": ("Mô tả giọng", "gemini"),
+    "ideas": ("3 hướng khác", "agy"),
+    "trends": ("Bắt trend", "agy"),
+    "characters": ("Chọn nhân vật (bộ ghép)", "agy"),
+    "background": ("Chọn bối cảnh", "agy"),
+    "voices": ("Mô tả giọng", "agy"),
 }
-ENGINES = {"claude": "Claude", "gemini": "Gemini"}
+ENGINES = {"claude": "Claude", "agy": "Antigravity (Gemini)"}
+# cài đặt cũ ghi "gemini" (Gemini CLI, Google đã ngừng cho tài khoản cá nhân)
+_LEGACY = {"gemini": "agy"}
 
 
 def engine_for(task: str) -> str:
     """AI được chọn cho một việc (theo Cài đặt, không có thì mặc định)."""
     chosen = (config.load_settings().get("ai_engines") or {}).get(task)
+    chosen = _LEGACY.get(chosen, chosen)
     if chosen in ENGINES:
         return chosen
     return AI_TASKS.get(task, ("", "claude"))[1]
@@ -80,7 +84,7 @@ def _run(prompt: str, *, task: str = "write",
          append_system: str | None = None, timeout: int = TIMEOUT) -> str:
     """Chạy AI đã chọn cho việc `task`; lỗi (chưa cài, hết hạn mức...) thì
     tự chuyển sang AI còn lại nếu Cài đặt cho phép."""
-    from . import gemini_cli
+    from . import agy_cli
 
     first = engine_for(task)
     order = [first]
@@ -88,16 +92,17 @@ def _run(prompt: str, *, task: str = "write",
         order += [e for e in ENGINES if e != first]
     errors = []
     for eng in order:
-        _count(eng)
+        if not (eng == "agy" and agy_cli._AUTH_ERROR):     # bỏ qua thì không đếm
+            _count(eng)
         try:
-            if eng == "gemini":
-                return gemini_cli.run(prompt, timeout=timeout)
+            if eng == "agy":
+                return agy_cli.run(prompt, timeout=timeout)
             return _run_claude(prompt, allowed_tools=allowed_tools,
                                append_system=append_system, timeout=timeout)
         except RuntimeError as e:
             errors.append(f"{ENGINES[eng]}: {e}")
             _log_fallback(task, eng, e)
-    raise RuntimeError(" | ".join(errors))
+    raise RuntimeError("\n".join(errors))
 
 
 def _log_fallback(task: str, eng: str, err: Exception) -> None:
@@ -192,9 +197,9 @@ def _extract_json(text: str) -> object:
     raise RuntimeError("AI không trả về JSON hợp lệ:\n" + text[:800])
 
 
-# --- đếm số lần gọi Claude / Gemini trong phiên làm việc ---
+# --- đếm số lần gọi Claude / Antigravity trong phiên làm việc ---
 
-_CALLS = {"claude": 0, "gemini": 0}
+_CALLS = {"claude": 0, "agy": 0}
 _CALL_COUNT_LOCK = threading.Lock()
 
 
@@ -210,7 +215,7 @@ def call_count() -> int:
 
 
 def call_counts() -> dict:
-    """Số lần gọi từng AI trong phiên hiện tại: {"claude": n, "gemini": m}."""
+    """Số lần gọi từng AI trong phiên hiện tại: {"claude": n, "agy": m}."""
     with _CALL_COUNT_LOCK:
         return dict(_CALLS)
 

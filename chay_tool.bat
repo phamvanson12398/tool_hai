@@ -39,12 +39,15 @@ if errorlevel 1 (
     echo.
 )
 
-REM Kiem tra Gemini CLI (tuy chon, cho cac viec phu)
-call gemini --version >nul 2>&1
+REM Kiem tra Antigravity CLI (tuy chon, cho cac viec phu)
+call agy --version >nul 2>&1
 if errorlevel 1 (
-    echo   [GHI CHU] Chua cai Gemini CLI. Cac viec chon Gemini se tu dung Claude.
-    echo   Cai bang: npm install -g @google/gemini-cli  roi chay "gemini" de dang nhap.
-    echo.
+    if not exist "%LOCALAPPDATA%\agy\bin\agy.exe" (
+        echo   [GHI CHU] Chua cai Antigravity CLI. Cac viec chon Antigravity se tu dung Claude.
+        echo   Cai trong PowerShell: irm https://antigravity.google/cli/install.ps1 ^| iex
+        echo   roi mo cua so lenh moi, go agy de dang nhap Google.
+        echo.
+    )
 )
 
 echo   Dang chay server. Dong cua so nay la tat tool.

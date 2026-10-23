@@ -305,12 +305,14 @@ def api_set_settings():
         for k, v in body.items():
             cur[k] = v
     config.save_settings(cur)
+    from core import agy_cli
+    agy_cli.reset()           # đổi cài đặt / vừa đăng nhập: thử lại Antigravity
     return jsonify(cur)
 
 
 @app.get("/api/check-system")
 def api_check_system():
-    """Kiểm tra: GPU NVIDIA, ffmpeg, Claude CLI, Gemini CLI."""
+    """Kiểm tra: GPU NVIDIA, ffmpeg, Claude CLI, Antigravity CLI."""
     import subprocess
     import os
 
@@ -411,13 +413,13 @@ def api_check_system():
             "message": f"Không kiểm tra được: {e}"
         })
 
-    # 4. Gemini CLI (cho các việc chọn Gemini ở mục Trợ lý AI)
-    from core import gemini_cli
-    ok, msg = gemini_cli.version()
+    # 4. Antigravity CLI (cho các việc chọn Antigravity ở mục Trợ lý AI)
+    from core import agy_cli
+    ok, msg = agy_cli.version()
     uses = [v[0] for k, v in claude_cli.AI_TASKS.items()
-            if claude_cli.engine_for(k) == "gemini"]
+            if claude_cli.engine_for(k) == "agy"]
     results.append({
-        "item": "Gemini CLI",
+        "item": "Antigravity CLI (agy)",
         "status": "ok" if ok else ("error" if uses else "warn"),
         "message": (f"Có — {msg}" if ok else
                     msg + (" (đang được chọn cho: " + ", ".join(uses) +

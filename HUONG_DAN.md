@@ -22,30 +22,39 @@ Cần có sẵn trên máy:
 | Python 3.11 | Chạy tool | Tải ở python.org, nhớ tick "Add to PATH" |
 | ffmpeg | Dựng video | Tải ở gyan.dev/ffmpeg/builds, thêm vào PATH |
 | Claude Code CLI | Viết, rà soát kịch bản; chọn nhân vật, bối cảnh, giọng | `npm install -g @anthropic-ai/claude-code` rồi chạy `claude` để đăng nhập |
-| Gemini CLI (nên có) | Các việc phụ: bắt trend, 3 hướng, chọn nhân vật, bối cảnh, giọng — đỡ tốn hạn mức Claude | `npm install -g @google/gemini-cli` rồi chạy `gemini` một lần, đăng nhập bằng tài khoản Google (có hạn mức miễn phí) |
+| Antigravity CLI `agy` (nên có) | Các việc phụ: bắt trend, 3 hướng, chọn nhân vật, bối cảnh, giọng — đỡ tốn hạn mức Claude | Mở **PowerShell**, chạy `irm https://antigravity.google/cli/install.ps1 \| iex`, mở cửa sổ lệnh mới, gõ `agy` một lần và đăng nhập tài khoản Google |
 | Dung lượng trống | Mô hình OmniVoice và Whisper | Vài GB, tải về lần đầu |
 
 > Mỗi lần gọi Claude đều trừ vào hạn mức tài khoản của chị. Góc trên bên phải
-> màn hình đếm số lần đã gọi Claude và Gemini trong phiên.
+> màn hình đếm số lần đã gọi Claude và Antigravity trong phiên.
 
 ### Trợ lý AI cho từng việc (Cài đặt → Trợ lý AI cho từng việc)
 
-Mỗi việc chọn riêng dùng Claude hay Gemini. Mặc định:
+Mỗi việc chọn riêng dùng Claude hay Antigravity (model Gemini của Google). Mặc định:
 
 | Việc | AI mặc định |
 |---|---|
 | Viết kịch bản (kể cả tự thêm/bớt cho đúng thời lượng) | Claude |
 | Rà soát kịch bản | Claude |
 | Áp dụng góp ý vào kịch bản | Claude |
-| 3 hướng khác | Gemini |
-| Bắt trend (Gemini tra Google) | Gemini |
-| Chọn nhân vật, chọn bối cảnh, mô tả giọng | Gemini |
+| 3 hướng khác | Antigravity |
+| Bắt trend | Antigravity |
+| Chọn nhân vật, chọn bối cảnh, mô tả giọng | Antigravity |
 
 - Nếu AI đã chọn lỗi, chưa cài hoặc hết hạn mức, tool **tự chuyển sang AI còn
   lại** (tắt được ở cùng mục). Các lần chuyển ghi vào `data/logs/ai_calls.log`.
-- Chưa cài Gemini thì mọi việc vẫn chạy bằng Claude như trước.
-- Ô **Model Gemini** để trống là dùng model mặc định của Gemini CLI.
-- Nút **Kiểm tra máy** báo có Gemini CLI chưa.
+- Chưa cài Antigravity thì mọi việc vẫn chạy bằng Claude như trước.
+- Antigravity báo chưa đăng nhập: tool dùng Claude cho cả phiên đó (không thử
+  lại mỗi lần cho chậm). Gõ `agy` trong cửa sổ lệnh để đăng nhập, rồi bấm **Lưu
+  cài đặt** trong tool là dùng lại được.
+- Ô **Model của Antigravity** để trống là dùng mặc định (vd có thể ghi
+  `gemini-3.1-pro-high`).
+- Nút **Kiểm tra máy** báo có Antigravity CLI chưa.
+
+> **Vì sao không dùng Gemini CLI nữa?** Google đã ngừng cho Gemini CLI đăng nhập
+> bằng tài khoản Google cá nhân (lỗi *IneligibleTierError … migrate to the
+> Antigravity suite*) và chuyển sang Antigravity. Cài đặt cũ chọn "Gemini" được
+> tự chuyển sang Antigravity.
 
 ---
 

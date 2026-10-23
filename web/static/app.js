@@ -1887,8 +1887,8 @@
     }
     $("s-title-text").value = s.title_text || "";
     $("s-claude-bin").value = s.claude_bin || "";
-    $("s-gemini-bin").value = s.gemini_bin || "";
-    $("s-gemini-model").value = s.gemini_model || "";
+    $("s-agy-bin").value = s.agy_bin || "";
+    $("s-agy-model").value = s.agy_model || "";
     $("s-ai-fallback").value = s.ai_fallback === false ? "0" : "1";
     renderAiEngines(s.ai_engines || {});
     $("s-ffmpeg-bin").value = s.ffmpeg_bin || "";
@@ -1922,7 +1922,8 @@
       sel.id = "ai-task-" + t.id;
       sel.setAttribute("data-task", t.id);
       engines.forEach(function (e) { sel.appendChild(new Option(e.label, e.id)); });
-      sel.value = chosen[t.id] || t["default"];
+      var v = chosen[t.id] === "gemini" ? "agy" : chosen[t.id];   // cài đặt cũ
+      sel.value = v || t["default"];
       f.appendChild(lb);
       f.appendChild(sel);
       box.appendChild(f);
@@ -1944,7 +1945,7 @@
   function showAiCalls(counts) {
     var cc = $("claude-calls");
     if (!cc || !counts) return;
-    cc.textContent = "Claude " + (counts.claude || 0) + " · Gemini " + (counts.gemini || 0);
+    cc.textContent = "Claude " + (counts.claude || 0) + " · Antigravity " + (counts.agy || 0);
   }
 
   /* --------------------- Xuất dự án CapCut ---------------------- */
@@ -1994,8 +1995,8 @@
       sfx_volume: parseFloat($("s-sfx-volume").value) || 0,
       title_text: $("s-title-text").value,
       claude_bin: $("s-claude-bin").value.trim(),
-      gemini_bin: $("s-gemini-bin").value.trim(),
-      gemini_model: $("s-gemini-model").value.trim(),
+      agy_bin: $("s-agy-bin").value.trim(),
+      agy_model: $("s-agy-model").value.trim(),
       ai_engines: collectAiEngines(),
       ai_fallback: $("s-ai-fallback").value === "1",
       ffmpeg_bin: $("s-ffmpeg-bin").value.trim(),

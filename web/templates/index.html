@@ -21,7 +21,7 @@
       <button class="tab" data-screen="settings" type="button">Cài đặt</button>
       <button class="tab" data-screen="rig" type="button">Dựng xương</button>
     </nav>
-    <div class="claude-calls" id="claude-calls" title="Số lần đã gọi Claude / Gemini trong phiên">0</div>
+    <div class="claude-calls" id="claude-calls" title="Số lần đã gọi Claude / Antigravity trong phiên">0</div>
   </div>
 </header>
 
@@ -451,7 +451,7 @@
     <section class="card">
       <h2 class="card-title">Trợ lý AI cho từng việc</h2>
       <p class="hint">Bước quan trọng (viết, rà soát kịch bản) nên dùng Claude để giữ chất lượng hài;
-        việc phụ dùng Gemini để đỡ tốn hạn mức Claude, nhất là khi làm video dài.</p>
+        việc phụ dùng Antigravity (model Gemini của Google) để đỡ tốn hạn mức Claude, nhất là khi làm video dài.</p>
       <div id="ai-engine-list"></div>
       <div class="field">
         <label for="s-ai-fallback">Khi AI đã chọn bị lỗi hoặc hết hạn mức</label>
@@ -470,13 +470,13 @@
         <p class="hint">Ví dụ: claude hoặc /usr/local/bin/claude</p>
       </div>
       <div class="field">
-        <label for="s-gemini-bin">Lệnh Gemini CLI (để trống = mặc định "gemini")</label>
-        <input type="text" id="s-gemini-bin" placeholder="gemini">
-        <p class="hint">Cài: npm install -g @google/gemini-cli rồi chạy gemini một lần để đăng nhập Google.</p>
+        <label for="s-agy-bin">Lệnh Antigravity CLI (để trống = mặc định "agy")</label>
+        <input type="text" id="s-agy-bin" placeholder="agy">
+        <p class="hint">Cài trong PowerShell: irm https://antigravity.google/cli/install.ps1 | iex — rồi mở cửa sổ lệnh mới, gõ agy một lần để đăng nhập Google.</p>
       </div>
       <div class="field">
-        <label for="s-gemini-model">Model Gemini (để trống = mặc định của Gemini CLI)</label>
-        <input type="text" id="s-gemini-model" placeholder="vd: gemini-2.5-pro">
+        <label for="s-agy-model">Model của Antigravity (để trống = mặc định)</label>
+        <input type="text" id="s-agy-model" placeholder="vd: gemini-3.1-pro-high">
       </div>
       <div class="field">
         <label for="s-ffmpeg-bin">Lệnh ffmpeg (để trống = mặc định "ffmpeg")</label>
