@@ -284,22 +284,29 @@ def save_voice(name: str, language: str, file_path: Path,
     return rec
 
 
-def voice_path(name: str, language: str) -> Path | None:
-    idx = _load_index("voices")
-    rec = idx.get(name)
+def _voice_info(name: str, language: str) -> dict | None:
+    """Mẫu giọng đúng ngôn ngữ; chưa có thì lấy mẫu ngôn ngữ khác (OmniVoice
+    clone được giọng sang ngôn ngữ khác) để giọng đã lưu dùng được ở mọi tập."""
+    rec = _load_index("voices").get(name)
     if not rec:
         return None
-    info = rec.get("languages", {}).get(language)
-    if not info:
-        return None
-    p = Path(info["file"])
-    return p if p.exists() else None
+    langs = rec.get("languages", {})
+    order = [language] + [k for k in langs if k != language]
+    for lang in order:
+        info = langs.get(lang)
+        if info and Path(info.get("file", "")).exists():
+            return info
+    return None
+
+
+def voice_path(name: str, language: str) -> Path | None:
+    info = _voice_info(name, language)
+    return Path(info["file"]) if info else None
 
 
 def voice_text(name: str, language: str) -> str:
-    idx = _load_index("voices")
-    rec = idx.get(name) or {}
-    return rec.get("languages", {}).get(language, {}).get("text", "")
+    info = _voice_info(name, language)
+    return (info or {}).get("text", "")
 
 
 def find_image(image_id: str) -> Path | None:
