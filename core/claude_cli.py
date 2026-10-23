@@ -65,6 +65,7 @@ AI_TASKS = {
     "characters": ("Chọn nhân vật (bộ ghép)", "agy"),
     "background": ("Chọn bối cảnh", "agy"),
     "voices": ("Mô tả giọng", "agy"),
+    "story": ("Truyện kể: viết lời kể, chia cảnh", "claude"),
 }
 ENGINES = {"claude": "Claude", "agy": "Antigravity (Gemini)"}
 # cài đặt cũ ghi "gemini" (Gemini CLI, Google đã ngừng cho tài khoản cá nhân)

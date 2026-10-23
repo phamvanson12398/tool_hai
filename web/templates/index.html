@@ -17,6 +17,7 @@
     </div>
     <nav class="tabs" id="tabs">
       <button class="tab is-active" data-screen="new" type="button">Tập mới</button>
+      <button class="tab" data-screen="story" type="button">Truyện kể</button>
       <button class="tab" data-screen="library" type="button">Thư viện</button>
       <button class="tab" data-screen="settings" type="button">Cài đặt</button>
       <button class="tab" data-screen="rig" type="button">Dựng xương</button>
@@ -300,6 +301,93 @@
   </section>
 
   <!-- ================= SCREEN 2: THƯ VIỆN ================= -->
+  <!-- ================= TRUYỆN KỂ (video dài, một giọng người kể) ================= -->
+  <section class="screen" id="screen-story">
+    <div class="layout-2col">
+      <div class="col-work">
+        <section class="card">
+          <div class="card-head">
+            <h2 class="card-title">1. Truyện</h2>
+            <div class="row-actions" style="margin:0">
+              <select id="st-pick" aria-label="Mở truyện đã làm"></select>
+              <button class="btn btn-sm" id="st-new" type="button">+ Truyện mới</button>
+            </div>
+          </div>
+          <p class="hint">Video kể chuyện dài (vd Lão Hạc — Nam Cao): một giọng người kể, tranh minh hoạ
+            chị tự vẽ từ bộ câu lệnh tool xuất ra. Truyện của tác giả mất trên 50 năm (Nam Cao, Ngô Tất Tố...)
+            mới dán nguyên văn được; truyện còn bản quyền thì để trống nguyên văn cho AI kể lại.</p>
+          <div class="field-row">
+            <div class="field"><label for="st-title">Tên truyện</label><input type="text" id="st-title" placeholder="Lão Hạc"></div>
+            <div class="field"><label for="st-author">Tác giả</label><input type="text" id="st-author" placeholder="Nam Cao"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="st-minutes">Thời lượng (phút)</label><input type="number" id="st-minutes" min="3" max="40" value="25"></div>
+            <div class="field"><label for="st-format">Khung</label>
+              <select id="st-format"><option value="16:9">16:9 ngang (YouTube)</option><option value="9:16">9:16 dọc</option><option value="1:1">1:1 vuông</option></select></div>
+            <div class="field"><label for="st-style">Phong cách tranh</label><select id="st-style"></select></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="st-voice">Giọng người kể (Thư viện)</label><select id="st-voice"></select></div>
+            <div class="field"><label for="st-instruct">hoặc mô tả giọng</label><input type="text" id="st-instruct" placeholder="male, elderly, low pitch"></div>
+            <div class="field"><label for="st-subs">Phụ đề</label>
+              <select id="st-subs"><option value="0">Không</option><option value="1">Có</option></select></div>
+          </div>
+          <div class="field">
+            <label for="st-source">Nguyên văn truyện (không bắt buộc)</label>
+            <textarea id="st-source" rows="6" placeholder="Dán nguyên văn để AI bám sát truyện gốc..."></textarea>
+          </div>
+          <div class="row-actions">
+            <button class="btn" id="st-save" type="button">Lưu</button>
+            <button class="btn btn-primary" id="st-write" type="button">AI viết lời kể &amp; chia cảnh</button>
+          </div>
+          <div class="progress-wrap" id="st-progress-wrap" hidden>
+            <div class="progress"><div class="progress-bar" id="st-progress-bar"></div></div>
+            <div class="progress-label" id="st-progress-label"></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <h2 class="card-title">2. Nhân vật &amp; địa điểm</h2>
+          <p class="hint">Mô tả ngoại hình cố định (tiếng Anh) được ghép vào mọi câu lệnh vẽ để nhân vật giống nhau ở mọi tranh. Sửa được.</p>
+          <div id="st-bible" class="card-list"></div>
+        </section>
+
+        <section class="card">
+          <h2 class="card-title">3. Lời kể &amp; cảnh</h2>
+          <p class="hint">Mỗi cảnh một tranh (scene_001.png...). Sửa lời kể, mô tả tranh, kiểu máy quay rồi bấm Lưu.</p>
+          <div id="st-scenes" class="card-list"></div>
+          <div class="row-actions"><button class="btn" id="st-save2" type="button">Lưu thay đổi</button></div>
+        </section>
+      </div>
+
+      <aside class="col-preview col-flow">
+        <section class="card">
+          <h2 class="card-title">4. Tranh minh hoạ</h2>
+          <p class="hint" id="st-img-count">Chưa có cảnh</p>
+          <div class="row-actions">
+            <a class="btn" id="st-prompts" href="#" download>Tải bộ câu lệnh vẽ (.txt)</a>
+          </div>
+          <div class="field">
+            <label for="st-files">Tải ảnh lên (chọn nhiều; tên có số cảnh: scene_001.png, 001.jpg...)</label>
+            <input type="file" id="st-files" accept="image/*" multiple>
+          </div>
+          <p class="hint">Cảnh chưa có tranh vẫn dựng được (hiện khung chữ tạm) để chị nghe thử nhịp kể.</p>
+        </section>
+        <section class="card">
+          <h2 class="card-title">5. Dựng video</h2>
+          <p class="hint">Giọng kể (OmniVoice), máy quay chuyển động trên tranh, chuyển cảnh mờ, tên truyện, tên chương, nhạc nền (Cài đặt). Video 25 phút dựng khoảng 15–20 phút.</p>
+          <div class="row-actions"><button class="btn btn-primary" id="st-render" type="button">Dựng video</button></div>
+          <div class="progress-wrap" id="st-render-wrap" hidden>
+            <div class="progress"><div class="progress-bar" id="st-render-bar"></div></div>
+            <div class="progress-label" id="st-render-label"></div>
+          </div>
+          <video id="st-video" controls hidden style="width:100%;margin-top:12px;border-radius:10px"></video>
+          <div class="row-actions"><a class="btn" id="st-download" href="#" download hidden>Tải mp4</a></div>
+        </section>
+      </aside>
+    </div>
+  </section>
+
   <section class="screen" id="screen-library">
     <div class="screen-head">
       <h1>Thư viện</h1>
@@ -669,5 +757,6 @@
 
 <script src="/static/app.js"></script>
 <script src="/static/rig.js"></script>
+<script src="/static/story.js"></script>
 </body>
 </html>

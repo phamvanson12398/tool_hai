@@ -1612,6 +1612,236 @@ def api_rig_gestures():
     return jsonify({"gestures": items})
 
 
+# ====================================================================== TRUYỆN KỂ
+# Video dài kể truyện (Lão Hạc...): một giọng người kể, tranh minh hoạ do chị tự
+# vẽ từ bộ câu lệnh tool xuất ra (core/story.py, core/story_render.py).
+
+def _load_story(pid: str) -> tuple[dict, dict]:
+    from core import story as story_mod
+    data = _load_project(pid)
+    if data.get("mode") != "story":
+        raise FileNotFoundError(f"'{pid}' không phải truyện kể")
+    st = data.setdefault("story", story_mod.default_story())
+    return data, st
+
+
+def _story_view(pid: str, data: dict) -> dict:
+    from core import story as story_mod
+    pdir = config.project_dir(pid)
+    st = data["story"]
+    imgs = story_mod.scene_images(pdir)
+    scenes = story_mod.all_scenes(st)
+    out = dict(data)
+    out["images"] = sorted(imgs)
+    out["scene_count"] = len(scenes)
+    out["missing"] = [sc["id"] for _ci, sc in scenes if sc["id"] not in imgs]
+    out["styles"] = {k: v[0] for k, v in story_mod.STYLES.items()}
+    out["cameras"] = list(story_mod.CAMERAS)
+    out["status"] = _status(pid)
+    out["video_ready"] = (pdir / "out" / "video.mp4").exists()
+    return out
+
+
+@app.post("/api/story")
+def api_story_new():
+    from core import story as story_mod
+    body = request.get_json(silent=True) or {}
+    pid = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
+    data = {
+        "id": pid, "mode": "story", "title": (body.get("title") or "").strip(),
+        "language": body.get("language") or "vi",
+        "format": _norm_format(body.get("format") or "16:9"),
+        "story": story_mod.default_story((body.get("title") or "").strip(),
+                                         (body.get("author") or "").strip()),
+        "assets": {"characters": [], "background": None, "voices": {}},
+        "state": "draft", "created_at": datetime.now().isoformat(timespec="seconds"),
+    }
+    config.project_dir(pid)
+    _save_project(pid, data)
+    return jsonify(_story_view(pid, data))
+
+
+@app.get("/api/story/list")
+def api_story_list():
+    out = []
+    for p in sorted(config.PROJECTS.glob("*/project.json"), reverse=True):
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        if d.get("mode") == "story":
+            out.append({"id": d["id"], "title": d.get("title") or "(chưa đặt tên)",
+                        "created_at": d.get("created_at")})
+    return jsonify({"stories": out[:50]})
+
+
+@app.get("/api/story/<pid>")
+def api_story_get(pid):
+    try:
+        data, _st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    return jsonify(_story_view(pid, data))
+
+
+@app.post("/api/story/<pid>/save")
+def api_story_save(pid):
+    """Lưu thông tin truyện và phần chị sửa (lời kể, câu lệnh vẽ, máy quay)."""
+    from core import story as story_mod
+    try:
+        data, st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    body = request.get_json(silent=True) or {}
+    for k in ("title", "author", "source_text", "style", "subtitles", "era"):
+        if k in body:
+            st[k] = body[k]
+    if "minutes" in body:
+        try:
+            st["minutes"] = max(3, min(40, int(float(body["minutes"]))))
+        except (TypeError, ValueError):
+            pass
+    if isinstance(body.get("narrator"), dict):
+        st["narrator"] = {"voice": str(body["narrator"].get("voice") or ""),
+                          "instruct": str(body["narrator"].get("instruct") or "")}
+    for k in ("characters", "places", "chapters"):
+        if isinstance(body.get(k), list):
+            st[k] = body[k]
+    story_mod.renumber(st)
+    if "format" in body:
+        data["format"] = _norm_format(body["format"])
+    if "title" in body:
+        data["title"] = str(body["title"]).strip()
+    _save_project(pid, data)
+    return jsonify(_story_view(pid, data))
+
+
+@app.post("/api/story/<pid>/write")
+def api_story_write(pid):
+    """AI chia chương, lập nhân vật/địa điểm, viết lời kể và chia cảnh (chạy nền)."""
+    from core import story as story_mod
+    try:
+        data, st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    if not (st.get("title") or "").strip():
+        return _err("Cần có tên truyện.")
+    if _status(pid).get("state") in ("writing", "rendering"):
+        return jsonify({"ok": True, "already": True})
+    with JOBS_LOCK:
+        JOBS[pid] = {"state": "writing", "progress": 0.0, "message": "bắt đầu", "log": []}
+
+    def work():
+        try:
+            story_mod.write_story(st, progress=lambda f, m: _set_status(
+                pid, progress=round(float(f), 3), message=str(m)))
+            d2, _ = _load_story(pid)
+            d2["story"] = st
+            _save_project(pid, d2)
+            _set_status(pid, state="written", progress=1.0, message="đã viết xong lời kể")
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            _set_status(pid, state="error", message=f"Viết lời kể lỗi: {_short_err(e, 400)}")
+
+    threading.Thread(target=work, daemon=True).start()
+    return jsonify({"ok": True})
+
+
+@app.get("/api/story/<pid>/prompts")
+def api_story_prompts(pid):
+    """Tải bộ câu lệnh vẽ (.txt) để dán vào công cụ vẽ tranh."""
+    from core import story as story_mod
+    try:
+        data, st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    if not story_mod.all_scenes(st):
+        return _err("Chưa có cảnh nào — bấm 'AI viết lời kể' trước.")
+    p = config.project_dir(pid) / "out" / "cau_lenh_ve.txt"
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(story_mod.prompts_text(st, data.get("format") or "16:9"), encoding="utf-8")
+    return send_file(str(p), mimetype="text/plain; charset=utf-8", as_attachment=True,
+                     download_name=f"cau_lenh_ve_{pid}.txt")
+
+
+@app.post("/api/story/<pid>/images")
+def api_story_images(pid):
+    """Nhận nhiều ảnh cùng lúc; tên file có số cảnh (scene_001.png, 001.jpg...)."""
+    from core import story as story_mod
+    try:
+        data, _st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    d = story_mod.image_dir(config.project_dir(pid))
+    saved, skipped = [], []
+    for f in request.files.getlist("files"):
+        name = Path(f.filename or "").name
+        if Path(name).suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp"):
+            skipped.append(name)
+            continue
+        m = story_mod._NUM.search(Path(name).stem)
+        if not m and not name.startswith("char_"):
+            skipped.append(name)
+            continue
+        if m and not name.startswith("char_"):
+            sid = f"{int(m.group(1)):03d}"
+            for old in d.glob(f"scene_{sid}.*"):        # thay ảnh cũ của cảnh đó
+                old.unlink(missing_ok=True)
+            name = f"scene_{sid}{Path(name).suffix.lower()}"
+        f.save(str(d / name))
+        saved.append(name)
+    out = _story_view(pid, data)
+    out.update({"saved": saved, "skipped": skipped})
+    return jsonify(out)
+
+
+@app.get("/api/story/<pid>/image/<sid>")
+def api_story_image(pid, sid):
+    from core import story as story_mod
+    p = story_mod.scene_images(config.project_dir(pid)).get(str(sid))
+    if not p:
+        return _err("Chưa có ảnh.", 404)
+    return send_file(str(p))
+
+
+@app.post("/api/story/<pid>/render")
+def api_story_render(pid):
+    """Đọc lời kể (OmniVoice) rồi dựng video truyện kể (chạy nền)."""
+    from core import story as story_mod
+    from core import story_render
+    try:
+        data, st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    if not story_mod.all_scenes(st):
+        return _err("Chưa có cảnh nào — bấm 'AI viết lời kể' trước.")
+    if _status(pid).get("state") in ("writing", "rendering"):
+        return jsonify({"ok": True, "already": True})
+    with JOBS_LOCK:
+        JOBS[pid] = {"state": "rendering", "progress": 0.0, "message": "bắt đầu", "log": []}
+
+    def work():
+        try:
+            pdir = config.project_dir(pid)
+            settings = config.load_settings()
+            lang = data.get("language") or "vi"
+            audio = story_mod.narrate(st, pdir, lang, progress=lambda f, m: _set_status(
+                pid, progress=round(0.4 * float(f), 3), message=str(m)))
+            mp4 = story_render.render(st, pdir, data.get("format") or "16:9", settings, audio,
+                                      progress=lambda f, m: _set_status(
+                                          pid, progress=round(0.4 + 0.6 * float(f), 3), message=str(m)))
+            d2, _ = _load_story(pid)
+            d2["result"] = {"video": str(mp4)}
+            _save_project(pid, d2)
+            _set_status(pid, state="done", progress=1.0, message="xong")
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            _set_status(pid, state="error", message=f"Dựng video lỗi: {_short_err(e, 400)}")
+
+    threading.Thread(target=work, daemon=True).start()
+    return jsonify({"ok": True})
+
+
 def main() -> None:
     host = "127.0.0.1"
     port = 8766

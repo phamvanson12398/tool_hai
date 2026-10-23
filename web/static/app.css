@@ -134,6 +134,19 @@ button, input, select, textarea { font-family: inherit; font-size: inherit; colo
 
 .col-work { display: flex; flex-direction: column; gap: 16px; min-width: 0; }
 .col-preview { min-width: 0; }
+.col-flow { display: flex; flex-direction: column; gap: 16px; }
+/* Truyện kể */
+.st-scene { display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 12px; padding: 10px;
+  background: var(--bg); border: 1px solid var(--line-soft); border-radius: var(--radius); }
+.st-thumb { width: 120px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 6px;
+  background: var(--bg-raise-2); display: flex; align-items: center; justify-content: center;
+  font-size: 11px; color: var(--text-faint); text-align: center; }
+.st-scene textarea { min-height: 54px; }
+.st-chapter { font-weight: 700; margin-top: 8px; }
+.st-chapter input { font-weight: 700; }
+.st-meta { display: flex; gap: 8px; align-items: center; font-size: 12px; color: var(--text-faint); }
+.st-meta select { width: auto; padding: 4px 8px; font-size: 12px; }
+.st-bible-item { display: grid; grid-template-columns: 160px minmax(0, 1fr); gap: 10px; }
 
 @media (min-width: 1101px) {
   .col-preview { position: sticky; top: 74px; }

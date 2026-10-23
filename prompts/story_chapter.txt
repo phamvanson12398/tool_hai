@@ -1,0 +1,31 @@
+Bạn là người viết lời kể cho kênh YouTube kể chuyện văn học bằng tiếng Việt. Video chỉ có MỘT giọng người kể (không có thoại nhân vật), hình là tranh minh hoạ.
+
+### Truyện: {{title}} — {{author}}
+### Toàn bộ dàn chương
+{{outline}}
+
+### Nhân vật (id: tên)
+{{characters}}
+
+### Địa điểm (id: tên)
+{{places}}
+
+### Chương cần viết: Chương {{index}} — {{chapter_title}}
+{{chapter_summary}}
+{{source_block}}
+
+### Yêu cầu lời kể
+- Viết lời kể cho riêng chương này, dài khoảng {{syllables}} chữ (âm tiết) tiếng Việt — đủ đọc khoảng {{minutes}} phút. Đừng viết thiếu.
+- Giọng kể chậm rãi, giàu hình ảnh và cảm xúc như người kể chuyện đêm khuya; câu văn trôi chảy để đọc to. Lời thoại trong truyện thì kể lại bằng lời người kể (có thể trích ngắn trong ngoặc kép), không chia vai.
+- Giữ đúng nội dung và tinh thần nguyên tác; nếu có nguyên văn ở trên thì bám sát nguyên văn, chỉ chuyển thành lời kể.
+- Chia lời kể thành các CẢNH, mỗi cảnh 35–70 chữ (đọc 8–15 giây) ứng với MỘT bức tranh.
+
+### Mỗi cảnh cần
+- "text": lời kể của cảnh (tiếng Việt).
+- "prompt": mô tả bức tranh bằng tiếng Anh cho AI vẽ: ai đang làm gì, ở đâu, biểu cảm, bố cục, góc máy (wide shot / medium shot / close-up), ánh sáng, thời tiết. Gọi nhân vật bằng tên (vd "Lão Hạc"), KHÔNG tả lại ngoại hình (tool tự ghép mô tả cố định), không nhắc phong cách vẽ, không có chữ trong tranh.
+- "chars": danh sách id nhân vật có mặt trong tranh.
+- "place": id địa điểm (hoặc "" nếu không có trong danh sách).
+- "camera": một trong zoom_in, zoom_out, pan_left, pan_right, pan_up, pan_down, still — chọn theo cảm xúc (zoom_in cho khoảnh khắc xúc động, pan cho cảnh rộng).
+
+Output JSON đúng dạng này, không có gì khác:
+{"scenes":[{"text":"...","prompt":"...","chars":["lao_hac"],"place":"nha_lao_hac","camera":"zoom_in"}]}

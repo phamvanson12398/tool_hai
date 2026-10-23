@@ -568,3 +568,48 @@ tool_hoat_hinh/
     settings.json    cài đặt
   projects/          mỗi tập một thư mục, có video và file rời
 ```
+
+---
+
+## 11. Truyện kể (video dài 20–30 phút, chỉ có giọng người kể)
+
+Tab **Truyện kể** làm video kể chuyện kiểu kênh YouTube văn học (Lão Hạc, Tắt
+đèn, truyện cổ tích...): **một giọng người kể** đọc suốt, không có thoại nhân vật;
+hình là **tranh minh hoạ** chị tự vẽ (Midjourney, Gemini, ChatGPT...) từ **bộ câu
+lệnh vẽ** tool xuất ra; tool lo phần còn lại.
+
+### Các bước
+1. **Truyện:** tên truyện, tác giả, thời lượng (phút), khung (16:9 cho YouTube),
+   phong cách tranh (mặc định **Hoạt hình 2D**), giọng người kể (chọn giọng trong
+   Thư viện, hoặc mô tả giọng), có/không phụ đề. Có thể **dán nguyên văn** để AI
+   bám sát truyện gốc.
+2. Bấm **AI viết lời kể & chia cảnh**: Claude chia chương, lập danh sách nhân vật
+   và địa điểm với **mô tả ngoại hình cố định**, rồi viết lời kể từng chương, chia
+   thành cảnh (mỗi cảnh 8–15 giây = một tranh). Truyện 25 phút ≈ 8 chương, 120–180
+   cảnh; mất vài phút. Lời kể, mô tả tranh, kiểu máy quay đều **sửa được** rồi bấm
+   Lưu.
+3. **Tải bộ câu lệnh vẽ (.txt)**: có câu lệnh vẽ **ảnh nhân vật** (char_...) để
+   làm ảnh tham chiếu, và câu lệnh từng **cảnh** (scene_001...). Mỗi câu lệnh cảnh
+   đã ghép sẵn phong cách + mô tả cảnh + ngoại hình cố định của nhân vật có mặt +
+   địa điểm + thời đại, nên tranh nào cũng ra cùng một Lão Hạc, cùng một cậu Vàng.
+   Khi vẽ, gửi kèm ảnh tham chiếu nhân vật (Midjourney `--cref`; Gemini/ChatGPT gửi
+   kèm ảnh) để giống nhau hơn nữa.
+4. **Tải ảnh lên**: chọn nhiều ảnh một lúc; tên file có số cảnh (scene_001.png,
+   001.jpg, "Cảnh 4.png"... đều được). Cảnh chưa có tranh vẫn dựng được (khung chữ
+   tạm) để nghe thử nhịp kể trước.
+5. **Dựng video**: OmniVoice đọc lời kể (giọng cố định, đọc chậm hơn thoại), máy
+   quay chuyển động trên tranh (phóng vào, lùi ra, lia ngang/dọc), chuyển cảnh mờ,
+   thẻ tên truyện ở đầu, thẻ tên chương, nhạc nền (Cài đặt → Nhạc nền), tối dần ở
+   cuối. Video 25 phút dựng khoảng 15–20 phút (đọc lời kể + ghép hình); dựng lại
+   sau khi sửa thì cảnh nào lời kể không đổi không phải đọc lại.
+
+### Bản quyền
+Nam Cao (mất 1951), Ngô Tất Tố (1954)... đã hết thời hạn bảo hộ ở Việt Nam nên
+dùng nguyên văn được — vẫn nên ghi tên tác giả. Truyện của tác giả còn sống hoặc
+mất chưa đủ 50 năm thì **đừng dán nguyên văn**; để trống cho AI kể lại bằng lời
+khác, hoặc chọn truyện dân gian, cổ tích.
+
+### Đỡ tốn hạn mức
+Viết lời kể là bước tốn nhất (truyện dài, nhiều chương). Cài đặt → Trợ lý AI →
+"Truyện kể: viết lời kể, chia cảnh" chọn được Antigravity; lỗi thì tự chuyển sang
+Claude.
