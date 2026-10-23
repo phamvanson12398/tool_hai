@@ -105,6 +105,7 @@
   function loadVoices() {
     return api("/api/library").then(function (d) {
       var sel = $("st-voice");
+      var cur = sel.value;
       sel.innerHTML = "";
       sel.appendChild(new Option("— Dùng mô tả giọng bên cạnh —", ""));
       st.voices = [];
@@ -112,7 +113,32 @@
         if (v && v.name) sel.appendChild(new Option(v.name, v.name));
         if (v && v.name) st.voices = (st.voices || []).concat([v.name]);
       });
+      if (cur) sel.value = cur;
     }).catch(function () {});
+  }
+
+  /** Clone giọng: chọn file âm thanh, đặt tên, lưu vào Thư viện (Whisper tự nghe
+   *  chữ). Xong gọi done(tên giọng). */
+  function cloneVoice(done) {
+    var input = $("st-clone-file");
+    input.value = "";
+    input.onchange = function () {
+      var f = input.files && input.files[0];
+      if (!f) return;
+      var name = (window.prompt("Tên giọng (lưu vào Thư viện):", f.name.replace(/\.[^.]+$/, "")) || "").trim();
+      if (!name) return;
+      var fd = new FormData();
+      fd.append("file", f);
+      fd.append("name", name);
+      fd.append("language", (st.data && st.data.language) || "vi");
+      toast("ok", "Đang xử lý giọng mẫu…", "Tool nghe chữ trong đoạn mẫu, lần đầu mất vài chục giây.");
+      api("/api/library/voice", { body: fd }).then(function (r) {
+        var msg = (r.duration ? r.duration.toFixed(1) + " giây" : "") + (r.text ? " · “" + r.text.slice(0, 60) + "”" : "");
+        toast("ok", "Đã clone giọng “" + name + "”", msg);
+        return loadVoices().then(function () { done(name); });
+      }).catch(fail("Không clone được giọng"));
+    };
+    input.click();
   }
 
   function open(id) {
@@ -353,6 +379,16 @@
         vsel.appendChild(new Option("Giọng: tạo theo mô tả →", ""));
         (st.voices || []).forEach(function (n) { vsel.appendChild(new Option("Giọng: " + n, n)); });
         vsel.value = (r[1].voice || {}).voice || "";
+        var vclone = el("button", "btn btn-sm", "🎙 Clone");
+        vclone.type = "button";
+        vclone.title = "Tải đoạn giọng để clone làm giọng nhân vật này";
+        vclone.addEventListener("click", function () {
+          cloneVoice(function (name) {
+            vsel.appendChild(new Option("Giọng: " + name, name));
+            vsel.value = name;
+            if (st.id) save(true);
+          });
+        });
         var vin = document.createElement("input");
         vin.type = "text";
         vin.className = "st-cinstruct";
@@ -360,6 +396,7 @@
         vin.title = "Mô tả giọng (tiếng Anh, theo OmniVoice): male/female, child/teenager/young adult/middle-aged/elderly, low/moderate/high pitch";
         vin.value = (r[1].voice || {}).instruct || "";
         vrow.appendChild(vsel);
+        vrow.appendChild(vclone);
         vrow.appendChild(vin);
         right.appendChild(vrow);
       }
@@ -779,6 +816,12 @@
     });
     $("st-pick").addEventListener("change", function () { open(this.value); });
     $("st-part-make").addEventListener("click", newPart);
+    $("st-clone").addEventListener("click", function () {
+      cloneVoice(function (name) {
+        $("st-voice").value = name;
+        if (st.id) save(true);
+      });
+    });
     $("st-bg3d-all").addEventListener("click", function () { drawBg3d([], false); });
     $("st-mode").addEventListener("change", function () {
       applyVisual();

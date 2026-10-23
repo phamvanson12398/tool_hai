@@ -239,9 +239,31 @@ def save_voice(name: str, language: str, file_path: Path,
     dest.mkdir(parents=True, exist_ok=True)
     target = dest / f"{language}.wav"
 
-    data, sr = sf.read(str(file_path), dtype="float32", always_2d=False)
+    try:
+        data, sr = sf.read(str(file_path), dtype="float32", always_2d=False)
+    except Exception:  # noqa: BLE001
+        # mp3, m4a, mp4, ogg... mà soundfile không đọc được: đổi sang wav bằng ffmpeg
+        import subprocess
+        from . import video
+        conv = Path(file_path).with_suffix(".conv.wav")
+        r = subprocess.run([video._ffmpeg_path(), "-y", "-i", str(file_path), "-vn", "-ac", "1",
+                            "-ar", "24000", str(conv)], capture_output=True, text=True)
+        if r.returncode != 0 or not conv.exists():
+            raise RuntimeError("không đọc được file âm thanh (thử wav hoặc mp3)") from None
+        data, sr = sf.read(str(conv), dtype="float32", always_2d=False)
     if getattr(data, "ndim", 1) > 1:
         data = data.mean(axis=1)
+    # mẫu clone tốt nhất 5–15 giây: đoạn dài thì cắt ở chỗ lặng gần 15 giây
+    if sr and len(data) > sr * 18:
+        import numpy as np
+        win = int(sr * 0.05)
+        lo, hi = int(sr * 10), int(sr * 15)
+        seg = np.abs(data[lo:hi + win])
+        energy = np.convolve(seg, np.ones(win) / win, mode="valid")[: hi - lo]
+        cut = lo + int(np.argmin(energy)) if energy.size else hi
+        data = data[:cut].copy()
+        fade = min(len(data), int(sr * 0.05))
+        data[-fade:] *= np.linspace(1, 0, fade)
     sf.write(str(target), data, sr)
     duration = len(data) / float(sr) if sr else 0.0
 

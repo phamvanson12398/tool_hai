@@ -388,7 +388,10 @@
               </select></div>
           </div>
           <div class="field-row">
-            <div class="field"><label for="st-voice">Giọng người kể (Thư viện)</label><select id="st-voice"></select></div>
+            <div class="field"><label for="st-voice">Giọng người kể (Thư viện)</label>
+              <div class="st-voice-row"><select id="st-voice"></select>
+                <button class="btn btn-sm" id="st-clone" type="button" title="Tải một đoạn giọng (wav, mp3, m4a...) để clone làm giọng người kể">🎙 Clone</button>
+                <input type="file" id="st-clone-file" accept="audio/*,video/mp4,.wav,.mp3,.m4a,.ogg,.flac" hidden></div></div>
             <div class="field"><label for="st-instruct">hoặc mô tả giọng</label><input type="text" id="st-instruct" placeholder="male, elderly, low pitch"></div>
             <div class="field st-story-only"><label for="st-dialogue">Thoại nhân vật</label>
               <select id="st-dialogue">
