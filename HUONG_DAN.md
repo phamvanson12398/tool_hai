@@ -591,6 +591,7 @@ màn hình đó. Ảnh không đạt (nửa người, tay khoanh) thì báo và 
 ```
 tool_hoat_hinh/
   cai_dat.bat        cài lần đầu
+  cai_3d.bat         cài phần vẽ bối cảnh 3D (không bắt buộc)
   chay_tool.bat      mở tool
   core/              lõi: kịch bản, giọng, bộ ghép nhân vật, dựng video,
                      capcut_export.py (xuất dự án CapCut)
@@ -636,6 +637,23 @@ hình có hai cách (ô **Cách làm hình**):
   kép.
 - Nhân vật tự quay mặt về phía nhau; máy quay phóng nhẹ vào chỗ có người hoặc lia
   ngang.
+- **Bối cảnh 3D** (ô **Bối cảnh** → "3D — AI vẽ trên máy"): nhân vật vẫn 2D con
+  nhộng, còn nền là tranh kiểu phim hoạt hình 3D (Pixar) do Stable Diffusion XL vẽ
+  ngay trên máy chị, không tốn tiền, không cần mạng sau khi tải mô hình.
+  - Cài một lần: bấm đúp **cai_3d.bat** (tải khoảng 7 GB). Cần card NVIDIA 8 GB trở
+    lên; GTX 1080 11 GB vẽ mỗi ảnh khoảng 20–60 giây.
+  - Mỗi địa điểm (ngày / đêm) chỉ vẽ **một lần** rồi dùng lại cho mọi cảnh ở đó,
+    nên căn nhà giống nhau suốt truyện. AI vẽ theo mô tả tiếng Anh của địa điểm ở
+    mục 2 (sửa mô tả rồi bấm **Vẽ lại 3D** nếu chưa ưng; mỗi lần vẽ lại ra bố cục
+    khác).
+  - Bấm **Vẽ bối cảnh 3D còn thiếu** để vẽ trước và xem, hoặc cứ bấm **Dựng video**:
+    tool tự vẽ phần còn thiếu trước rồi mới đọc lời kể (vẽ xong tự trả bộ nhớ card
+    cho giọng đọc).
+  - Thiếu bản ban đêm thì tool làm tối bản ban ngày; địa điểm chưa vẽ 3D (hoặc vẽ
+    lỗi) thì dùng bối cảnh vẽ tay.
+  - Nhân vật có bóng mờ dưới chân để đứng vững trên nền 3D.
+  - Đổi mô hình (vd mô hình 3D khác trên Hugging Face): sửa `bg3d_model`,
+    `bg3d_lora_repo`, `bg3d_lora_file`, `bg3d_steps` trong `data/settings.json`.
 - Muốn một cảnh đặc biệt đẹp hơn: tải tranh lên đúng số cảnh (scene_012.png),
   tranh đó thay cảnh tool vẽ.
 - **Vẽ thêm bằng AI** (mục 2, khung dưới cùng): truyện cần thứ tool chưa có — mũ

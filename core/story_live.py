@@ -188,6 +188,26 @@ def background(kind: str, time: str, size, seed: int) -> np.ndarray:
     return _BG_CACHE[key]
 
 
+def background3d(pdir, place_id: str, time: str, size):
+    """Nền 3D AI vẽ (None nếu chưa vẽ); thiếu bản đêm thì làm tối bản ngày."""
+    from . import bg3d
+    p = bg3d.path_for(pdir, place_id, time)
+    darken = False
+    if not p.exists() and time == "dem":
+        p, darken = bg3d.path_for(pdir, place_id, "ngay"), True
+    if not p.exists():
+        return None
+    key = ("3d", str(p), p.stat().st_mtime, tuple(size), darken)
+    if key not in _BG_CACHE:
+        if len(_BG_CACHE) > 6:
+            _BG_CACHE.pop(next(iter(_BG_CACHE)))
+        a = np.asarray(bg3d.load_cover(p, tuple(size))).astype(np.float32)
+        if darken:
+            a = a * np.array([0.45, 0.5, 0.72], dtype=np.float32)
+        _BG_CACHE[key] = np.clip(a, 0, 255).astype(np.uint8)
+    return _BG_CACHE[key]
+
+
 # ---------------------------------------------------------------- cảnh động
 
 def _bump(t, a, b):
@@ -201,7 +221,7 @@ class LiveShot:
 
     def __init__(self, st: dict, sc: dict, size, camera: str, dur: float,
                  audio=None, audio_at: float = 0.0, audio_dur: float = 0.0,
-                 over: float = 1.15, fps: int = 24):
+                 over: float = 1.15, fps: int = 24, pdir=None):
         import cv2
         self.cv2 = cv2
         self.W, self.H = size
@@ -215,7 +235,15 @@ class LiveShot:
         kind = place_kind(place)
         self.night = scene_time(sc, place) == "dem"
         seed = zlib.crc32(str(sc.get("place") or kind).encode()) % 1000
-        self.base = background(kind, "dem" if self.night else "ngay", (self.bw, self.bh), seed)
+        self.base = None
+        self.is3d = False
+        if st.get("bg_mode") == "ai3d" and pdir is not None and place:
+            # bối cảnh 3D AI đã vẽ cho địa điểm này (vẽ một lần, dùng lại)
+            self.base = background3d(pdir, place["id"], "dem" if self.night else "ngay",
+                                     (self.bw, self.bh))
+            self.is3d = self.base is not None
+        if self.base is None:
+            self.base = background(kind, "dem" if self.night else "ngay", (self.bw, self.bh), seed)
         looks = {c["id"]: c for c in st.get("characters") or []}
         chars = [looks[c] for c in sc.get("chars") or [] if c in looks][:5]
         for c in chars:
@@ -232,6 +260,7 @@ class LiveShot:
                          talk_windows(sc.get("text") or "", audio_dur)] if talk else []
         self._layout(chars, acts, talk, kind)
         self._cache: dict = {}
+        self._shadows: dict = {}
 
     # --- bố cục: ai đứng đâu, quay về phía ai
     def _layout(self, chars, acts, talk, kind):
@@ -446,8 +475,31 @@ class LiveShot:
                     cv2.circle(canvas, (x, y), rr, (250, 250, 250), -1, cv2.LINE_AA)
                     cv2.circle(canvas, (x, y), rr, (40, 34, 38), max(1, lw // 2), cv2.LINE_AA)
 
+    def _shadow(self, canvas, x, y, w):
+        """Bóng mờ dưới chân cho nhân vật đứng vững trên nền (nhất là nền 3D)."""
+        cv2 = self.cv2
+        rx, ry = int(w * 0.5), max(2, int(w * 0.09))
+        x0, y0 = max(0, int(x) - rx - 2), max(0, int(y) - ry - 2)
+        x1, y1 = min(canvas.shape[1], int(x) + rx + 2), min(canvas.shape[0], int(y) + ry + 2)
+        if x1 <= x0 or y1 <= y0:
+            return
+        key = (rx, ry)
+        if key not in self._shadows:
+            m = np.zeros((2 * ry + 5, 2 * rx + 5), np.uint8)
+            cv2.ellipse(m, (rx + 2, ry + 2), (rx, ry), 0, 0, 360, 255, -1, cv2.LINE_AA)
+            m = cv2.GaussianBlur(m, (0, 0), max(1.0, ry * 0.5))
+            self._shadows[key] = 255 - (m.astype(np.float32) * (0.32 if self.is3d else 0.18)).astype(np.uint8)
+        m = self._shadows[key][y0 - (int(y) - ry - 2):, x0 - (int(x) - rx - 2):][: y1 - y0, : x1 - x0]
+        reg = canvas[y0:y1, x0:x1]
+        canvas[y0:y1, x0:x1] = cv2.multiply(reg, cv2.merge([m, m, m]), scale=1 / 255.0)
+
     def scene_frame(self, t: float) -> np.ndarray:
         canvas = self.base.copy()
+        for a in self.actors:
+            if ACTS[a["act"]][2] != "lie":
+                w = self.T * a["k"] * (0.42 if a["kit"]["species"] == "human" else 0.5) * \
+                    (doodle.char_height(a["kit"], 1.0) if a["kit"]["species"] != "human" else 1.0)
+                self._shadow(canvas, self._walk_x(a, t), a["y"], w)
         for a in self.actors:
             expr = ACTS[a["act"]][1]
             arr, foot, eye = self._sprite(a, expr, self._mouth(a, t), self._blink(a, t))
@@ -500,9 +552,9 @@ class LiveShot:
         return self.cv2.warpAffine(canvas, M, (self.W, self.H), flags=self.cv2.INTER_LINEAR)
 
 
-def preview(st: dict, sc: dict, size, t: float = 1.0) -> Image.Image:
+def preview(st: dict, sc: dict, size, t: float = 1.0, pdir=None) -> Image.Image:
     """Ảnh xem trước một cảnh (khung giữa cảnh)."""
-    shot = LiveShot(st, sc, size, "still", 6.0)
+    shot = LiveShot(st, sc, size, "still", 6.0, pdir=pdir)
     return Image.fromarray(shot.frame(min(1.0, t / 6.0)))
 
 

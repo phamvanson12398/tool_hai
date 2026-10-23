@@ -374,6 +374,11 @@
                 <option value="images">Tranh tự vẽ ở công cụ khác (xuất câu lệnh)</option>
               </select></div>
             <div class="field st-img-only"><label for="st-style">Phong cách tranh</label><select id="st-style"></select></div>
+            <div class="field st-tool-only"><label for="st-bgmode">Bối cảnh</label>
+              <select id="st-bgmode">
+                <option value="draw">Vẽ tay (nhanh, có sẵn)</option>
+                <option value="ai3d">3D — AI vẽ trên máy (Stable Diffusion)</option>
+              </select></div>
           </div>
           <div class="field-row">
             <div class="field"><label for="st-voice">Giọng người kể (Thư viện)</label><select id="st-voice"></select></div>
@@ -399,6 +404,10 @@
           <h2 class="card-title">2. Nhân vật &amp; địa điểm</h2>
           <p class="hint st-tool-only">Tool vẽ nhân vật theo các lựa chọn (tóc, áo, râu, kính...) và vẽ bối cảnh theo mẫu. Đổi lựa chọn là ảnh xem trước vẽ lại ngay; nhân vật giống nhau ở mọi cảnh.</p>
           <p class="hint st-img-only">Mô tả ngoại hình cố định (tiếng Anh) được ghép vào mọi câu lệnh vẽ để nhân vật giống nhau ở mọi tranh. Sửa được.</p>
+          <div class="st-3d-only st-bg3d-bar">
+            <button class="btn" id="st-bg3d-all" type="button">Vẽ bối cảnh 3D còn thiếu</button>
+            <span class="hint" id="st-bg3d-hint">Mỗi địa điểm (ngày/đêm) vẽ một lần, khoảng 20–60 giây trên GTX 1080; dùng lại cho mọi cảnh. Bấm Dựng video cũng tự vẽ phần còn thiếu.</span>
+          </div>
           <div id="st-bible" class="card-list"></div>
           <div class="st-parts st-tool-only">
             <h3 class="st-sub">Vẽ thêm bằng AI (thứ tool chưa có)</h3>

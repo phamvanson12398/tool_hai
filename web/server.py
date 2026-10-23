@@ -508,6 +508,14 @@ def api_check_system():
                            if uses else "")),
     })
 
+    # 5. Vẽ bối cảnh 3D (Truyện kể) — không bắt buộc
+    from core import bg3d
+    ok, msg = bg3d.check() if bg3d.installed() else (False, "Chưa cài (không bắt buộc) — "
+                                                            "muốn bối cảnh 3D thì chạy cai_3d.bat")
+    results.append({"item": "Vẽ bối cảnh 3D (Stable Diffusion)",
+                    "status": "ok" if ok else "warn",
+                    "message": ("Có — " + msg) if ok else msg})
+
     return jsonify({"checks": results})
 
 
@@ -1764,6 +1772,11 @@ def _story_view(pid: str, data: dict) -> dict:
             p["kind"] = story_live.place_kind(p)
         p.setdefault("time", "ngay")
     out["visual"] = st.get("visual", "tool")
+    from core import bg3d
+    out["bg_mode"] = st.get("bg_mode", "draw")
+    out["bg3d_installed"] = bg3d.installed()
+    d3 = pdir / bg3d.DIR
+    out["bg3d"] = sorted(p.stem for p in d3.glob("*.png")) if d3.exists() else []
     out["kit_options"] = doodle.options()
     from core import doodle_parts
     lib = doodle_parts.load()
@@ -1837,6 +1850,8 @@ def api_story_save(pid):
             st[k] = body[k]
     if body.get("visual") in ("tool", "images"):
         st["visual"] = body["visual"]
+    if body.get("bg_mode") in ("draw", "ai3d"):
+        st["bg_mode"] = body["bg_mode"]
     if "minutes" in body:
         try:
             st["minutes"] = max(3, min(40, int(float(body["minutes"]))))
@@ -1871,7 +1886,7 @@ def api_story_write(pid):
         return _err(str(e), 404)
     if not (st.get("title") or "").strip():
         return _err("Cần có tên truyện.")
-    if _status(pid).get("state") in ("writing", "rendering"):
+    if _status(pid).get("state") in ("writing", "rendering", "drawing"):
         return jsonify({"ok": True, "already": True})
     with JOBS_LOCK:
         JOBS[pid] = {"state": "writing", "progress": 0.0, "message": "bắt đầu", "log": []}
@@ -2023,7 +2038,8 @@ def api_story_preview_png(pid, sid):
         return _err("Không có cảnh.", 404)
     W, H = config.frame_size(data.get("format") or "16:9")
     k = 480 / max(W, H)
-    img = story_live.preview(st, sc, (int(W * k), int(H * k)), 3.2)
+    img = story_live.preview(st, sc, (int(W * k), int(H * k)), 3.2,
+                             pdir=config.project_dir(pid))
     return _png(img)
 
 
@@ -2095,6 +2111,59 @@ def api_story_image(pid, sid):
     return send_file(str(p))
 
 
+@app.post("/api/story/<pid>/bg3d")
+def api_story_bg3d(pid):
+    """Vẽ bối cảnh 3D cho các địa điểm (chạy nền). body: places (id, không có =
+    mọi địa điểm còn thiếu), force (vẽ lại)."""
+    from core import bg3d
+    try:
+        data, st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    if not bg3d.installed():
+        return _err("Chưa cài phần vẽ 3D. Chạy cai_3d.bat một lần (tải khoảng 7 GB) rồi mở lại tool.")
+    if _status(pid).get("state") in ("writing", "rendering", "drawing"):
+        return jsonify({"ok": True, "already": True})
+    body = request.get_json(silent=True) or {}
+    only = [str(x) for x in body.get("places") or []] or None
+    force = bool(body.get("force"))
+    with JOBS_LOCK:
+        JOBS[pid] = {"state": "drawing", "progress": 0.0,
+                     "message": "nạp mô hình vẽ 3D (lần đầu mất 1–2 phút)", "log": []}
+
+    def work():
+        try:
+            made = bg3d.draw_story(st, config.project_dir(pid),
+                                   config.frame_size(data.get("format") or "16:9"), only, force,
+                                   progress=lambda f, m: _set_status(
+                                       pid, progress=round(float(f), 3), message=str(m)))
+            d2, _ = _load_story(pid)
+            d2["story"]["places"] = st["places"]
+            _save_project(pid, d2)
+            _set_status(pid, state="drawn", progress=1.0,
+                        message=f"đã vẽ {len(made)} bối cảnh 3D" if made else "bối cảnh 3D đã đủ")
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            _set_status(pid, state="error", message=f"Vẽ bối cảnh 3D lỗi: {_short_err(e, 400)}")
+        finally:
+            bg3d.unload()
+
+    threading.Thread(target=work, daemon=True).start()
+    return jsonify({"ok": True})
+
+
+@app.get("/api/story/<pid>/bg3d/<name>.png")
+def api_story_bg3d_png(pid, name):
+    from core import bg3d
+    p = config.project_dir(pid) / bg3d.DIR / f"{Path(name).name}.png"
+    if not p.exists():
+        return _err("Chưa vẽ.", 404)
+    if request.args.get("w"):
+        img = bg3d.load_cover(p, (480, 270))
+        return _png(img)
+    return send_file(str(p))
+
+
 @app.post("/api/story/<pid>/render")
 def api_story_render(pid):
     """Đọc lời kể (OmniVoice) rồi dựng video truyện kể (chạy nền)."""
@@ -2106,7 +2175,7 @@ def api_story_render(pid):
         return _err(str(e), 404)
     if not story_mod.all_scenes(st):
         return _err("Chưa có cảnh nào — bấm 'AI viết lời kể' trước.")
-    if _status(pid).get("state") in ("writing", "rendering"):
+    if _status(pid).get("state") in ("writing", "rendering", "drawing"):
         return jsonify({"ok": True, "already": True})
     with JOBS_LOCK:
         JOBS[pid] = {"state": "rendering", "progress": 0.0, "message": "bắt đầu", "log": []}
@@ -2116,6 +2185,20 @@ def api_story_render(pid):
             pdir = config.project_dir(pid)
             settings = config.load_settings()
             lang = data.get("language") or "vi"
+            if st.get("bg_mode") == "ai3d" and st.get("visual", "tool") == "tool":
+                from core import bg3d
+                try:
+                    bg3d.draw_story(st, pdir, config.frame_size(data.get("format") or "16:9"),
+                                    progress=lambda f, m: _set_status(pid, progress=0.0, message=str(m)))
+                    d2, _ = _load_story(pid)
+                    d2["story"]["places"] = st["places"]          # hạt giống đã dùng
+                    _save_project(pid, d2)
+                except Exception as e:  # noqa: BLE001
+                    traceback.print_exc()
+                    _set_status(pid, message=f"Không vẽ được bối cảnh 3D ({_short_err(e)}); "
+                                             "dùng bối cảnh vẽ tay cho chỗ còn thiếu.")
+                finally:
+                    bg3d.unload()                    # trả bộ nhớ card cho OmniVoice
             audio = story_mod.narrate(st, pdir, lang, progress=lambda f, m: _set_status(
                 pid, progress=round(0.4 * float(f), 3), message=str(m)))
             mp4 = story_render.render(st, pdir, data.get("format") or "16:9", settings, audio,

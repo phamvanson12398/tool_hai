@@ -269,7 +269,7 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict[str, Path
                 from .story_live import LiveShot
                 shots[i] = LiveShot(st, sc, size, sc.get("camera") or "zoom_in", row["dur"],
                                     audio=row["audio"], audio_at=row["card"] + LEAD,
-                                    audio_dur=row["audio_dur"], over=OVER, fps=FPS)
+                                    audio_dur=row["audio_dur"], over=OVER, fps=FPS, pdir=pdir)
                 return shots[i]
             try:
                 im = Image.open(p) if p else _placeholder(size, sc["id"], sc.get("text") or "")

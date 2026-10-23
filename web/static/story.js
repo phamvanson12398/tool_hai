@@ -132,6 +132,7 @@
       format: $("st-format").value,
       style: $("st-style").value,
       visual: $("st-visual").value,
+      bg_mode: $("st-bgmode").value,
       subtitles: $("st-subs").value === "1",
       source_text: $("st-source").value,
       narrator: { voice: $("st-voice").value, instruct: $("st-instruct").value.trim() }
@@ -216,6 +217,7 @@
     (d.styles || []).forEach(function (kv) { sty.appendChild(new Option(kv[1], kv[0])); });
     sty.value = s.style || "doodle";
     $("st-visual").value = s.visual || "tool";
+    $("st-bgmode").value = s.bg_mode || "draw";
     applyVisual();
     showStyleRef(d);
     $("st-subs").value = s.subtitles ? "1" : "0";
@@ -272,7 +274,21 @@
         img.loading = "lazy";
         img.src = "/api/story/" + encodeURIComponent(st.id) + "/" +
           (r[0] === "characters" ? "char/" : "place/") + encodeURIComponent(r[1].id) + ".png?v=" + stamp();
+        var is3d = r[0] === "places" && $("st-bgmode").value === "ai3d";
+        var key3d = r[1].id + "_" + (r[1].time || "ngay");
+        var has3d = (d.bg3d || []).indexOf(key3d) >= 0 || (d.bg3d || []).indexOf(r[1].id + "_ngay") >= 0;
+        if (is3d && has3d) {
+          var k = (d.bg3d || []).indexOf(key3d) >= 0 ? key3d : r[1].id + "_ngay";
+          img.src = "/api/story/" + encodeURIComponent(st.id) + "/bg3d/" + encodeURIComponent(k) + ".png?w=1&v=" + stamp();
+        }
         left.appendChild(img);
+        if (is3d) {
+          var b3 = el("button", "btn btn-sm", has3d ? "Vẽ lại 3D" : "Vẽ 3D");
+          b3.type = "button";
+          b3.title = has3d ? "AI vẽ lại bối cảnh này (bố cục khác)" : "AI vẽ bối cảnh 3D cho địa điểm này";
+          b3.addEventListener("click", function () { drawBg3d([r[1].id], has3d); });
+          left.appendChild(b3);
+        }
         var kits = el("div", "st-kit");
         if (r[0] === "characters") {
           var kit = r[1].kit || {};
@@ -358,6 +374,20 @@
       card.appendChild(row);
       box.appendChild(card);
     });
+  }
+
+  function drawBg3d(places, force) {
+    if (!st.id) return;
+    var d = st.data || {};
+    if (!d.bg3d_installed) {
+      toast("warn", "Chưa cài phần vẽ 3D", "Chạy cai_3d.bat một lần (tải khoảng 7 GB) rồi mở lại tool.");
+      return;
+    }
+    save(true).then(function () {
+      return api("/api/story/" + encodeURIComponent(st.id) + "/bg3d",
+                 { body: { places: places || [], force: !!force } });
+    }).then(function () { toast("ok", "AI đang vẽ bối cảnh 3D", "Theo dõi tiến độ ở mục 1."); })
+      .catch(fail("Không vẽ được bối cảnh 3D"));
   }
 
   function newPart() {
@@ -473,6 +503,7 @@
     var tool = isTool();
     var scr = $("screen-story");
     if (scr) scr.classList.toggle("st-tool", tool);
+    if (scr) scr.classList.toggle("st-3d", tool && $("st-bgmode").value === "ai3d");
   }
 
   function showVideo(ready) {
@@ -497,7 +528,7 @@
     st.polling = setInterval(function () {
       if (!st.id) return;
       api("/api/project/" + encodeURIComponent(st.id) + "/status").then(function (s) {
-        var writing = s.state === "writing", rendering = s.state === "rendering";
+        var writing = s.state === "writing" || s.state === "drawing", rendering = s.state === "rendering";
         var pct = Math.round((s.progress || 0) * 100) + "%";
         $("st-progress-wrap").hidden = !writing;
         $("st-render-wrap").hidden = !rendering;
@@ -512,6 +543,7 @@
         // việc nền xong mà màn hình chưa có kết quả (xong nhanh hơn lần hỏi đầu): tải lại
         if (s.state === "written" && !(st.data && st.data.scene_count)) open(st.id);
         if (s.state === "done" && !(st.data && st.data.video_ready)) open(st.id);
+        if (last === "drawing" && s.state === "drawn") { toast("ok", "Đã vẽ bối cảnh 3D", s.message || ""); open(st.id); }
         if (last && last !== s.state) {
           if (s.state === "written") { toast("ok", "AI đã viết xong lời kể"); open(st.id); }
           if (s.state === "done") { toast("ok", "Đã dựng xong video"); open(st.id); }
@@ -534,6 +566,13 @@
     });
     $("st-pick").addEventListener("change", function () { open(this.value); });
     $("st-part-make").addEventListener("click", newPart);
+    $("st-bg3d-all").addEventListener("click", function () { drawBg3d([], false); });
+    $("st-bgmode").addEventListener("change", function () {
+      applyVisual();
+      if (st.id) save(true);
+      if (this.value === "ai3d" && st.data && !st.data.bg3d_installed)
+        toast("warn", "Cần cài phần vẽ 3D", "Chạy cai_3d.bat một lần (tải khoảng 7 GB). Chưa cài thì tool dùng bối cảnh vẽ tay.");
+    });
     $("st-visual").addEventListener("change", function () {
       applyVisual();
       if (st.id) save(true); else if (st.data) render(st.data);
