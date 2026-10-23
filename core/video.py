@@ -49,6 +49,50 @@ def has_vietnamese(text: str) -> bool:
     return bool(_VI_CHARS.search(text or ""))
 
 
+def _sit_geom(anim) -> tuple[float, float, float, float] | None:
+    """(cao khung gốc, hạ người bao nhiêu, mặt ghế ở đâu, vai ở đâu) khi ngồi
+    hẳn, theo toạ độ khung gốc của nhân vật. Hạ người sao cho chân vẫn chạm
+    sàn; mặt ghế ngay dưới hông; vai để đặt mặt bàn ngang khuỷu tay."""
+    cached = getattr(anim, "_sit_cache", None)
+    if cached is not None:
+        return cached or None
+    from .gestures import SIT_DUI_DEG
+    a = math.radians(SIT_DUI_DEG)
+    out = ()
+    try:
+        rig = getattr(anim, "rig", None)
+        if rig is not None:                       # nhân vật bộ ghép
+            from .gestures import mirror_left
+            from .rig import CH
+            sit = mirror_left({"dui_left": -a, "dui_right": -a, "goi_left": a, "goi_right": a})
+            w0, w1 = rig.solve({}), rig.solve(sit)
+            drop = max(w0[b]["pivot"][1] - w1[b]["pivot"][1]
+                       for b in ("co_chan_left", "co_chan_right"))
+            hip = w0["than"]["pivot"][1]
+            out = (float(CH), drop, hip + drop + 0.03 * CH,
+                   w0["vai_right"]["pivot"][1] + drop)
+        elif getattr(anim, "pchar", None) is not None:   # ảnh tải lên
+            j = anim.pchar.joints
+            fh = float(anim.pchar.rgba.size[1])
+            thigh = math.dist(j.hip_r, j.knee_r)
+            drop = thigh * (1 - math.cos(a))
+            out = (fh, drop, j.hip_r[1] + drop + 0.03 * fh, j.shoulder_r[1] + drop)
+    except Exception:  # noqa: BLE001
+        out = ()
+    anim._sit_cache = out
+    return out or None
+
+
+def _sprite(img: Image.Image | None):
+    """Cắt lớp trong suốt cỡ khung về sát nội dung: (ảnh, x, y) hoặc None."""
+    if img is None:
+        return None
+    box = img.getbbox()
+    if not box:
+        return None
+    return img.crop(box), box[0], box[1]
+
+
 def find_font(bold: bool = True, vietnamese: bool = False) -> str:
     cands = [f for f in FONT_CANDIDATES if not (vietnamese and "malgun" in f)]
     for f in cands:
@@ -199,6 +243,104 @@ class Stage:
         self.font_small = find_font(bold=False)
         self.font_vi = find_font(bold=True, vietnamese=True)
         self._char_cache: dict[tuple, Image.Image] = {}
+        # chỗ ngồi theo bối cảnh: chỉ số cảnh -> loại (office, sofa...), màu
+        self.scene_seats: dict[int, str] = {}
+        self.scene_colors: dict[int, tuple] = {}
+        self.seat_fallback = False            # ngồi ở cảnh không có ghế: tự đặt ghế gỗ
+        self.t = 0.0                          # thời điểm khung đang dựng
+        self._seat_cache: dict = {}
+        self._sprite_cache: dict = {}
+
+    # ------------------------------------------------------ chỗ ngồi
+    def _seating(self, chars: list["Character"]) -> dict | None:
+        """Đồ đạc + độ hạ người khi ngồi cho các nhân vật ở cảnh hiện tại.
+
+        Cảnh không có bàn ghế mà có người ngồi (kịch bản ghi ngoi_ghe): đặt
+        một chiếc ghế gỗ dưới đúng người đang ngồi."""
+        seat = self.scene_seats.get(self.scene)
+        sitting = None
+        if not seat and self.seat_fallback:
+            from .gestures import sit_amount
+            sitting = tuple(c.name for c in chars if c.rig_animator is not None
+                            and sit_amount(c.rig_animator, self.t) > 0)
+            if not sitting:
+                return None
+            seat = "chair"
+        key = (self.scene, seat, tuple(c.name for c in chars), sitting)
+        if key in self._seat_cache:
+            return self._seat_cache[key]
+        out = None
+        n = len(chars)
+        rows = []
+        if seat and n:
+            slots = self.slots(n)
+            base_y = self.floor_y
+            for i, ch in enumerate(chars):
+                if sitting is not None and ch.name not in sitting:
+                    continue
+                g = _sit_geom(ch.rig_animator) if ch.rig_animator is not None else None
+                if not g:
+                    continue
+                fh, drop, seat_c, sh_c = g
+                th = self.char_h(n, ch.scale)
+                sc = th / fh
+                rows.append([ch.name, self.w * slots[i], base_y - th + seat_c * sc,
+                             drop * sc, th, base_y - th + sh_c * sc])
+        if rows:
+            from . import furniture
+            if seat in furniture.SHARED:
+                top = min(r[2] for r in rows)
+                for r in rows:          # cùng một mặt sofa: người thấp ngồi cao lên
+                    r[3] += top - r[2]
+                    r[5] += top - r[2]
+                    r[2] = top
+            k = sum(r[4] for r in rows) / len(rows) / 160.0
+            back, front = furniture.draw(seat, [(r[1], r[2], r[5]) for r in rows], k,
+                                         self.floor_y, (self.w, self.h),
+                                         self.scene_colors.get(self.scene))
+            out = {"drops": {r[0]: r[3] for r in rows},
+                   "back": _sprite(back), "front": _sprite(front)}
+        self._seat_cache[key] = out
+        return out
+
+    def seat_drop(self, ch: "Character", chars: list["Character"]) -> float:
+        """Người đang ngồi được hạ xuống bao nhiêu px (theo mức đang ngồi)."""
+        anim = ch.rig_animator
+        if anim is None:
+            return 0.0
+        from .gestures import sit_amount
+        p = sit_amount(anim, self.t)
+        if p <= 0:
+            return 0.0
+        lay = self._seating(chars)
+        if lay and ch.name in lay["drops"]:
+            return p * lay["drops"][ch.name]
+        g = _sit_geom(anim)            # ngồi ở cảnh không có đồ đạc
+        if not g:
+            return 0.0
+        return p * g[1] * self.char_h(len(chars), ch.scale) / g[0]
+
+    def draw_furniture(self, img: Image.Image, chars: list["Character"],
+                       layer: str) -> Image.Image:
+        """Vẽ lớp đồ đạc 'back' (ghế, sofa) hoặc 'front' (bàn) theo góc máy."""
+        lay = self._seating(chars)
+        sp = lay.get(layer) if lay else None
+        if not sp:
+            return img
+        im, x0, y0 = sp
+        s = self.cam[0]
+        if s > 1.001:
+            key = (id(im), round(s, 3))
+            hit = self._sprite_cache.get(key)
+            if hit is None:
+                if len(self._sprite_cache) > 64:
+                    self._sprite_cache.clear()
+                hit = im.resize((max(1, int(im.width * s)), max(1, int(im.height * s))),
+                                Image.BILINEAR)
+                self._sprite_cache[key] = hit
+            im = hit
+        img.paste(im, self._cam_map(x0, y0), im)
+        return img
 
     # ------------------------------------------------------ bố cục theo khung
     def slots(self, n: int) -> list[float]:
@@ -292,7 +434,7 @@ class Stage:
                 k = target_h / CH
                 x += (hp[0] - CW / 2) * k
                 head_y = base_y - target_h + hp[1] * k - last.get("dich_y", 0.0) * self.h
-            out[ch.name] = (x, head_y, target_h)
+            out[ch.name] = (x, head_y + self.seat_drop(ch, chars), target_h)
         return out
 
     def _shot(self, shot: str) -> tuple[float, float]:
@@ -399,7 +541,8 @@ class Stage:
                     x = (cx - int(fw * sc) // 2 - int(ox * sc)
                          + int(last.get("dich_x", 0.0) * self.w))
                     y = (base_y - target_h - int(oy * sc) - bounce
-                         - int(last.get("dich_y", 0.0) * self.h))
+                         - int(last.get("dich_y", 0.0) * self.h)
+                         + int(self.seat_drop(ch, chars)))
                     img.paste(im, self._cam_map(x, y), im)
                     continue
                 except Exception as e:  # lỗi cử động -> quay về ảnh tĩnh
@@ -699,8 +842,28 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
             rig_animators[ch.name] = ch.rig_animator
 
     from .gestures import POSTURES as _POSTURES
+    from .gestures import reset_pose as _reset_pose
     _last_scene = None
     _entered: set = set()
+    auto_seat = bool(settings.get("auto_seat", True))
+
+    def _enter_scene(scene: int, t0: float) -> None:
+        """Vào bối cảnh lần đầu: ở chỗ có ghế (văn phòng, lớp, quán, phòng
+        khách...) mọi người đã ngồi sẵn; chỗ khác thì đứng."""
+        _entered.add(scene)
+        here = set(timeline.present(scene, list(rig_animators)))
+        sit = auto_seat and bool(stage.scene_seats.get(scene))
+        for nm, anim in rig_animators.items():
+            if nm not in here:
+                continue
+            try:
+                _reset_pose(anim, t0)
+                if sit:
+                    # bắt đầu sớm 1 giây để vào cảnh là đã ngồi xong
+                    anim.set_gesture("ngoi_ghe", None, t0 - 1.0)
+                    anim._fade_from = None
+            except Exception:  # pragma: no cover
+                pass
 
     def _apply_gestures(ev) -> None:
         """Áp cử chỉ, hiệu ứng, đạo cụ của câu (hoặc nhịp '>') cho NGƯỜI ĐÓ.
@@ -714,18 +877,9 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
             return
         nonlocal _last_scene
         if ev.scene != _last_scene and ev.scene not in _entered:
-            # vào bối cảnh mới lần đầu: người ở đó đứng dậy (bỏ tư thế cũ);
+            # vào bối cảnh mới lần đầu: đứng, hoặc ngồi sẵn nếu chỗ đó có ghế;
             # cắt qua lại giữa hai nơi thì ai đang nằm/ngồi vẫn giữ nguyên
-            _entered.add(ev.scene)
-            here = set(timeline.present(ev.scene, list(rig_animators)))
-            for nm, anim in rig_animators.items():
-                if nm not in here:
-                    continue
-                try:
-                    if getattr(anim, "current_gesture", None) is not None:
-                        anim.set_gesture(None, None, ev.start)
-                except Exception:  # pragma: no cover
-                    pass
+            _enter_scene(ev.scene, ev.start)
         _last_scene = ev.scene
         who = getattr(ev, "speaker", None) or getattr(ev, "actor", "")
         gesture = ev.gestures[0] if ev.gestures else None
@@ -747,6 +901,12 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
                     anim.set_gesture(None, None, ev.start)
             except Exception:  # pragma: no cover - cố gắng thay thế
                 pass
+
+    # cảnh đầu tiên: ngồi sẵn ngay từ khung đầu (trước câu thoại đầu tiên)
+    if rig_animators and events:
+        _first = getattr(events[0][2], "scene", 0)
+        _enter_scene(_first, 0.0)
+        _last_scene = _first
 
     # Theo dõi câu hiện tại để chỉ áp cử chỉ ở khung đầu của mỗi câu
     _current_line_idx: object = None
@@ -799,6 +959,7 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
             seen_scenes.add(scene)
         mix = min(1.0, (t - scene_since) / SCENE_FADE) if prev_scene is not None else 1.0
         vis = chars_in(cur_scene)
+        stage.scene, stage.t = cur_scene, t
 
         speaking = None
         mouth_open = False
@@ -855,7 +1016,9 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
                 who = zoom_focus
             stage.set_camera(shot, who, vis, other)
         img = stage.blank(cur_scene, prev_scene, mix)
+        img = stage.draw_furniture(img, vis, "back")
         img = stage.place_characters(img, vis, held, speaking, mouth_open, t)
+        img = stage.draw_furniture(img, vis, "front")
         img = stage.draw_ots(img)
 
         # Vẽ phụ đề và tiêu đề (không cache được vì text thay đổi mỗi khung)

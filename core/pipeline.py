@@ -292,18 +292,7 @@ class _PhotoRigAnimator:
 
     def set_gesture(self, name: str | None, effect: str | None,
                     start_time: float) -> None:
-        if self.current_gesture is not None and self.gesture_start is not None:
-            self._fade_from = gmod.gesture_pose(self.current_gesture,
-                                                start_time - self.gesture_start)
-            self._fade_t0 = start_time
-        if name is None:
-            self.current_gesture = None
-            self.gesture_start = None
-        else:
-            _, lib = gmod.ensure_library()
-            self.current_gesture = lib.get(name)
-            self.gesture_start = start_time
-        self.current_effect = effect
+        gmod.switch_gesture(self, name, effect, start_time)
 
     def _angles_at(self, t: float, speaking: bool) -> dict[str, float]:
         angles = gmod.breathe_angles(t, gmod.stable_seed(self.name))
@@ -314,6 +303,7 @@ class _PhotoRigAnimator:
             angles = gmod.merge_angles(angles,
                                        gmod.effect_angles(self.current_effect,
                                                           t, gmod.stable_seed(self.name)))
+        angles = gmod.merge_angles(angles, gmod.base_pose(self))
         angles = gmod.merge_angles(angles, gmod.fade_pose(getattr(self, "_fade_from", None),
                                                           getattr(self, "_fade_t0", 0.0), t))
         if self.current_gesture is not None and self.gesture_start is not None:
@@ -338,7 +328,8 @@ class _PhotoRigAnimator:
 
 def render_episode(pdir: Path, script: Script, chars_cfg: list[dict],
                    bg_path: Path | None, voices: dict, settings: dict,
-                   progress=None, scene_bgs: dict[int, Path] | None = None) -> dict:
+                   progress=None, scene_bgs: dict[int, Path] | None = None,
+                   scene_kinds: dict[int, dict] | None = None) -> dict:
     """Chạy toàn bộ: giọng -> timeline -> video -> bộ file rời.
 
     bg_path: ảnh nền chung; scene_bgs: {chỉ số cảnh: ảnh nền} cho kịch bản
@@ -366,6 +357,16 @@ def render_episode(pdir: Path, script: Script, chars_cfg: list[dict],
         stage.set_background(Path(bg_path))
     if scene_bgs:
         stage.set_scene_backgrounds(scene_bgs)
+    if settings.get("enable_rig") and settings.get("auto_seat", True):
+        # văn phòng, lớp học, quán, phòng khách... có bàn ghế, nhân vật ngồi sẵn
+        from . import furniture
+        stage.seat_fallback = True
+        for i, info in (scene_kinds or {}).items():
+            seat = furniture.seat_type(info.get("kind"))
+            if seat:
+                stage.scene_seats[i] = seat
+                if info.get("accent"):
+                    stage.scene_colors[i] = tuple(info["accent"][:3])
     stage.title = settings.get("title_text") or script.title
     stage.subtitle_pos = "duoi" if settings.get("subtitle_position") == "duoi" else "tren"
     stage.subtitle_style = config.SUBTITLE_STYLES.get(

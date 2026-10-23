@@ -1,5 +1,5 @@
 {
-  "version": 4,
+  "version": 5,
   "gestures": [
     {
       "name": "vaytay",
@@ -1154,6 +1154,54 @@
           },
           "thoi_luong": 0.14,
           "kieu": "lap"
+        }
+      ]
+    },
+    {
+      "name": "ngoi_ghe",
+      "label": "Ngồi ghế",
+      "mo_ta": "Ngồi trên ghế, sofa, ghế đá, mép giường (văn phòng, lớp học, quán, phòng khách). Đang ngồi vẫn làm cử chỉ tay được.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "dui_left": -1.0821041362364843,
+            "dui_right": -1.0821041362364843,
+            "goi_left": 1.0821041362364843,
+            "goi_right": 1.0821041362364843
+          },
+          "thoi_luong": 0.4,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "dui_left": -1.0821041362364843,
+            "dui_right": -1.0821041362364843,
+            "goi_left": 1.0821041362364843,
+            "goi_right": 1.0821041362364843
+          },
+          "thoi_luong": 0.3,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "dung_day",
+      "label": "Đứng dậy",
+      "mo_ta": "Đứng bật dậy khỏi ghế (sốc, giận, chuẩn bị đi), thôi tư thế ngồi/nằm.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "dich_y": 0.012
+          },
+          "thoi_luong": 0.25,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {},
+          "thoi_luong": 0.2,
+          "kieu": "mot_lan"
         }
       ]
     }

@@ -134,7 +134,8 @@ DEFAULT_SETTINGS = {
     "enable_rig": True,         # True = bật cử động bằng khung xương + cử chỉ + đạo cụ
     # kiểu nhân vật AI vẽ: auto (tiếng Hàn -> khand, tiếng Anh -> gray) | gray | khand | stick | box | kchibi | flat
     "char_style": "auto",
-    "auto_camera": True,        # tự đổi góc máy (cận, qua vai, toàn cảnh) như phim
+    "auto_camera": True,
+    "auto_seat": True,          # bàn ghế theo bối cảnh, nhân vật ngồi sẵn ở văn phòng, lớp, quán...        # tự đổi góc máy (cận, qua vai, toàn cảnh) như phim
     "subtitle_position": "tren",  # tren (như video hoạt hình hài) | duoi
     # --- Xuất dự án CapCut (thử nghiệm) ---
     "capcut_drafts_root": "",   # rỗng = mặc định %LOCALAPPDATA%\\CapCut\\User Data\\Projects\\com.lveditor.draft

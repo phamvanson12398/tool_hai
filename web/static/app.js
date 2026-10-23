@@ -1894,6 +1894,7 @@
     $("s-ffmpeg-bin").value = s.ffmpeg_bin || "";
     $("s-enable-rig").value = s.enable_rig === false ? "0" : "1";
     $("s-auto-camera").value = s.auto_camera === false ? "0" : "1";
+    $("s-auto-seat").value = s.auto_seat === false ? "0" : "1";
     $("s-subtitle-pos").value = s.subtitle_position === "duoi" ? "duoi" : "tren";
     var cs = s.char_style || "auto";
     $("s-char-style").value = ["auto", "gray", "khand", "kchibi", "box", "stick", "flat"].indexOf(cs) >= 0 ? cs : "auto";
@@ -1999,6 +2000,7 @@
       ffmpeg_bin: $("s-ffmpeg-bin").value.trim(),
       enable_rig: $("s-enable-rig").value === "1",
       auto_camera: $("s-auto-camera").value === "1",
+      auto_seat: $("s-auto-seat").value === "1",
       subtitle_position: $("s-subtitle-pos").value,
       char_style: $("s-char-style").value,
       capcut_drafts_root: $("s-capcut-root").value.trim(),

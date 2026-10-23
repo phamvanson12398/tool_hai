@@ -31,6 +31,10 @@ Quy tắc:
 - Có thêm hiệu ứng cả người trong ngoặc (chọn từ): nhun, nhay, rung, nghieng, quay, nga.
 - ĐẠO CỤ: nhân vật cầm đồ bằng `cam=<đạo cụ>` (tay phải) hoặc `cam_trai=<đạo cụ>`, `cam=bo` để bỏ xuống. Đạo cụ có: {{props_block}}. Nhân vật giữ đồ qua các câu sau cho tới khi đổi. Hãy dùng đạo cụ cho tình huống sống động (đang nằm bấm điện thoại, bưng nồi mì, cầm chiếc tất bẩn...).
 - TƯ THẾ ĐỜI THƯỜNG (cũng là cử chỉ): nam (nằm dài), ngoi (ngồi xổm), om_goi (ngồi bó gối khóc), bo (bò), nga_ngua (ngã ngửa), voi (với lên cao), chay (chạy), dam_dat (dậm chân), an (ăn), xem_dt (xem điện thoại), cam_tai (áp điện thoại lên tai), bung (bưng hai tay), gio_do (giơ đồ lên). Tư thế nằm/ngồi/bò được giữ qua các câu sau tới khi có cử chỉ khác.
+- TƯ THẾ PHẢI HỢP TÌNH HUỐNG, không phải ai cũng đứng suốt:
+  - Ở văn phòng, lớp học, quán cà phê, phòng khách, phòng ngủ, công viên: tool tự vẽ bàn ghế/sofa/giường/ghế đá và cho nhân vật NGỒI sẵn — không cần ghi gì. Nhà bếp, đường phố, cửa hàng, bãi biển: đứng; muốn ngồi thì ghi `ngoi_ghe`.
+  - Đang ngồi vẫn làm cử chỉ tay được (omdau, chitay, vaytay, cam=...) mà KHÔNG đứng dậy. Ghi `dung_day` ở đúng câu nhân vật bật dậy (sốc, giận, bỏ đi, đập bàn); muốn ngồi lại thì ghi `ngoi_ghe`.
+  - Đổi tư thế theo diễn biến cho sinh động: đang ngồi làm việc → đứng bật dậy ở cú lật; nằm dài sofa bấm điện thoại → ngồi dậy; đi vào (vao_trai/vao_phai), bỏ đi (ra_trai/ra_phai), ngồi bó gối khi tủi thân. Mỗi tập nên có ít nhất 2–3 lần đổi tư thế, nhưng không đổi ở mọi câu.
 - GÓC MÁY (tuỳ chọn, tool tự chọn nếu không ghi): `goc=toan` (toàn cảnh), `goc=trung` (nửa người), `goc=can` (cận mặt), `goc=sieucan` (siêu cận khi sốc), `goc=quavai` (qua vai người nghe). Mở cảnh nên toàn cảnh, cú lật nên siêu cận.
 - Viết như phim hoạt hình hài ngắn: nhân vật làm việc gì đó cụ thể (nằm chơi điện thoại, nấu mì, dọn nhà...), có hành động và đạo cụ trong hầu hết các câu, phản ứng cơ thể mạnh ở cú lật.
 - Tên biểu cảm, cử chỉ, tiếng động phải chép ĐÚNG Y HỆT danh sách trên (vd vỗ tay là `voratay`, không viết `vortay`/`votay`); không tự đặt tên mới.

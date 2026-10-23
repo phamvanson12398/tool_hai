@@ -27,7 +27,7 @@ from . import character_kit as ck
 from .character_kit import CharSpec
 from .gestures import (Gesture, breathe_angles, effect_angles,  # noqa: E402
                        ensure_library, fade_pose, gesture_pose, idle_arm_angles,
-                       stable_seed)
+                       stable_seed, switch_gesture, base_pose)
 
 # Khung vẽ bộ phận. Bộ phận được vẽ trên canvas 2x cho rộng rãi, khi
 # xoay quanh khớp sẽ không bị cắt.
@@ -2312,19 +2312,9 @@ class CharacterAnimator:
     def set_gesture(self, name: str | None, effect: str | None,
                     start_time: float) -> None:
         """Thiet lap cu chi / hieu ung moi, bat dau tinh gio tu start_time.
-        Cu chi cu nhat dan ve tu the dung (khong giat)."""
-        if self.current_gesture is not None and self.gesture_start is not None:
-            self._fade_from = gesture_pose(self.current_gesture,
-                                           start_time - self.gesture_start)
-            self._fade_t0 = start_time
-        if name is None:
-            self.current_gesture = None
-            self.gesture_start = None
-        else:
-            _, lib = ensure_library()
-            self.current_gesture = lib.get(name)
-            self.gesture_start = start_time
-        self.current_effect = effect
+        Cu chi cu nhat dan ve tu the dung (khong giat); dang ngoi/nam ma lam
+        cu chi tay thi van ngoi/nam (gestures.switch_gesture)."""
+        switch_gesture(self, name, effect, start_time)
 
     def angles_at(self, t: float, speaking: bool, mouth_open: bool
                   ) -> dict[str, float]:
@@ -2345,7 +2335,9 @@ class CharacterAnimator:
         # 3b. Tu the cam do (dien thoai truoc nguc, bung noi...) — cu chi de len
         angles = merge(angles, hold_angles(self.props, self.prop_since, t))
 
-        # 4. Cu chi cu nhat dan + cu chi hien tai
+        # 4. Tu the nen (dang ngoi/nam duoi cu chi tay), cu chi cu nhat dan,
+        # cu chi hien tai
+        angles = merge(angles, base_pose(self))
         angles = merge(angles, fade_pose(getattr(self, "_fade_from", None),
                                          getattr(self, "_fade_t0", 0.0), t))
         if self.current_gesture is not None and self.gesture_start is not None:

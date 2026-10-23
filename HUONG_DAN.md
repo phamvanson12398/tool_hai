@@ -201,8 +201,29 @@ tới khi đổi; cầm đồ thì tay tự vào tư thế cầm (điện thoạ
 **Tư thế đời thường** (ghi như cử chỉ): `nam` (nằm dài), `ngoi` (ngồi xổm),
 `om_goi` (ngồi bó gối), `bo` (bò), `nga_ngua` (ngã ngửa), `voi` (với lên cao),
 `chay`, `dam_dat` (dậm chân), `an`, `xem_dt`, `cam_tai` (nghe điện thoại),
-`bung`, `gio_do`. Nằm/ngồi/bò/khoanh tay được **giữ qua các câu sau** cho tới khi
+`bung`, `gio_do`, `ngoi_ghe`, `dung_day`. Nằm/ngồi/bò/khoanh tay được **giữ qua các câu sau** cho tới khi
 có cử chỉ khác; sang bối cảnh mới thì mọi người đứng dậy.
+
+**Bàn ghế theo bối cảnh, nhân vật ngồi sẵn** — ở **văn phòng** (ghế xoay + bàn
+làm việc có laptop), **lớp học** (ghế + bàn học), **quán cà phê** (ghế + bàn có
+khăn, cốc), **phòng khách** (sofa), **phòng ngủ** (ngồi mép giường), **công viên**
+(ghế đá), tool tự vẽ đồ đạc ngay chỗ nhân vật: ghế ở sau lưng, bàn ở trước che
+chân như người thật. Vào cảnh là mọi người đã ngồi. Nhà bếp, đường phố, cửa hàng,
+bãi biển thì đứng như trước.
+
+- `dung_day`: đứng bật dậy (sốc, giận, bỏ đi). `ngoi_ghe`: ngồi xuống (cả ở cảnh
+  không có bàn ghế).
+- **Đang ngồi vẫn làm cử chỉ tay** (`omdau`, `chitay`, `vaytay`, cầm đồ...) mà
+  không đứng dậy. Cử chỉ dùng cả người (`dibo`, `chay`, `nhaylen`...) thì đứng lên.
+- Ảnh nền chị tự tải lên: tool đoán loại cảnh từ dòng `## canh:` (vd "văn phòng",
+  "quán cà phê", "phòng khách").
+- Tắt ở **Cài đặt → Cử động nhân vật → Bàn ghế theo bối cảnh**.
+
+```
+## canh: văn phòng, buổi sáng
+Linh (worried, omdau): Họp lúc... năm phút nữa.
+Tuấn (shocked, dung_day, zoom): Hả?!
+```
 
 **Góc máy** — tool **tự đổi góc như phim** (mở cảnh toàn cảnh, câu thường xen kẽ
 cận mặt và qua vai có gáy người nghe ở tiền cảnh, phản ứng mạnh thì siêu cận,

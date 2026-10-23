@@ -27,7 +27,7 @@ KIEU_GIU = "giu"           # giữ nguyên tư thế cuối
 KIEU_LAP = "lap"           # lặp lại liên tục
 
 # Phiên bản thư viện: tăng khi đổi cử chỉ mặc định để file cũ được tạo lại
-LIBRARY_VERSION = 4
+LIBRARY_VERSION = 5
 
 # Khoá dịch cả người (không phải xương)
 OFFSET_KEYS = ("dich_x", "dich_y")
@@ -428,11 +428,111 @@ def _default_gestures() -> list[Gesture]:
         loop=True,
     ))
 
+    # ngồi ghế / sofa / ghế đá: chỉ gập chân, tay để tự do (cầm đồ, nói, ôm
+    # đầu... vẫn ngồi). Người được hạ xuống cho chân chạm sàn, ghế vẽ theo bối
+    # cảnh (core/furniture.py).
+    sit = {"dui_left": -SIT_DUI_DEG, "dui_right": -SIT_DUI_DEG,
+           "goi_left": SIT_DUI_DEG, "goi_right": SIT_DUI_DEG}
+    g.append(Gesture(
+        name="ngoi_ghe", label="Ngồi ghế",
+        mo_ta="Ngồi trên ghế, sofa, ghế đá, mép giường (văn phòng, lớp học, quán, "
+              "phòng khách). Đang ngồi vẫn làm cử chỉ tay được.",
+        keyframes=[K(sit, 0.4), K(sit, 0.3, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="dung_day", label="Đứng dậy",
+        mo_ta="Đứng bật dậy khỏi ghế (sốc, giận, chuẩn bị đi), thôi tư thế ngồi/nằm.",
+        keyframes=[K({"dich_y": 0.012}, 0.25), K({}, 0.2)],
+    ))
+
     return g
 
 
+# Góc gập đùi khi ngồi ghế (độ)
+SIT_DUI_DEG = 62
+
 # Tư thế cả người: giữ qua các câu sau cho tới khi có cử chỉ khác
-POSTURES = {"ngoi", "om_goi", "nam", "bo", "nga_ngua", "ra_trai", "ra_phai", "khoanhtay"}
+POSTURES = {"ngoi", "om_goi", "nam", "bo", "nga_ngua", "ra_trai", "ra_phai", "khoanhtay",
+            "ngoi_ghe"}
+# Tư thế ngồi trên đồ đạc (người được hạ xuống, có ghế vẽ theo bối cảnh)
+SEATED = {"ngoi_ghe"}
+# Xương / khoá dịch làm thay đổi cả người (chân, thân, vị trí)
+_BODY_KEYS = ("dui_", "goi_", "co_chan_", "dich_", "than")
+
+
+def upper_body_only(g: "Gesture | None") -> bool:
+    """Cử chỉ chỉ dùng tay/đầu/cổ — làm được khi đang ngồi, nằm."""
+    if g is None or g.name == "dung_day":
+        return False
+    return all(not k.startswith(_BODY_KEYS) for kf in g.keyframes for k in kf.goc)
+
+
+def switch_gesture(anim, name: str | None, effect: str | None, t: float) -> None:
+    """Đổi cử chỉ cho một animator (nhân vật bộ ghép hoặc ảnh tải lên).
+
+    Đang ngồi/nằm mà làm cử chỉ tay (ôm đầu, chỉ tay...) thì vẫn ngồi/nằm:
+    tư thế cũ thành tư thế nền, cử chỉ tay chồng lên. Cử chỉ dùng cả người
+    (đi, chạy, nhảy, đứng dậy...) thì bỏ tư thế nền. Cử chỉ cũ nhạt dần.
+    """
+    _, lib = ensure_library()
+    new = lib.get(name) if name else None
+    cur = getattr(anim, "current_gesture", None)
+    base = getattr(anim, "base_posture", None)
+    holding = base or (cur if cur is not None and cur.name in POSTURES
+                       and not upper_body_only(cur) else None)
+    keep_base = holding is not None and (new is None or upper_body_only(new))
+
+    # cử chỉ cũ nhạt dần — trừ khi chính nó được giữ làm tư thế nền
+    if cur is not None and anim.gesture_start is not None and not (keep_base and cur is holding):
+        anim._fade_from = gesture_pose(cur, t - anim.gesture_start)
+        anim._fade_t0 = t
+        anim._fade_src = cur.name
+
+    if keep_base and new is None:
+        # thôi cử chỉ tay: về tư thế nền (đã ở tư thế cuối, không làm lại)
+        anim.current_gesture = holding
+        anim.gesture_start = t - holding.duration
+        anim.base_posture = None
+    elif keep_base:
+        anim.base_posture = holding
+        anim.current_gesture = new
+        anim.gesture_start = t
+    else:
+        anim.base_posture = None
+        anim.current_gesture = new
+        anim.gesture_start = t if new is not None else None
+    anim.current_effect = effect
+
+
+def reset_pose(anim, t: float) -> None:
+    """Về tư thế đứng (vd vào bối cảnh mới), bỏ cả tư thế ngồi/nằm đang giữ."""
+    cur = getattr(anim, "current_gesture", None)
+    if cur is not None and anim.gesture_start is not None:
+        anim._fade_from = gesture_pose(cur, t - anim.gesture_start)
+        anim._fade_t0 = t
+        anim._fade_src = cur.name
+    anim.base_posture = None
+    anim.current_gesture = None
+    anim.gesture_start = None
+    anim.current_effect = None
+
+
+def base_pose(anim) -> dict[str, float]:
+    """Góc của tư thế nền (ngồi, nằm) đang giữ dưới cử chỉ tay."""
+    b = getattr(anim, "base_posture", None)
+    return gesture_angles(b, b.duration) if b is not None else {}
+
+
+def sit_amount(anim, t: float) -> float:
+    """Đang ngồi bao nhiêu (0 = đứng, 1 = ngồi hẳn), theo góc đùi khung vừa vẽ."""
+    fading = t - getattr(anim, "_fade_t0", -99.0) < RETURN_TIME + 0.05
+    names = {getattr(getattr(anim, "current_gesture", None), "name", None),
+             getattr(getattr(anim, "base_posture", None), "name", None),
+             getattr(anim, "_fade_src", None) if fading else None}
+    if not names & SEATED:
+        return 0.0
+    a = (getattr(anim, "last_angles", None) or {}).get("dui_right", 0.0)
+    return max(0.0, min(1.0, -a / math.radians(SIT_DUI_DEG)))
 
 
 def fade_pose(pose: dict[str, float] | None, since: float, t: float) -> dict[str, float]:

@@ -96,6 +96,25 @@ def _scene_bg_paths(data: dict, s) -> dict[int, Path]:
     return out
 
 
+def _scene_kinds(data: dict, s) -> dict[int, dict]:
+    """{chỉ số cảnh: {"kind": mẫu bối cảnh, "accent": màu}} để vẽ bàn ghế và
+    cho nhân vật ngồi đúng chỗ. Ảnh chị tự tải lên thì đoán từ mô tả cảnh."""
+    from core import furniture
+    general = data["assets"].get("background") or {}
+    out: dict[int, dict] = {}
+    for i, desc in enumerate(s.scenes or [""]):
+        rec = (_scene_bg(data, desc) if _scene_key(desc) else None) or {}
+        if not rec.get("image") and not _scene_key(desc):
+            rec = general
+        kind = rec.get("kind") or furniture.kind_from_desc(desc) \
+            or furniture.kind_from_desc(rec.get("desc") or "")
+        if not kind and not rec.get("image"):
+            kind = general.get("kind") or furniture.kind_from_desc(general.get("desc") or "")
+        if kind:
+            out[i] = {"kind": kind, "accent": (rec.get("spec") or {}).get("accent")}
+    return out
+
+
 def _draw_scene_bg(data: dict, pdir: Path, desc: str, hint: str = "") -> tuple[dict, str | None]:
     """Claude chọn mẫu + màu cho cảnh, tool vẽ và lưu. Trả về (bản ghi, cảnh báo)."""
     from core import scene_art
@@ -1230,6 +1249,7 @@ def api_project_render(pid):
                 pdir, s, chars_cfg, Path(bg) if bg else None,
                 voices, settings, progress=prog,
                 scene_bgs=_scene_bg_paths(data, s),
+                scene_kinds=_scene_kinds(data, s),
             )
             data["result"] = result
             data["state"] = "done"
