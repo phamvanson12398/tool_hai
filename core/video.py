@@ -275,6 +275,19 @@ class Stage:
             out[ch.name] = (x, head_y, target_h)
         return out
 
+    def _shot(self, shot: str) -> tuple[float, float]:
+        """(độ phóng, tâm máy thấp hơn đầu bao nhiêu px) cho khung này.
+
+        SHOTS chỉnh theo khung dọc 9:16. Khung khác (người to hơn so với
+        chiều cao khung) phóng ít hơn để mặt to như nhau, và giữ đầu ở cùng
+        độ cao trên màn hình, nên phụ đề phía trên không đè lên mặt."""
+        s, dy = SHOTS[shot]
+        portrait = 0.50
+        k = portrait / self.layout["height"][0]
+        s_eff = max(1.05, s * k)
+        head_screen = 0.5 - dy * portrait * s          # vị trí đầu trên màn hình (0..1)
+        return s_eff, (0.5 - head_screen) * self.h / s_eff
+
     def set_camera(self, shot: str, focus: str | None, chars: list["Character"],
                    other: str | None = None) -> None:
         """Đặt góc máy: toan (toàn cảnh), trung (nửa người), can (cận mặt),
@@ -284,9 +297,9 @@ class Stage:
         if shot not in SHOTS or shot == "toan" or focus not in an:
             self.cam = (1.0, self.w / 2, self.h / 2)
             return
-        s, dy = SHOTS[shot]
+        s, off = self._shot(shot)
         x, head_y, th = an[focus]
-        cx, cy = x, head_y + dy * th
+        cx, cy = x, head_y + off
         if shot == "quavai" and other in an and other != focus:
             left = an[other][0] < x
             ch_other = next(c for c in chars if c.name == other)
@@ -294,8 +307,8 @@ class Stage:
                 self.ots = (ch_other, left)
                 cx += (-1 if left else 1) * min(self.w, self.h) * 0.14 / s   # chừa chỗ cho gáy người nghe
             else:
-                s, dy = SHOTS["can"]
-                cy = head_y + dy * th
+                s, off = self._shot("can")
+                cy = head_y + off
         hw, hh = self.w / (2 * s), self.h / (2 * s)
         cx = min(max(cx, hw), self.w - hw)
         cy = min(max(cy, hh), self.h - hh)
