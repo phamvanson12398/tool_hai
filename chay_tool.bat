@@ -31,7 +31,7 @@ if errorlevel 1 (
 )
 
 REM Kiem tra Claude CLI
-claude --version >nul 2>&1
+call claude --version >nul 2>&1
 if errorlevel 1 (
     echo   [CANH BAO] Khong tim thay Claude Code CLI.
     echo   Phan AI viet kich ban / ra soat se khong chay.
@@ -40,7 +40,7 @@ if errorlevel 1 (
 )
 
 REM Kiem tra Gemini CLI (tuy chon, cho cac viec phu)
-gemini --version >nul 2>&1
+call gemini --version >nul 2>&1
 if errorlevel 1 (
     echo   [GHI CHU] Chua cai Gemini CLI. Cac viec chon Gemini se tu dung Claude.
     echo   Cai bang: npm install -g @google/gemini-cli  roi chay "gemini" de dang nhap.
