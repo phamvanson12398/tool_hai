@@ -84,14 +84,18 @@ PROPS = {
     "bowl": "Bát cơm", "cup": "Chén nước", "letter": "Lá thư", "money": "Tiền",
     "basket": "Rổ, thúng", "stick": "Gậy", "book": "Quyển sách", "flower": "Bông hoa",
     "bag": "Tay nải", "bottle": "Chai, lọ", "knife": "Dao", "lamp": "Đèn dầu",
+    "hoe": "Cái cuốc", "broom": "Chổi rơm", "axe": "Cái rìu", "sickle": "Cái liềm",
+    "fan": "Quạt nan", "pipe": "Điếu cày", "pot": "Nồi", "pole": "Đòn gánh (hai thúng)",
 }
+# dụng cụ cầm cán: ảnh vẽ cán chĩa XUỐNG từ điểm cầm, khi vẽ xoay theo cẳng tay
+TOOLS = {"hoe", "broom", "axe", "sickle", "fan", "knife", "stick"}
 
 
 def prop_image(name: str, size: int) -> tuple[Image.Image, tuple[float, float]] | None:
     """Ảnh đồ vật + điểm cầm (toạ độ trong ảnh). size = cỡ tham chiếu (px)."""
     from . import doodle_parts
     s = max(8, int(size)) * doodle.SS
-    W = H = int(s * 2)
+    W = H = int(s * 4.4)
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     pen = doodle._Pen(img, s * 3, 5)
     c = W / 2
@@ -124,8 +128,45 @@ def prop_image(name: str, size: int) -> tuple[Image.Image, tuple[float, float]] 
                  fill=(150, 116, 70))
         hold = (c, c - s * 0.85)
     elif name == "stick":
-        pen.line([(c, c - s * 0.9), (c + s * 0.05, c + s * 0.9)], width=int(s * 0.12), fill=(132, 94, 64))
-        hold = (c, c - s * 0.3)
+        pen.line([(c, c - s * 0.4), (c, c + s * 1.9)], width=int(s * 0.12), fill=(132, 94, 64))
+    elif name == "hoe":                                  # cuốc: cán dài, lưỡi sắt ở đầu
+        pen.line([(c, c - s * 0.3), (c, c + s * 2.0)], width=int(s * 0.13), fill=(150, 112, 74))
+        pen.shape([(c - s * 0.06, c + s * 1.85), (c + s * 0.6, c + s * 1.75), (c + s * 0.7, c + s * 2.05),
+                   (c - s * 0.06, c + s * 2.1)], (150, 156, 164))
+    elif name == "broom":                                # chổi rơm
+        pen.line([(c, c - s * 0.3), (c, c + s * 1.5)], width=int(s * 0.1), fill=(150, 112, 74))
+        pen.shape([(c - s * 0.12, c + s * 1.45), (c + s * 0.12, c + s * 1.45), (c + s * 0.5, c + s * 2.1),
+                   (c - s * 0.5, c + s * 2.1)], (214, 180, 100))
+        for k in range(-2, 3):
+            pen.line([(c + k * s * 0.05, c + s * 1.55), (c + k * s * 0.16, c + s * 2.05)],
+                     width=max(1, int(s * 0.03)), fill=(170, 136, 70))
+    elif name == "axe":                                  # rìu
+        pen.line([(c, c - s * 0.2), (c, c + s * 1.4)], width=int(s * 0.12), fill=(150, 112, 74))
+        pen.shape([(c - s * 0.05, c + s * 1.1), (c + s * 0.5, c + s * 1.0), (c + s * 0.55, c + s * 1.55),
+                   (c - s * 0.05, c + s * 1.4)], (160, 166, 176))
+    elif name == "sickle":                               # liềm
+        pen.line([(c, c - s * 0.2), (c, c + s * 0.5)], width=int(s * 0.12), fill=(150, 112, 74))
+        pen.line(doodle._ellipse_pts(c + s * 0.35, c + s * 0.55, s * 0.4, s * 0.45, 180, 360, 12),
+                 width=int(s * 0.1), fill=(170, 176, 186))
+    elif name == "fan":                                  # quạt nan
+        pen.line([(c, c - s * 0.2), (c, c + s * 0.5)], width=int(s * 0.1), fill=(150, 112, 74))
+        pen.shape(doodle._ellipse_pts(c, c + s * 0.95, s * 0.6, s * 0.55, 0, 360, 24), (222, 196, 140))
+        for k in range(-3, 4):
+            pen.line([(c, c + s * 0.45), (c + k * s * 0.17, c + s * 1.4)], width=max(1, int(s * 0.03)),
+                     fill=(176, 146, 92))
+    elif name == "pipe":                                 # điếu cày: ống tre dài, nõ điếu
+        pen.shape([(c - s * 0.1, c - s * 1.5), (c + s * 0.1, c - s * 1.5), (c + s * 0.1, c + s * 0.6),
+                   (c - s * 0.1, c + s * 0.6)], (190, 170, 110))
+        pen.line([(c + s * 0.16, c + s * 0.2), (c + s * 0.45, c - s * 0.1)], width=int(s * 0.08),
+                 fill=(150, 112, 74))
+        pen.ell(c + s * 0.47, c - s * 0.12, s * 0.09, s * 0.06, (90, 80, 76))
+        hold = (c, c - s * 0.1)
+    elif name == "pot":                                  # nồi đất
+        pen.shape(doodle._ellipse_pts(c, c, s * 0.6, s * 0.5, 0, 180, 16), (130, 96, 74))
+        pen.ell(c, c, s * 0.6, s * 0.14, (110, 80, 62))
+        hold = (c, c - s * 0.05)
+    elif name == "pole":                                 # vẽ riêng ở Rig._pole
+        return None
     elif name == "book":
         pen.shape([(c - s * 0.35, c - s * 0.45), (c + s * 0.35, c - s * 0.45), (c + s * 0.35, c + s * 0.45),
                    (c - s * 0.35, c + s * 0.45)], (150, 70, 60))
@@ -327,7 +368,8 @@ class Rig:
         G = _aff(_tr(pose["x"], pose["y"] - pose.get("bob", 0.0) * T), _rot(pose.get("rot", 0.0) * d))
         G = _aff(cam, G)
         # ngồi: hông hạ xuống ghế thấp, đùi đưa ngang
-        drop = sit * (self.hip_h - T * 0.07)
+        seat = pose.get("seat_h")              # ngồi trên đồ đạc của cảnh (chõng, giường...)
+        drop = sit * (self.hip_h - (seat if seat is not None else T * 0.07))
         hip = (0.0, -self.hip_h + drop)
         B = _aff(G, _aff(_tr(hip[0], hip[1]), _aff(_rot(pose.get("lean", 0.0) * d),
                                                   _sc(1.0, pose.get("sy", 1.0)))))
@@ -335,7 +377,7 @@ class Rig:
         Hm = _aff(Bl, _aff(_tr(0, self.body_top + 0.0), _aff(_rot(pose.get("head", 0.0) * d),
                                                                _tr(0, -self.body_top))))
         lw = max(1, int(T * zoom * 0.016))
-        if sit > 0.05:                                       # ghế đẩu tre
+        if sit > 0.05 and seat is None:                      # ghế đẩu tre
             col = (176, 150, 96)
             p0 = _pt(G, -self.wb * 1.0, -T * 0.07)
             p1 = _pt(G, self.wb * 1.0, 0)
@@ -368,16 +410,21 @@ class Rig:
             draw_legs()                      # ngồi: đùi nằm trên lòng, thấy rõ
         paste(canvas, spr["head"][0], _aff(Hm, spr["head"][1]), night)
         # tay (trước thân, kể cả che mặt khi khóc)
-        hands = []
+        hands, elbows = [], []
         for i, (a, e) in enumerate(arms):
             sx = (1 if i == 0 else -1) * d * self.shoulder[0]
             hands.append(self._limb(canvas, Bl, (sx, self.shoulder[1]), a, e, d,
                                     self.arm[0], self.arm[1], self.arm[2], self.sleeve, zoom,
                                     hand=True))
+            elbows.append(self._last_elbow)
         prop = pose.get("prop")
         if prop:
             name, hi = prop
-            self._prop(canvas, name, hands[hi if hi in (0, 1) else 0], zoom, d)
+            hi = hi if hi in (0, 1) else 0
+            if name == "pole":
+                self._pole(canvas, Bl, zoom, d)
+            else:
+                self._prop(canvas, name, hands[hi], zoom, d, elbows[hi])
         head_c = _pt(Hm, 0, self.head_y)
         return {"head": head_c, "r": self.R * zoom, "hands": hands}
 
@@ -389,6 +436,7 @@ class Rig:
         x1, y1 = x0 + d * l1 * math.sin(t1), y0 + l1 * math.cos(t1)
         x2, y2 = x1 + d * l2 * math.sin(t2), y1 + l2 * math.cos(t2)
         pts = [_pt(M, x0, y0), _pt(M, x1, y1), _pt(M, x2, y2)]
+        self._last_elbow = pts[1]
         P = np.array([[int(px * 4), int(py * 4)] for px, py in pts], np.int32)
         wz = max(2, int(w * zoom))
         lw = max(1, int(self.T * zoom * 0.016))
@@ -416,10 +464,34 @@ class Rig:
                         self.foot, -1, cv2.LINE_AA, shift=2)
         return end
 
-    def _prop(self, canvas, name, hand, zoom, d):
-        key = ("prop", name, round(zoom * 8) / 8)
+    def _pole(self, canvas, Bl, zoom, d):
+        """Đòn gánh trên vai, hai thúng treo hai đầu."""
+        import cv2
+        T = self.T
+        lw = max(1, int(T * zoom * 0.016))
+        y = self.shoulder[1] + 0.04 * self.R
+        a, b = _pt(Bl, -T * 0.42, y), _pt(Bl, T * 0.42, y)
+        wood = (150, 112, 74)
+        P = lambda p: (int(p[0] * 4), int(p[1] * 4))  # noqa: E731
+        th = max(2, int(T * zoom * 0.03))
+        cv2.line(canvas, P(a), P(b), OUT, (th + 2 * lw) * 4 // 4, cv2.LINE_AA, shift=2)
+        cv2.line(canvas, P(a), P(b), wood, th, cv2.LINE_AA, shift=2)
+        for end in (a, b):
+            top = (end[0], end[1])
+            bx, by = end[0], end[1] + T * zoom * 0.36
+            cv2.line(canvas, P(top), P((bx - T * zoom * 0.1, by)), OUT, lw, cv2.LINE_AA, shift=2)
+            cv2.line(canvas, P(top), P((bx + T * zoom * 0.1, by)), OUT, lw, cv2.LINE_AA, shift=2)
+            pts = np.array([P((bx - T * zoom * 0.14, by)), P((bx + T * zoom * 0.14, by)),
+                            P((bx + T * zoom * 0.1, by + T * zoom * 0.14)),
+                            P((bx - T * zoom * 0.1, by + T * zoom * 0.14))], np.int32)
+            cv2.fillPoly(canvas, [pts], (196, 160, 98), cv2.LINE_AA, shift=2)
+            cv2.polylines(canvas, [pts], True, OUT, lw, cv2.LINE_AA, shift=2)
+
+    def _prop(self, canvas, name, hand, zoom, d, elbow=None):
+        key = ("prop", name, round(zoom * 8) / 8, d)
         if key not in self._cache:
-            got = prop_image(name, self.T * 0.11 * zoom)
+            k = 0.2 if name in TOOLS or name == "pipe" else 0.11      # dụng cụ dài hơn bàn tay nhiều
+            got = prop_image(name, self.T * k * zoom)
             if not got:
                 self._cache[key] = None
             else:
@@ -432,6 +504,13 @@ class Rig:
         if not got:
             return
         arr, hold, _d = got
+        if name in TOOLS and elbow is not None:
+            # cán dụng cụ nối dài cẳng tay (ảnh vẽ cán chĩa xuống)
+            vx, vy = hand[0] - elbow[0], hand[1] - elbow[1]
+            ang = math.degrees(math.atan2(-vx, vy))
+            m = _aff(_tr(hand[0], hand[1]), _aff(_rot(ang), _tr(-hold[0], -hold[1])))
+            paste(canvas, arr, m)
+            return
         paste(canvas, arr, _tr(hand[0] - hold[0], hand[1] - hold[1]))
 
 

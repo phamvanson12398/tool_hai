@@ -26,6 +26,15 @@ Chương dài khoảng {{minutes}} phút ≈ {{beats}} nhịp (mỗi câu thoạ
 - Nhân vật chưa có mặt lúc đầu cảnh: "start" ở "ngoai_trai"/"ngoai_phai" rồi có nhịp "enter". Rời đi thì nhịp "exit".
 - "chars" của cảnh: mọi nhân vật xuất hiện trong cảnh (tối đa 4).
 
+### Cho phim liền mạch, sinh động
+- Cho nhân vật VIỆC ĐANG LÀM hợp hoàn cảnh (cuốc đất, quét sân, bổ củi, gánh hàng, hút điếu cày, phe phẩy quạt, nấu ăn, cho gà ăn, đọc sách...): ghi một nhịp "act" với việc đó, nhân vật sẽ TIẾP TỤC làm cả lúc người khác nói và cả lúc chính họ nói (câu thoại để "act":"talk"), tới khi có hành động khác. Đừng để ai đứng không suốt cảnh.
+- Đạo cụ tự có theo việc (cuốc khi cuốc đất, chổi khi quét, rìu khi bổ củi, đòn gánh khi gánh, điếu cày khi hút, quạt nan khi quạt...).
+- Cảnh sau nối tiếp cảnh trước (ai vừa đi ra ở cảnh trước thì đi vào ở cảnh sau; đang cầm gì thì vẫn cầm), tình huống diễn ra liên tục, có nguyên nhân – kết quả.
+- Đồ đạc của cảnh ("furniture"): kê giường, chõng, ghế, bàn, bếp lửa, chum nước... cho đúng bối cảnh; nhân vật "lie" (nằm, ốm, ngủ, chết) sẽ tự đi tới nằm trên giường / chiếu, "sit" tự ngồi lên chõng / ghế gần nhất. Có thể cho nhân vật nằm / ngồi sẵn từ đầu cảnh bằng "posture".
+- Tiếng động ("t":"sfx","name": ...) cho các sự kiện không có hành động tương ứng: gà gáy buổi sáng, gõ cửa, sấm... (tiếng bước chân, cuốc đất, chó sủa... tool tự thêm). Thời tiết mưa: "weather":"rain".
+- Đồ đạc dùng được: {{furniture}}
+- Tiếng động dùng được: {{sfx}}
+
 ### Hành động dùng được ("act")
 {{actions}}
 Hành động đặc biệt: walk / run (đi / chạy tới "to": id nhân vật hoặc chỗ đứng), enter (đi vào khung tới "to"), exit (đi ra khỏi khung), sit / stand / lie (ngồi xuống, đứng dậy, nằm — giữ nguyên tới khi đổi), give (đưa đồ đang cầm cho "to"; ghi "prop" nếu chưa cầm), hug / pat (tự đi tới "to" rồi ôm / xoa đầu).
@@ -38,7 +47,9 @@ Hành động đặc biệt: walk / run (đi / chạy tới "to": id nhân vật
 
 Output JSON đúng dạng này, không có gì khác:
 {"scenes":[{"place":"nha","time":"ngay","chars":["lao_hac","cau_vang","ong_giao"],"start":{"lao_hac":"trai","cau_vang":"giua","ong_giao":"ngoai_phai"},"posture":{"lao_hac":"sit"},
-"beats":[{"t":"narr","text":"Chiều hôm ấy, lão Hạc ngồi lặng bên hiên."},
+"furniture":[{"item":"bench","at":"trai"},{"item":"jar","at":"xa_phai"}],
+"beats":[{"t":"sfx","name":"rooster"},
+{"t":"act","who":"lao_hac","act":"smoke"},{"t":"narr","text":"Chiều hôm ấy, lão Hạc ngồi lặng bên hiên."},
 {"t":"act","who":"lao_hac","act":"pat","to":"cau_vang"},
 {"t":"act","who":"ong_giao","act":"enter","to":"phai"},
 {"t":"line","who":"ong_giao","text":"Cụ làm gì mà ngồi thừ ra thế?","act":"wave","to":"lao_hac"},

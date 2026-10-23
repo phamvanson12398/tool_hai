@@ -43,11 +43,32 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "jump": ("Nhảy cẫng lên mừng", "happy"),
     "tremble": ("Run sợ", "worried"),
     "sad": ("Buồn rũ, cúi đầu", "sad"),
-    "work": ("Làm việc (cuốc, quét...)", "neutral"),
+    "work": ("Làm việc chung chung", "neutral"),
+    "dig": ("Cuốc đất (cầm cuốc)", "neutral"),
+    "sweep": ("Quét sân (cầm chổi)", "neutral"),
+    "chop": ("Bổ củi (cầm rìu)", "angry"),
+    "reap": ("Gặt lúa, cắt cỏ (cầm liềm)", "neutral"),
+    "carry": ("Gánh hàng (đòn gánh)", "neutral"),
+    "smoke": ("Hút điếu cày", "neutral"),
+    "fan": ("Phe phẩy quạt", "neutral"),
+    "read": ("Đọc sách", "think"),
+    "cook": ("Nấu ăn, khuấy nồi", "neutral"),
+    "feed": ("Cho gà / chó ăn", "happy"),
     "sit": ("Ngồi", "neutral"),
     "sleep": ("Ngủ gật", "sleep"),
     "lie": ("Nằm (ốm, chết)", "sleep"),
 }
+
+# việc làm kéo dài: làm xong nhịp vẫn tiếp tục làm (cả lúc người khác nói) tới
+# khi nhân vật có hành động khác
+CONTINUOUS = {"work", "dig", "sweep", "chop", "reap", "carry", "smoke", "fan", "read", "cook",
+              "feed", "eat", "drink", "sleep", "cry", "sad", "think", "cross_arms", "tremble",
+              "lie"}
+
+# tiếng động theo nhịp động tác: hành động -> (tên tiếng, chu kỳ giây, lệch pha)
+SFX = {"dig": ("dig", 1.2, 0.85), "sweep": ("sweep", 1.0, 0.45), "chop": ("chop", 1.3, 0.9),
+       "reap": ("swish", 1.1, 0.5), "clap": ("clap", 0.4, 0.1), "eat": ("nom", 1.4, 0.5),
+       "smoke": ("bubble", 4.0, 1.6), "cook": ("bubble", 2.5, 0.3), "work": ("dig", 1.2, 0.85)}
 
 # tên hành động cũ của chế độ Kể chuyện
 ALIASES = {"hop": "jump", "shocked": "hands_up", "worried": "scratch_head", "shake": "shake_head",
@@ -278,12 +299,61 @@ def pose(act: str, t: float, seed: int = 0, dur: float = 3.0, speaking: bool = F
         p["head"] = 9
         p["lean"] = 5
         p["sy"] = 0.985 + 0.006 * _s(w * t / 3.2)
-    elif act == "work":
-        k = (t % 1.2) / 1.2
-        sw = math.sin(math.pi * k)
-        p["arms"] = [(40 + 100 * sw, 20), (30 + 90 * sw, 30)]
-        p["lean"] = 6 + 10 * (1 - sw)
+    elif act in ("work", "dig"):
+        k = (t % 1.2) / 1.2                      # nhấc cuốc lên rồi bổ xuống
+        sw = math.sin(math.pi * min(1.0, k / 0.7)) if k < 0.7 else 1 - _ease((k - 0.7) / 0.3) * 1.0
+        sw = max(0.0, sw)
+        p["arms"] = [(30 + 120 * sw, 15 - 10 * sw), (25 + 70 * sw, 55 - 15 * sw)]
+        p["lean"] = 14 - 12 * sw
+        p["legs"] = [(10, 5), (-8, 8)]
+        p["prop_default"] = ("hoe", 0)
+    elif act == "sweep":
+        k = _s(w * t / 1.0)
+        p["arms"] = [(45 + 25 * k, 25), (35 + 25 * k, 30)]
+        p["lean"] = 14
+        p["head"] = 6
+        p["prop_default"] = ("broom", 0)
+    elif act == "chop":
+        k = (t % 1.3) / 1.3
+        sw = math.sin(math.pi * min(1.0, k / 0.65)) if k < 0.65 else max(0.0, 1 - (k - 0.65) / 0.25)
+        p["arms"] = [(40 + 135 * sw, 10), (35 + 80 * sw, 50)]
+        p["lean"] = 10 - 14 * sw
+        p["prop_default"] = ("axe", 0)
+    elif act == "reap":
+        k = _s(w * t / 1.1)
+        p["arms"] = [(40 + 30 * k, 40), (60, 50)]
+        p["lean"] = 22
+        p["head"] = 8
+        p["prop_default"] = ("sickle", 0)
+    elif act == "carry":
+        p["arms"] = [(105, 70), (105, 70)]
+        p["bob"] = 0.012 * abs(_s(w * t))
+        p["prop_default"] = ("pole", 0)
+    elif act == "smoke":
+        k = (t % 4.0)
+        up = 1.0 if 0.8 < k < 2.6 else 0.0
+        p["arms"] = [(45 + 30 * up, 60 + 30 * up), (10, 6)]
+        p["head"] = -4 * up
+        p["prop_default"] = ("pipe", 0)
+    elif act == "fan":
+        p["arms"] = [(110 + 12 * _s(w * t * 1.8), 50 + 15 * _s(w * t * 1.8)), (10, 6)]
+        p["prop_default"] = ("fan", 0)
+    elif act == "read":
+        p["arms"] = [(55, 55), (55, 55)]
+        p["head"] = 10
+        p["prop_default"] = ("book", 0)
+    elif act == "cook":
+        k = _s(w * t / 1.2)
+        p["arms"] = [(55 + 10 * k, 30 + 15 * k), (40, 40)]
+        p["lean"] = 12
+        p["head"] = 8
         p["prop_default"] = ("stick", 0)
+    elif act == "feed":
+        k = (t % 1.6) / 1.6
+        th = math.sin(math.pi * min(1.0, k / 0.4)) if k < 0.4 else 0.0
+        p["arms"] = [(35 + 70 * th, 30 - 20 * th), (45, 50)]
+        p["lean"] = 8
+        p["prop_default"] = ("bowl", 1)
     elif act == "sleep":
         p["head"] = 12 + 2 * _s(w * t / 3.5)
         p["arms"] = [(30, 50), (30, 50)]

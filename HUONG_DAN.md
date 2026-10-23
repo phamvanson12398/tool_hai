@@ -661,6 +661,21 @@ lúc giọng đọc tới câu đó.
     rổ, gậy, sách, hoa, tay nải, chai, dao, đèn dầu — thiếu thì "Vẽ thêm bằng AI"
     loại **Đồ vật cầm tay**).
   - **Người kể**: một câu nối cảnh.
+- **Việc đang làm** (cuốc đất, quét sân, bổ củi, gặt lúa, gánh hàng, hút điếu cày,
+  phe phẩy quạt, đọc sách, nấu ăn, cho gà ăn...): nhân vật **làm liên tục** cả lúc
+  người khác nói và lúc chính mình nói, tới khi có hành động khác; nghe chuyện
+  giật mình thì giơ tay rồi làm tiếp. Đạo cụ tự có theo việc: cuốc, chổi, rìu,
+  liềm, đòn gánh hai thúng, điếu cày, quạt nan, sách, nồi...
+- **Đồ đạc của cảnh** (dòng "+ Đồ đạc"): giường tre, chõng, ghế tựa, bàn (có ấm
+  chén), chiếu, bếp lửa (lửa bập bùng), chum nước. Nhân vật **nằm** (ốm, ngủ, chết)
+  tự đi tới nằm lên giường / chiếu (cảnh chưa có thì tool tự kê), **ngồi** tự ngồi
+  lên chõng / ghế gần nhất. Kể chuyện cũng nằm trên giường / chiếu.
+- **Tiếng động**: bước chân khi đi / chạy, tiếng cuốc, chổi, rìu, liềm, vỗ tay,
+  nhai, rít điếu cày, chó sủa khi chó mừng / nói, mèo kêu, há hốc khi giật mình,
+  vút khi đưa đồ, phịch khi nằm xuống, cửa kẽo kẹt khi vào nhà; **tiếng nền**:
+  chim hót ban ngày, dế kêu ban đêm, mưa khi cảnh "Trời mưa" (có cả mưa rơi trên
+  hình). Nhịp **Tiếng động** để thêm gà gáy, gõ cửa, sấm... Âm lượng theo Cài đặt →
+  tiếng động (đặt 0 để tắt).
 - **Máy quay tự đổi góc**: toàn cảnh khi mở cảnh và khi người kể nói, hai người
   khi đối đáp, cận mặt người đang nói, lia theo người đi lại; đẩy máy rất chậm
   cho đỡ đơ.

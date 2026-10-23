@@ -1779,6 +1779,9 @@ def _story_view(pid: str, data: dict) -> dict:
     out["sync"] = {k: v for k, v in (st.get("sync") or {}).items() if k != "bible"}
     out["film_acts"] = [[k, v[0] if isinstance(v, tuple) else v] for k, v in film_m.all_actions().items()]
     out["spots"] = [[k, v] for k, v in film_m.SPOT_VI.items()]
+    from core import film_sfx
+    out["furniture_items"] = [[k, v[0]] for k, v in film_m.FURNITURE.items()]
+    out["sfx_names"] = [[k, v] for k, v in film_sfx.LABELS.items() if k not in film_sfx.AMBIENT]
     out["props"] = [[k, v] for k, v in film_rig.PROPS.items()] + \
         [[k, "★ " + v["name"]] for k, v in doodle_parts.load().items() if v.get("kind") == "prop"]
     from core import bg3d

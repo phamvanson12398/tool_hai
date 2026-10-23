@@ -902,3 +902,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 .st-voice-row select { flex: 1 1 auto; min-width: 150px; }
 .st-voice-row { flex-wrap: wrap; }
 .st-voice-row .btn { white-space: nowrap; }
+
+.st-furn { display: inline-flex; gap: 4px; align-items: center; }
+.st-furn select { width: auto; padding: 4px 6px; font-size: 12px; }

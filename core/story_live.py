@@ -243,6 +243,7 @@ class LiveShot:
         places = {p["id"]: p for p in st.get("places") or []}
         place = places.get(sc.get("place"))
         kind = place_kind(place)
+        self.outdoor = kind in scene_art.OUTDOOR
         self.night = scene_time(sc, place) == "dem"
         seed = zlib.crc32(str(sc.get("place") or kind).encode()) % 1000
         self.base = None
@@ -422,6 +423,17 @@ class LiveShot:
                 self._shadow(canvas, p["x"], a["y"], w)
         night = (0.78, 0.8, 0.95) if self.night else None
         for a, p in zip(self.actors, poses):
+            if a["act"] == "lie":                 # nằm trên giường (trong nhà) / chiếu (ngoài trời)
+                from . import film
+                item = "mat" if self.outdoor else "bed"
+                key = ("furn", item)
+                if key not in self._shadows:
+                    self._shadows[key] = film.furniture_image(item, self.T * a["k"])
+                arr, (ax, ay) = self._shadows[key]
+                bx = p["x"] - 0.5 * self.T * a["k"]
+                film_rig.paste(canvas, arr, film_rig._tr(bx - ax, a["y"] - ay), night)
+                p["y"] = a["y"] - film.FURNITURE[item][2] * self.T * a["k"]
+                p["dir"] = 1                          # đầu về phía gối
             info = a["rig"].draw(canvas, p, self.cam, 1.0, night)
             hx, hy = info["head"]
             self._marks(canvas, a, t, (hx, hy + 0.08 * info["r"], info["r"]))

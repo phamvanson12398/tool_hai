@@ -74,6 +74,22 @@ def voices(st: dict, pdir: Path, language: str = "vi", progress=None) -> dict:
     return out
 
 
+def ambience(st: dict, scene: dict) -> tuple[str | None, bool]:
+    """(tiếng nền, trong nhà?) theo địa điểm, giờ, thời tiết của cảnh."""
+    from . import doodle_parts, scene_art, story_live
+    places = {p["id"]: p for p in st.get("places") or []}
+    place = places.get(scene.get("place"))
+    kind = story_live.place_kind(place)
+    custom = doodle_parts.get(kind)
+    indoor = (custom.get("indoor", True) if custom else kind not in scene_art.OUTDOOR)
+    night = story_live.scene_time(scene, place) == "dem"
+    if scene.get("weather") == "rain":
+        return "rain", indoor
+    if night:
+        return "crickets", indoor
+    return "birds", indoor
+
+
 def plan_all(st: dict, size, audio: dict) -> list[dict]:
     """Mốc thời gian từng cảnh (đã mô phỏng)."""
     import soundfile as sf
@@ -97,9 +113,10 @@ def plan_all(st: dict, size, audio: dict) -> list[dict]:
                 beats.append(b)
             card = CHAPTER_CARD if k == 0 else 0.0
             scn = dict(sc, beats=beats)
-            plan = film.simulate(scn, chars, W, T, durs, lead=film.LEAD_IN + card)
+            amb, indoor = ambience(st, scn)
+            plan = film.simulate(scn, chars, W, T, durs, lead=film.LEAD_IN + card, indoor=indoor)
             rows.append({"sc": scn, "chapter": ci, "card": card, "start": t, "dur": plan["dur"],
-                         "plan": plan})
+                         "plan": plan, "ambience": amb})
             t += plan["dur"]
     return rows
 
@@ -153,6 +170,17 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict, progress
                     a0 = at + acc / tot * dur
                     acc += len(s)
                     subs_plan.append((a0, at + acc / tot * dur, s))
+    # tiếng động theo động tác + tiếng nền từng cảnh
+    from . import film_sfx
+    gain = float(settings.get("sfx_volume") if settings.get("sfx_volume") is not None else 0.8)
+    if gain > 0:
+        say(0.03, "thêm tiếng động")
+        for row in rows:
+            for at, name, vol in row["plan"].get("sfx") or []:
+                film_sfx.put(track, name, row["start"] + at, vol * gain)
+            if row.get("ambience"):
+                v = {"birds": 0.5, "crickets": 0.6, "rain": 0.35, "wind": 0.4}.get(row["ambience"], 0.4)
+                film_sfx.loop(track, row["ambience"], row["start"], row["start"] + row["dur"], v * gain * 0.5)
     wav = tmp / "film_audio.wav"
     sf.write(str(wav), np.clip(track, -1, 1), sr)
 

@@ -562,7 +562,7 @@
   function beatRow(b, s, d) {
     var row = el("div", "st-beat");
     var chars = (s.characters || []).map(function (c) { return [c.id, c.name]; });
-    var type = opt(document.createElement("select"), [["narr", "Người kể"], ["line", "Thoại"], ["act", "Hành động"]], b.t || "act");
+    var type = opt(document.createElement("select"), [["narr", "Người kể"], ["line", "Thoại"], ["act", "Hành động"], ["sfx", "Tiếng động"]], b.t || "act");
     type.className = "st-b-type";
     var who = opt(document.createElement("select"), chars, b.who || (chars[0] || [""])[0]);
     who.className = "st-b-who";
@@ -572,6 +572,8 @@
     to.className = "st-b-to";
     var prop = opt(document.createElement("select"), [["", "— đồ cầm —"], ["none", "Bỏ đồ xuống"]].concat(d.props || []), b.prop || "");
     prop.className = "st-b-prop";
+    var sfx = opt(document.createElement("select"), d.sfx_names || [], b.name || "rooster");
+    sfx.className = "st-b-sfx";
     var text = document.createElement("input");
     text.type = "text";
     text.className = "st-b-text";
@@ -590,13 +592,14 @@
     row._react = b.react;
     function sync() {
       var t = type.value;
-      who.hidden = act.hidden = to.hidden = t === "narr";
+      who.hidden = act.hidden = to.hidden = t === "narr" || t === "sfx";
       prop.hidden = t !== "act";
-      text.hidden = t === "act";
+      sfx.hidden = t !== "sfx";
+      text.hidden = t === "act" || t === "sfx";
       text.placeholder = t === "narr" ? "Lời người kể (ngắn, nối cảnh)" : "Câu nhân vật nói";
     }
     type.addEventListener("change", sync);
-    [type, who, act, to, prop, text, up, rm].forEach(function (x) { row.appendChild(x); });
+    [type, who, act, to, prop, sfx, text, up, rm].forEach(function (x) { row.appendChild(x); });
     sync();
     return row;
   }
@@ -606,12 +609,23 @@
     var pl = box.querySelector(".st-f-place"), tm = box.querySelector(".st-f-time");
     if (pl) out.place = pl.value;
     if (tm) out.time = tm.value;
+    var wx = box.querySelector(".st-f-weather");
+    if (wx) { if (wx.value) out.weather = wx.value; else delete out.weather; }
+    var furn = [];
+    box.querySelectorAll(".st-furn").forEach(function (fr) {
+      furn.push({ item: fr.querySelector(".st-fu-item").value, at: fr.querySelector(".st-fu-at").value });
+    });
+    if (furn.length) out.furniture = furn; else delete out.furniture;
     var chars = (sc.chars || []).slice();
     out.beats = [];
     box.querySelectorAll(".st-beat").forEach(function (row) {
       var t = row.querySelector(".st-b-type").value;
       var b = { t: t };
       var txt = row.querySelector(".st-b-text").value.trim();
+      if (t === "sfx") {
+        out.beats.push({ t: "sfx", name: row.querySelector(".st-b-sfx").value });
+        return;
+      }
       if (t === "narr") {
         if (!txt) return;
         b.text = txt;
@@ -662,10 +676,34 @@
         pl.className = "st-f-place";
         var tm = opt(document.createElement("select"), [["ngay", "Ban ngày"], ["dem", "Ban đêm"]], sc.time || "ngay");
         tm.className = "st-f-time";
+        var wx = opt(document.createElement("select"), [["", "Trời bình thường"], ["rain", "Trời mưa"]], sc.weather || "");
+        wx.className = "st-f-weather";
         var ctl = el("div", "st-kit");
         ctl.appendChild(pl);
         ctl.appendChild(tm);
+        ctl.appendChild(wx);
         hr.appendChild(ctl);
+        // đồ đạc của cảnh: giường, chõng, ghế, bàn, bếp lửa...
+        var fwrap = el("div", "st-kit");
+        var addF = el("button", "btn btn-sm", "+ Đồ đạc");
+        addF.type = "button";
+        function furnRow(f) {
+          var r = el("span", "st-furn");
+          var it = opt(document.createElement("select"), d.furniture_items || [], f.item || "bed");
+          it.className = "st-fu-item";
+          var at = opt(document.createElement("select"), (d.spots || []).filter(function (kv) {
+            return kv[0].indexOf("ngoai") < 0; }), f.at || "giua");
+          at.className = "st-fu-at";
+          var x = el("button", "btn btn-sm", "✕");
+          x.type = "button";
+          x.addEventListener("click", function () { r.remove(); });
+          r.appendChild(it); r.appendChild(at); r.appendChild(x);
+          fwrap.insertBefore(r, addF);
+        }
+        addF.addEventListener("click", function () { furnRow({}); });
+        fwrap.appendChild(addF);
+        (sc.furniture || []).forEach(furnRow);
+        hr.appendChild(fwrap);
         head.appendChild(img);
         head.appendChild(hr);
         card.appendChild(head);

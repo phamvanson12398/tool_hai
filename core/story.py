@@ -193,6 +193,13 @@ def _slug(v) -> str:
     return t or "x"
 
 
+def _film_extra() -> str:
+    from . import film, film_sfx
+    furn = ", ".join(f"{k} ({v[0]})" for k, v in film.FURNITURE.items())
+    sfx = ", ".join(f"{k} ({v})" for k, v in film_sfx.LABELS.items() if k not in film_sfx.AMBIENT)
+    return furn, sfx
+
+
 def _film_lists() -> tuple[str, str, str]:
     from . import doodle_parts, film, film_rig
     acts = ", ".join(f"{k} ({v[0]})" for k, v in film.all_actions().items())
@@ -210,7 +217,8 @@ def _write_film_chapter(st, i, c, outline, chars_txt, places_txt, block, per_min
         outline=outline, characters=chars_txt, places=places_txt, index=str(i + 1),
         chapter_title=str(c.get("title") or ""), chapter_summary=str(c.get("summary") or ""),
         source_block=block, minutes=f"{per_min:.1f}", beats=str(int(per_min * 60 / 3.0)),
-        actions=acts, spots=spots, props=props), task="story", timeout=900)
+        actions=acts, spots=spots, props=props, furniture=_film_extra()[0],
+        sfx=_film_extra()[1]), task="story", timeout=900)
     scenes = data.get("scenes") if isinstance(data, dict) else None
     if not scenes:
         raise RuntimeError(f"AI không viết được chương {i + 1}.")
@@ -236,6 +244,11 @@ def clean_film_scene(s: dict, known: set | None = None) -> dict:
         if t == "narr":
             if str(b.get("text") or "").strip():
                 beats.append({"t": "narr", "text": str(b["text"]).strip()})
+            continue
+        if t == "sfx":
+            from . import film_sfx
+            if b.get("name") in film_sfx.LABELS:
+                beats.append({"t": "sfx", "name": b["name"]})
             continue
         if t not in ("line", "act") or not who or (known is not None and who not in known):
             continue
@@ -270,7 +283,13 @@ def clean_film_scene(s: dict, known: set | None = None) -> dict:
            "start": start, "beats": beats, "camera": "still", "text": ""}
     if s.get("time") in ("ngay", "dem"):
         out["time"] = s["time"]
-    post = {_slug(k): v for k, v in (s.get("posture") or {}).items() if v == "sit"}
+    furn = [{"item": f.get("item"), "at": f.get("at") if f.get("at") in film.SPOTS else "giua"}
+            for f in (s.get("furniture") or []) if isinstance(f, dict) and f.get("item") in film.FURNITURE]
+    if furn:
+        out["furniture"] = furn[:5]
+    if s.get("weather") == "rain":
+        out["weather"] = "rain"
+    post = {_slug(k): v for k, v in (s.get("posture") or {}).items() if v in ("sit", "lie")}
     if post:
         out["posture"] = post
     return out

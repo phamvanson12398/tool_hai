@@ -34,6 +34,16 @@ ACT_DUR = {"give": 2.0, "bow": 1.8, "hug": 2.6, "eat": 3.2, "drink": 2.6, "jump"
            "sit": 1.0, "stand": 0.8, "lie": 1.6, "wave": 1.8, "hands_up": 1.6, "cry": 3.2,
            "laugh": 2.4, "nod": 1.4, "shake_head": 1.6, "clap": 1.8, "work": 3.0,
            "sleep": 3.0, "pat": 2.2, "beg": 2.6, "point": 1.8}
+# đồ đạc trong cảnh: (nhãn, rộng theo T, cao mặt ngồi / nằm theo T, ngồi được, nằm được)
+FURNITURE = {
+    "bed": ("Giường tre / phản", 1.25, 0.17, True, True),
+    "bench": ("Chõng tre / ghế dài", 0.9, 0.13, True, False),
+    "chair": ("Ghế tựa", 0.36, 0.15, True, False),
+    "table": ("Bàn gỗ", 0.75, 0.24, False, False),
+    "mat": ("Chiếu trải đất", 1.2, 0.0, True, True),
+    "stove": ("Bếp lửa (kiềng ba chân)", 0.42, 0.0, False, False),
+    "jar": ("Chum nước", 0.32, 0.0, False, False),
+}
 WALK = 1.0               # chiều cao T mỗi giây
 RUN = 2.4
 LEAD_IN = 1.2            # giây toàn cảnh đầu mỗi cảnh
@@ -60,10 +70,11 @@ class Track:
         self.cid = cid
         self.keys = [(0.0, x)]            # (t, x) – giữ nguyên giữa các lần đi
         self.moves = []                   # (t0, t1, x0, x1, run)
-        self.postures = [(0.0, posture)]
+        self.postures = [(0.0, posture, None, None)]     # (t, tư thế, cao mặt ghế, x ghế)
         self.props = [(0.0, prop)]
         self.acts = []                    # (t0, t1, act, to)
         self.speak = []                   # (t0, t1, to, path)
+        self.reacts = set()               # thời điểm bắt đầu các phản ứng khi nghe
 
     def x_at(self, t):
         for t0, t1, x0, x1, _r in self.moves:
@@ -89,11 +100,24 @@ class Track:
                 v = vk
         return v
 
+    def posture_at(self, t):
+        cur = self.postures[0]
+        for p in self.postures:
+            if p[0] <= t:
+                cur = p
+        return cur
+
     def act_at(self, t):
+        """Hành động đang làm: hành động bắt đầu muộn nhất còn hiệu lực (phản ứng
+        ngắn đè lên việc đang làm dở, xong thì làm tiếp)."""
+        best = None
         for t0, t1, a, to in self.acts:
-            if t0 <= t < t1:
-                return a, t - t0, to, t1 - t0
-        return None
+            if t0 <= t < t1 and (best is None or t0 >= best[0]):
+                best = (t0, t1, a, to)
+        if not best:
+            return None
+        t0, t1, a, to = best
+        return a, t - t0, to, t1 - t0
 
     def speaking(self, t):
         for s in self.speak:
@@ -113,8 +137,33 @@ def _target_x(to, tracks, who, t, W, T):
     return None
 
 
+def furniture_layout(scene: dict, W: float, T: float) -> list[dict]:
+    """[{item, x, w, h}] theo toạ độ thế giới."""
+    out = []
+    for f in scene.get("furniture") or []:
+        it = f.get("item")
+        if it not in FURNITURE:
+            continue
+        at = f.get("at")
+        x = SPOTS[at] * W if at in SPOTS else (float(f["x"]) * W if "x" in f else W / 2)
+        _lab, w, h, _s, _l = FURNITURE[it]
+        out.append({"item": it, "x": x, "w": w * T, "h": h * T})
+    return out
+
+
+def _seat_for(furn, x, T, lie=False):
+    """Đồ ngồi / nằm gần chỗ x nhất (trong khoảng 1.2T)."""
+    best = None
+    for f in furn:
+        ok = FURNITURE[f["item"]][4] if lie else FURNITURE[f["item"]][3]
+        if ok and abs(f["x"] - x) < T * 1.2 + f["w"] / 2:
+            if best is None or abs(f["x"] - x) < abs(best["x"] - x):
+                best = f
+    return best
+
+
 def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
-             lead: float = LEAD_IN) -> dict:
+             lead: float = LEAD_IN, indoor: bool = True) -> dict:
     """durs: {chỉ số beat: giây âm thanh}. Trả về {"tracks", "beats" (có t0, t1),
     "dur", "shots"}."""
     ids = [c for c in scene.get("chars") or [] if c in chars]
@@ -122,12 +171,31 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
     n = len(ids)
     auto = [0.5] if n == 1 else [0.3 + 0.4 * i / max(1, n - 1) for i in range(n)] if n <= 3 else \
         [0.15 + 0.7 * i / (n - 1) for i in range(n)]
+    furn = furniture_layout(scene, W, T)
+    # nằm / ngồi mà cảnh chưa có giường, chõng: tự kê
+    need_lie = [b.get("who") for b in scene.get("beats") or [] if b.get("act") == "lie"] + \
+        [c for c, p in (scene.get("posture") or {}).items() if p == "lie"]
+    if need_lie and not any(FURNITURE[f["item"]][4] for f in furn):
+        it = "bed" if indoor else "mat"
+        x = SPOTS["phai"] * W
+        furn.append({"item": it, "x": x, "w": FURNITURE[it][1] * T, "h": FURNITURE[it][2] * T,
+                     "auto": True})
     tracks = {}
     for i, cid in enumerate(ids):
         sp = start.get(cid)
         x = SPOTS[sp] * W if sp in SPOTS else auto[i] * W
-        posture = "sit" if (scene.get("posture") or {}).get(cid) == "sit" else "stand"
-        tracks[cid] = Track(cid, x, posture)
+        pst = (scene.get("posture") or {}).get(cid)
+        tracks[cid] = Track(cid, x)
+        if pst in ("sit", "lie"):
+            f = _seat_for(furn, x, T, lie=pst == "lie") or (_seat_for(furn, x, T * 50, lie=True)
+                                                             if pst == "lie" else None)
+            if f:
+                tracks[cid].keys = [(0.0, f["x"])]
+            tracks[cid].postures = [(0.0, pst, f["h"] if f else None, f["x"] if f else None)]
+            if pst == "lie":
+                tracks[cid].acts.append((0.0, 1e9, "lie", None))
+    activity: dict = {}                       # việc đang làm dở của từng người
+    sfx: list = []                            # (t, tên, âm lượng)
     t = lead
     beats = []
     for i, b in enumerate(scene.get("beats") or []):
@@ -142,15 +210,27 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
             tr = tracks[who]
             act = film_act.norm(b.get("act") or "talk") if b.get("act") not in ("walk", "run") else "talk"
             tr.speak.append((t + 0.15, t + 0.15 + a, b.get("to"), b.get("path")))
-            tr.acts.append((t, t + d, act, b.get("to")))
+            if not (act == "talk" and activity.get(who)):          # đang làm dở thì vừa làm vừa nói
+                tr.acts.append((t, t + d, act, b.get("to")))
+                if act in film_act.CONTINUOUS:
+                    activity[who] = act
+                elif act != "talk":
+                    activity.pop(who, None)
             for rid, ract in (b.get("react") or {}).items():
                 if rid in tracks and rid != who:
                     tracks[rid].acts.append((t, t + d, film_act.norm(ract), who))
+                    tracks[rid].reacts.add(t)
+        elif kind == "sfx":
+            name = b.get("name") or b.get("act")
+            d = float(b.get("dur") or 0.8)
+            if name:
+                sfx.append((t + 0.05, name, float(b.get("vol") or 0.6)))
         elif kind == "act" and who in tracks:
             tr = tracks[who]
             act = b.get("act") or "idle"
             to = b.get("to")
             x0 = tr.x_at(t)
+            activity.pop(who, None)
             if b.get("prop"):
                 tr.props.append((t, None if b["prop"] == "none" else b["prop"]))
             if act in ("walk", "run", "enter", "exit"):
@@ -172,10 +252,24 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
                 tr.keys.append((t + d, x1))
                 d += 0.2
             elif act in ("sit", "stand", "lie"):
-                d = default_dur(act)
-                tr.postures.append((t + d * 0.5, act if act != "stand" else "stand"))
+                walk = 0.0
+                f = None
+                if act in ("sit", "lie"):
+                    f = _seat_for(furn, x0, T, lie=act == "lie")
+                    if f is None and act == "lie":
+                        f = _seat_for(furn, x0, T * 50, lie=True)      # đi tới giường
+                    if f is not None and abs(f["x"] - x0) > T * 0.15:
+                        walk = max(0.6, abs(f["x"] - x0) / (T * WALK))
+                        tr.moves.append((t, t + walk, x0, f["x"], False))
+                        tr.keys.append((t + walk, f["x"]))
+                d = walk + default_dur(act)
+                tr.postures.append((t + walk + (d - walk) * 0.5, act,
+                                    f["h"] if f else None, f["x"] if f else None))
                 if act == "lie":
-                    tr.acts.append((t, t + d, "lie", None))
+                    tr.acts.append((t + walk, 1e9, "lie", None))
+                    sfx.append((t + walk + (d - walk) * 0.5, "thud", 0.35))
+                elif act == "stand":
+                    tr.acts.append((t, t + 0.01, "idle", None))
             else:
                 act = film_act.norm(act)
                 walk = 0.0
@@ -187,11 +281,14 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
                         tr.keys.append((t + walk, x1))
                 d = walk + (float(b.get("dur") or 0) or default_dur(act))
                 tr.acts.append((t + walk, t + d, act, to))
+                if act in film_act.CONTINUOUS:
+                    activity[who] = act
                 if act == "give" and to in tracks:
                     got = tr.last(tr.props, t) or b.get("prop")
                     tr.props.append((t + d - 0.3, None))
                     if got:
                         tracks[to].props.append((t + d - 0.3, got))
+                    sfx.append((t + d - 0.4, "swoosh", 0.3))
             if b.get("text"):
                 d = max(d, durs.get(i, 0) + 0.3)
         else:
@@ -200,7 +297,56 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
         beats.append(bt)
         t += d
     total = t + TAIL
-    return {"tracks": tracks, "beats": beats, "dur": total, "W": W, "T": T}
+    # việc làm dở kéo dài tới khi người đó có hành động / bước đi khác
+    for cid, tr in tracks.items():
+        acts = sorted(tr.acts, key=lambda a: a[0])
+        new = []
+        for k, (t0, t1, a, to) in enumerate(acts):
+            if a in film_act.CONTINUOUS and t1 < 1e8:
+                # phản ứng ngắn khi nghe người khác nói không cắt việc đang làm
+                # (act_at chọn cái bắt đầu muộn nhất, xong phản ứng thì làm tiếp)
+                nxt = [x[0] for x in acts[k + 1:] if x[0] >= t1 - 1e-6 and x[2] != "talk"
+                       and x[0] not in tr.reacts]
+                stops = [m[0] for m in tr.moves if m[0] >= t1 - 1e-6] + \
+                        [p[0] for p in tr.postures if p[0] >= t1 - 1e-6]
+                ends = nxt + stops
+                t1 = min(ends) if ends else total
+            new.append((t0, t1, a, to))
+        tr.acts = new
+    # tiếng động theo động tác, bước chân, chó sủa...
+    for cid, tr in tracks.items():
+        kit = (chars.get(cid) or {}).get("kit") or {}
+        sp = kit.get("species", "human")
+        for t0, t1, run in [(m[0], m[1], m[4]) for m in tr.moves]:
+            step = 0.24 if run else 0.34
+            k = t0 + 0.1
+            while k < t1:
+                sfx.append((k, "step", 0.22 if sp == "human" else 0.12))
+                k += step
+        for t0, t1, a, _to in tr.acts:
+            t1 = min(t1, total)
+            if sp in ("dog", "cat") and a in ("jump", "happy", "angry", "wave", "hands_up"):
+                sfx.append((t0 + 0.15, "bark" if sp == "dog" else "meow", 0.5))
+                continue
+            if a == "hands_up":
+                sfx.append((t0 + 0.05, "gasp", 0.35))
+            rule = film_act.SFX.get(a)
+            if rule and sp == "human":
+                name, per, ph = rule
+                k = t0 + ph
+                while k < t1:
+                    sfx.append((k, name, 0.45 if name not in ("bubble", "nom") else 0.3))
+                    k += per
+        for s0, _s1, _to, _p in tr.speak:                 # chó mèo "nói" = sủa / kêu
+            if sp in ("dog", "cat"):
+                sfx.append((s0, "bark" if sp == "dog" else "meow", 0.5))
+    if scene.get("beats") and any(b.get("act") == "enter" for b in scene["beats"]) and indoor:
+        for b in beats:
+            if b.get("act") == "enter":
+                sfx.append((b["t0"], "door", 0.25))
+    sfx.sort()
+    return {"tracks": tracks, "beats": beats, "dur": total, "W": W, "T": T, "furniture": furn,
+            "sfx": sfx}
 
 
 # ---------------------------------------------------------------- máy quay
@@ -329,6 +475,8 @@ class FilmShot:
                     from .story_live import envelope
                     self.env[(cid, s[0])] = envelope(s[3], fps)
         self.speakers = {}
+        self._furn: dict = {}
+        self.rain = scene.get("weather") == "rain"
 
     def _shot(self, t):
         for s in self.shots:
@@ -377,7 +525,7 @@ class FilmShot:
         tr = self.plan["tracks"][cid]
         rig, kit, seed = self.rigs[cid]
         x = tr.x_at(t)
-        posture = tr.last(tr.postures, t)
+        _pt0, posture, seat_h, seat_x = tr.posture_at(t)
         m = tr.moving(t)
         speaking = tr.speaking(t) is not None
         cur = tr.act_at(t)
@@ -398,7 +546,15 @@ class FilmShot:
         per = 3.2 + (seed % 13) / 8.0
         blink = (t + seed / 50.0) % per < 0.13 and p.get("expr") not in ("sleep", "cry", "happy")
         prop = tr.last(tr.props, t)
-        p.update(x=x, y=self.floor, dir=d, look=look, mouth=self._mouth(cid, t), blink=blink)
+        y = self.floor
+        if posture == "lie" and not m:
+            d = 1                                        # nằm: không lật qua lật lại
+            if seat_x is not None:                       # nằm trên giường / chiếu
+                x = seat_x + 0.5 * self.plan["T"]
+            y = self.floor - (seat_h or 0.0)
+        elif posture == "sit" and not m and seat_h is not None:
+            p["seat_h"] = seat_h
+        p.update(x=x, y=y, dir=d, look=look, mouth=self._mouth(cid, t), blink=blink)
         if prop:
             p["prop"] = (prop, 0)
         elif p.get("prop_default"):
@@ -415,6 +571,8 @@ class FilmShot:
         M = np.float32([[k, 0, W / 2 - z * cx], [0, k, H / 2 - z * cy]])
         frame = cv2.warpAffine(self.bg, M, (W, H), flags=cv2.INTER_AREA if k < 1 else cv2.INTER_LINEAR)
         cam = np.array([[z, 0, W / 2 - z * cx], [0, z, H / 2 - z * cy]], dtype=np.float64)
+        for f in self.plan.get("furniture") or []:           # đồ đạc sau nhân vật
+            self._furniture(frame, f, cam, z, t)
         poses = {cid: self.pose(cid, t) for cid in self.plan["tracks"]}
         order = sorted(poses, key=lambda c: (poses[c]["_act"] == "lie", poses[c]["x"]))
         T = self.plan["T"]
@@ -436,7 +594,43 @@ class FilmShot:
             hx, hy = info["head"]
             film_rig.marks(frame, p["_act"], t, (hx, hy + 0.08 * info["r"], info["r"]), T * z,
                            p.get("dir", 1))
+        if self.rain:
+            self._rain(frame, t)
         return frame
+
+    # --- đồ đạc, mưa
+    def _furniture(self, frame, f, cam, z, t):
+        import cv2
+        key = (f["item"], round(z * 8) / 8)
+        if key not in self._furn:
+            self._furn[key] = furniture_image(f["item"], self.plan["T"] * z)
+        got = self._furn[key]
+        if got is None:
+            return
+        arr, (ax, ay) = got
+        sx, sy = cam[0, 0] * f["x"] + cam[0, 2], cam[1, 1] * self.floor + cam[1, 2]
+        film_rig.paste(frame, arr, film_rig._tr(sx - ax, sy - ay),
+                       (0.78, 0.8, 0.95) if self.night else None)
+        if f["item"] == "stove":                         # lửa bập bùng
+            T = self.plan["T"] * z
+            for k in range(3):
+                fl = 0.5 + 0.5 * math.sin(t * 11 + k * 2.1)
+                cx, cy = int(sx + (k - 1) * T * 0.07), int(sy - T * 0.09)
+                h = int(T * (0.1 + 0.05 * fl))
+                pts = np.array([[cx - int(T * 0.04), cy], [cx, cy - h], [cx + int(T * 0.04), cy]], np.int32)
+                cv2.fillPoly(frame, [pts], (250, 150 + int(60 * fl), 50), cv2.LINE_AA)
+
+    def _rain(self, frame, t):
+        import cv2
+        H, W = frame.shape[:2]
+        frame[:] = (frame * 0.86).astype(np.uint8)
+        rng = np.random.default_rng(int(t * 24))
+        n = 160
+        xs = rng.uniform(0, W, n)
+        ys = rng.uniform(0, H, n)
+        ln = H * 0.04
+        for x, y in zip(xs, ys):
+            cv2.line(frame, (int(x), int(y)), (int(x - ln * 0.25), int(y + ln)), (200, 210, 230), 1, cv2.LINE_AA)
 
     def _shadow(self, frame, x, y, w):
         cv2 = self.cv2
@@ -452,6 +646,73 @@ class FilmShot:
         frame[y0:y1, x0:x1] = cv2.multiply(reg, cv2.merge([inv, inv, inv]), scale=1 / 255.0)
 
 
+def furniture_image(item: str, wpx: float):
+    """Ảnh đồ đạc (đã nhân alpha) + điểm đặt (giữa chân đồ vật). wpx = T màn hình."""
+    from PIL import Image
+    if item not in FURNITURE:
+        return None
+    T = wpx * doodle.SS
+    _lab, wk, hk, _s, _l = FURNITURE[item]
+    w, h = wk * T, max(hk, 0.05) * T
+    W, H = int(w + T * 0.3), int(T * 0.75)
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    pen = doodle._Pen(img, T, 11)
+    cx, gy = W / 2, H - T * 0.03
+    wood, bamboo = (150, 108, 72), (190, 168, 104)
+    if item == "bed":
+        top = gy - h
+        pen.shape([(cx - w / 2, top), (cx + w / 2, top), (cx + w / 2, top + T * 0.04),
+                   (cx - w / 2, top + T * 0.04)], bamboo)
+        for k in range(1, 12):
+            xx = cx - w / 2 + w * k / 12
+            pen.line([(xx, top + T * 0.005), (xx, top + T * 0.035)], width=max(1, pen.lw // 3),
+                     fill=(150, 130, 80))
+        for xx in (cx - w / 2 + T * 0.03, cx + w / 2 - T * 0.06):
+            pen.shape([(xx, top + T * 0.04), (xx + T * 0.03, top + T * 0.04), (xx + T * 0.03, gy),
+                       (xx, gy)], wood)
+        pen.shape([(cx - w / 2 + T * 0.02, top - T * 0.05), (cx - w / 2 + T * 0.22, top - T * 0.05),
+                   (cx - w / 2 + T * 0.22, top), (cx - w / 2 + T * 0.02, top)], (236, 232, 220))  # gối
+    elif item == "bench":
+        top = gy - h
+        pen.shape([(cx - w / 2, top), (cx + w / 2, top), (cx + w / 2, top + T * 0.03),
+                   (cx - w / 2, top + T * 0.03)], bamboo)
+        for xx in (cx - w / 2 + T * 0.04, cx + w / 2 - T * 0.06):
+            pen.shape([(xx, top + T * 0.03), (xx + T * 0.025, top + T * 0.03), (xx + T * 0.025, gy),
+                       (xx, gy)], bamboo)
+    elif item == "chair":
+        top = gy - h
+        pen.shape([(cx - w / 2, top), (cx + w / 2, top), (cx + w / 2, top + T * 0.025),
+                   (cx - w / 2, top + T * 0.025)], wood)
+        pen.shape([(cx + w / 2 - T * 0.03, top - T * 0.2), (cx + w / 2, top - T * 0.2), (cx + w / 2, gy),
+                   (cx + w / 2 - T * 0.03, gy)], wood)
+        pen.shape([(cx - w / 2, top), (cx - w / 2 + T * 0.025, top), (cx - w / 2 + T * 0.025, gy),
+                   (cx - w / 2, gy)], wood)
+    elif item == "table":
+        top = gy - h
+        pen.shape([(cx - w / 2, top), (cx + w / 2, top), (cx + w / 2, top + T * 0.035),
+                   (cx - w / 2, top + T * 0.035)], wood)
+        for xx in (cx - w / 2 + T * 0.03, cx + w / 2 - T * 0.06):
+            pen.shape([(xx, top + T * 0.035), (xx + T * 0.03, top + T * 0.035), (xx + T * 0.03, gy),
+                       (xx, gy)], (130, 92, 60))
+        pen.ell(cx - w * 0.15, top - T * 0.03, T * 0.06, T * 0.03, (236, 232, 222))     # ấm chén
+        pen.shape([(cx + w * 0.1, top - T * 0.03), (cx + w * 0.16, top - T * 0.03), (cx + w * 0.15, top),
+                   (cx + w * 0.11, top)], (236, 232, 222))
+    elif item == "mat":
+        pen.shape([(cx - w / 2, gy - T * 0.015), (cx + w / 2, gy - T * 0.015), (cx + w / 2 + T * 0.04, gy + T * 0.01),
+                   (cx - w / 2 - T * 0.04, gy + T * 0.01)], (214, 190, 130))
+    elif item == "stove":
+        for k in (-1, 0, 1):
+            pen.shape([(cx + k * T * 0.12 - T * 0.04, gy - T * 0.08), (cx + k * T * 0.12 + T * 0.04, gy - T * 0.08),
+                       (cx + k * T * 0.12 + T * 0.05, gy), (cx + k * T * 0.12 - T * 0.05, gy)], (150, 90, 70))
+        pen.shape(doodle._ellipse_pts(cx, gy - T * 0.12, T * 0.15, T * 0.08, 0, 180, 14), (90, 70, 62))
+        pen.ell(cx, gy - T * 0.12, T * 0.15, T * 0.03, (70, 56, 50))
+    elif item == "jar":
+        pen.ell(cx, gy - T * 0.15, T * 0.15, T * 0.15, (120, 84, 60))
+        pen.ell(cx, gy - T * 0.29, T * 0.09, T * 0.025, (90, 64, 48))
+    img = img.resize((max(1, W // doodle.SS), max(1, H // doodle.SS)), Image.LANCZOS)
+    return film_rig._premul(img), (cx / doodle.SS, gy / doodle.SS)
+
+
 def char_T(size) -> float:
     W, H = size
     lay = config.stage_layout(W, H)
@@ -461,7 +722,8 @@ def char_T(size) -> float:
 def preview(st, scene, size, pdir=None, at: float | None = None):
     from PIL import Image
     chars = {c["id"]: c for c in st.get("characters") or []}
-    plan = simulate(scene, chars, size[0], char_T(size), {})
+    from .film_render import ambience
+    plan = simulate(scene, chars, size[0], char_T(size), {}, indoor=ambience(st, scene)[1])
     shot = FilmShot(st, scene, plan, size, pdir)
     t = at if at is not None else min(plan["dur"] * 0.4, LEAD_IN + 1.5)
     return Image.fromarray(shot.frame(t))
