@@ -1774,6 +1774,9 @@ def _story_view(pid: str, data: dict) -> dict:
     out["visual"] = st.get("visual", "tool")
     from core import doodle_parts, film as film_m, film_rig
     out["mode"] = st.get("mode", "story")
+    out["char_styles"] = [[k, v["label"]] for k, v in film_rig.CHAR_STYLES.items()]
+    smp = st.get("char_sample") or {}
+    out["char_sample"] = {"note": smp.get("note", ""), "has": bool(smp.get("image"))}
     from core import sync as sync_m
     out["sync_styles"] = [[k, v[0]] for k, v in sync_m.STYLES.items()]
     out["sync"] = {k: v for k, v in (st.get("sync") or {}).items() if k != "bible"}
@@ -1861,7 +1864,7 @@ def api_story_save(pid):
     except FileNotFoundError as e:
         return _err(str(e), 404)
     body = request.get_json(silent=True) or {}
-    for k in ("title", "author", "source_text", "style", "subtitles", "era"):
+    for k in ("title", "author", "source_text", "style", "subtitles", "era", "brief"):
         if k in body:
             st[k] = body[k]
     if body.get("visual") in ("tool", "images"):
@@ -1872,6 +1875,9 @@ def api_story_save(pid):
         st["dialogue"] = body["dialogue"]
     if body.get("mode") in ("story", "film", "sync"):
         st["mode"] = body["mode"]
+    from core import film_rig as fr_m
+    if body.get("char_style") in list(fr_m.CHAR_STYLES) + ["sample"]:
+        st["char_style"] = body["char_style"]
     if isinstance(body.get("sync_style"), str):
         from core import sync as sync_m
         if body["sync_style"] in sync_m.STYLES:
@@ -1908,8 +1914,8 @@ def api_story_write(pid):
         data, st = _load_story(pid)
     except FileNotFoundError as e:
         return _err(str(e), 404)
-    if not (st.get("title") or "").strip():
-        return _err("Cần có tên truyện.")
+    if not (st.get("title") or "").strip() and not (st.get("brief") or "").strip():
+        return _err("Gõ yêu cầu (vd 'làm đoạn phim về chương 1 truyện Lão Hạc') hoặc tên truyện.")
     if _status(pid).get("state") in ("writing", "rendering", "drawing"):
         return jsonify({"ok": True, "already": True})
     with JOBS_LOCK:
@@ -2033,7 +2039,8 @@ def api_story_char_png(pid, cid):
     c = next((c for c in st.get("characters") or [] if c.get("id") == cid), None)
     if not c:
         return _err("Không có nhân vật.", 404)
-    return _png(story_live.character_preview(c, 300))
+    from core import film_rig
+    return _png(story_live.character_preview(c, 300, film_rig.style_of(st)))
 
 
 @app.get("/api/story/<pid>/place/<plid>.png")
@@ -2136,6 +2143,53 @@ def api_story_image(pid, sid):
     p = story_mod.scene_images(config.project_dir(pid)).get(str(sid))
     if not p:
         return _err("Chưa có ảnh.", 404)
+    return send_file(str(p))
+
+
+@app.post("/api/story/<pid>/char_sample")
+def api_story_char_sample(pid):
+    """Ảnh nhân vật mẫu: Claude xem ảnh, rút ra nét vẽ (tỉ lệ, mắt, nét viền) và
+    ngoại hình; truyện dùng kiểu nhân vật 'Theo ảnh mẫu'."""
+    from PIL import Image
+    try:
+        data, st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    f = request.files.get("file")
+    if not f:
+        return _err("Chưa chọn ảnh.")
+    from core import story as story_mod
+    try:
+        img = Image.open(f.stream).convert("RGB")
+    except Exception:  # noqa: BLE001
+        return _err("Không đọc được ảnh (thử JPG, PNG, WEBP).")
+    img.thumbnail((1400, 1400))
+    dest = story_mod.image_dir(config.project_dir(pid)) / "char_sample.png"
+    img.save(dest)
+    look = Path(claude_cli._claude_dir()) / f"mau_{uuid.uuid4().hex[:8]}.png"
+    small = img.copy()
+    small.thumbnail((768, 768))
+    small.save(look)
+    try:
+        res = claude_cli.style_from_photo(look)
+    except Exception as e:  # noqa: BLE001
+        return _err(f"Claude chưa xem được ảnh: {_short_err(e)}")
+    finally:
+        look.unlink(missing_ok=True)
+    if not res:
+        return _err("Claude không phân tích được ảnh.")
+    st["char_sample"] = dict(res, image=str(dest))
+    st["char_style"] = "sample"
+    _save_project(pid, data)
+    return jsonify(_story_view(pid, data))
+
+
+@app.get("/api/story/<pid>/char_sample.png")
+def api_story_char_sample_png(pid):
+    from core import story as story_mod
+    p = story_mod.image_dir(config.project_dir(pid)) / "char_sample.png"
+    if not p.exists():
+        return _err("Chưa có ảnh mẫu.", 404)
     return send_file(str(p))
 
 

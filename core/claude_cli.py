@@ -666,6 +666,21 @@ def spec_from_photo(image: Path, name: str) -> dict:
     return out
 
 
+def style_from_photo(image: Path) -> dict:
+    """Claude xem ảnh nhân vật mẫu: trả về tham số nét vẽ + bộ ghép + ghi chú."""
+    from . import doodle, film_rig
+    opt = doodle.options()
+    catalog = "\n".join(f"- {k}: {', '.join(v)}" for k, v in opt.items()
+                        if k not in ("expressions", "extra"))
+    data = _run_json(_load_prompt("char_style_from_photo", image=str(image), catalog=catalog),
+                     task="photo", timeout=240, allowed_tools=["Read"])
+    if not isinstance(data, dict):
+        return {}
+    return {"style": film_rig.clean_style(data.get("style") if isinstance(data.get("style"), dict) else {}),
+            "kit": doodle.clean_kit(data.get("kit") if isinstance(data.get("kit"), dict) else {}),
+            "note": str(data.get("note") or "")[:300]}
+
+
 def design_background(script: str, language: str, desc: str = "") -> dict:
     """Claude chọn mẫu bối cảnh (phòng khách, bếp, đường phố...), ngày/đêm
     và màu chủ đạo cho một cảnh. desc: mô tả cảnh (dòng '## canh:')."""

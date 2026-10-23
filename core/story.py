@@ -133,12 +133,22 @@ def write_story(st: dict, progress=None) -> dict:
     style_vi = STYLES.get(st.get("style"), STYLES["anim2d"])[0]
     src = (st.get("source_text") or "").strip()
     source_block = (f"### Nguyên văn truyện\n{src}" if src else
-                    "(Không có nguyên văn: kể lại theo đúng nội dung truyện mà bạn biết, "
-                    "không bịa thêm.)")
+                    "(Không có nguyên văn: dựa theo nội dung truyện mà bạn biết.)")
+    brief = brief_block(st)
+    if brief:
+        source_block = brief + "\n\n" + source_block
     look_hint = LOOK_HINTS.get(st.get("style"), "")
     film_mode = st.get("mode") == "film"
     tool = film_mode or st.get("visual", "tool") == "tool"
     visual_block, scene_block = (_tool_blocks() if tool else ("", ""))
+    smp = st.get("char_sample") or {}
+    if tool and st.get("char_style") == "sample" and smp.get("kit"):
+        visual_block += (
+            "6. Chị đã tải lên NHÂN VẬT MẪU (" + (smp.get("note") or "") + "), bộ ghép: "
+            + json.dumps({k: v for k, v in smp["kit"].items() if not k.startswith("_")},
+                         ensure_ascii=False)
+            + ". Nhân vật chính (hoặc nhân vật giống mẫu nhất) dùng ĐÚNG bộ ghép này; các nhân "
+              "vật khác thiết kế cùng phong cách, màu sắc hài hoà với mẫu nhưng phân biệt rõ.\n")
     say(0.03, "AI chia chương và lập danh sách nhân vật, địa điểm")
     plan = claude_cli._run_json(claude_cli._load_prompt(
         "story_plan", minutes=str(int(minutes)), style_vi=style_vi,
@@ -149,6 +159,8 @@ def write_story(st: dict, progress=None) -> dict:
     if not isinstance(plan, dict) or not plan.get("chapters"):
         raise RuntimeError("AI không lập được dàn chương.")
     chapters = plan["chapters"][:16]
+    if plan.get("title") and not (st.get("title") or "").strip():
+        st["title"] = str(plan["title"]).strip()[:120]
     st["era"] = str(plan.get("era") or "")
     if tool:
         _make_parts(plan.get("new_parts"), say)
@@ -163,6 +175,8 @@ def write_story(st: dict, progress=None) -> dict:
     for i, c in enumerate(chapters):
         say(0.08 + 0.9 * i / len(chapters), f"AI viết chương {i + 1}/{len(chapters)}: {c.get('title')}")
         block = f"### Nguyên văn đoạn tương ứng\n{parts[i]}" if parts[i] else ""
+        if brief:
+            block = brief + ("\n\n" + block if block else "")
         if film_mode:
             out_chapters.append(_write_film_chapter(st, i, c, outline, chars_txt, places_txt,
                                                     block, per_min))
@@ -367,6 +381,18 @@ def default_voice(kit: dict | None) -> str:
     pitch = ("high pitch" if age in ("child", "young adult") else "moderate pitch") if female \
         else ("moderate pitch" if age in ("child", "young adult") else "low pitch")
     return f"{'female' if female else 'male'}, {age}, {pitch}"
+
+
+def brief_block(st: dict) -> str:
+    """Yêu cầu chị gõ (vd 'làm đoạn phim về chương 1 truyện Lão Hạc', 'một ngày
+    bình thường của Lão Hạc') đưa vào mọi câu lệnh viết."""
+    b = (st.get("brief") or "").strip()
+    if not b:
+        return ""
+    return ("### YÊU CẦU CỦA CHỊ (làm đúng theo yêu cầu này)\n" + b + "\n"
+            "- Chuyển thể một phần truyện (vd 'chương 1'): chỉ làm đúng phần đó, bám nguyên tác.\n"
+            "- Tình huống mới (vd 'một ngày bình thường của ...'): sáng tác mới, nhiều việc đời "
+            "thường hợp lý, nhưng giữ đúng tính cách, hoàn cảnh, thời đại, cách nói của nhân vật.")
 
 
 def _make_parts(new_parts, say) -> list[str]:

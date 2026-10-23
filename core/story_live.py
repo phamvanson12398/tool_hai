@@ -277,6 +277,7 @@ class LiveShot:
                 c.setdefault("kit", doodle.kit_from_look(c.get("name", ""), c.get("look", "")))
                 chars.append(c)
             self.speech.append(dict(sp, env=envelope(sp.get("path"), fps)))
+        self.sty = film_rig.style_of(st)
         self._layout(chars, acts, talk, kind)
         self._shadows: dict = {}
         self.cam = np.array([[1.0, 0, 0], [0, 1.0, 0]])
@@ -297,7 +298,7 @@ class LiveShot:
             kit = doodle.clean_kit(c["kit"])
             seed = zlib.crc32(c["id"].encode()) % 997
             k = 0.93 if back else 1.0
-            rig = film_rig.Rig(kit, T * k, seed) if kit["species"] == "human" \
+            rig = film_rig.Rig(kit, T * k, seed, self.sty) if kit["species"] == "human" \
                 else film_rig.AnimalRig(kit, T * k, seed)
             self.actors.append({
                 "c": c, "kit": kit, "act": act, "rig": rig,
@@ -479,12 +480,21 @@ def preview(st: dict, sc: dict, size, t: float = 1.0, pdir=None) -> Image.Image:
     return Image.fromarray(shot.frame(min(1.0, t / 6.0)))
 
 
-def character_preview(c: dict, height: int = 360) -> Image.Image:
-    kit = c.get("kit") or doodle.kit_from_look(c.get("name", ""), c.get("look", ""))
-    img, _foot, _eye = doodle.render(kit, "neutral", facing=0.3, height=height)
-    bg = Image.new("RGBA", img.size, (246, 238, 222, 255))
-    bg.alpha_composite(img)
-    return bg.convert("RGB")
+def character_preview(c: dict, height: int = 360, sty: dict | None = None) -> Image.Image:
+    """Ảnh xem trước nhân vật đúng kiểu nhân vật của truyện (có tay chân)."""
+    kit = doodle.clean_kit(c.get("kit") or doodle.kit_from_look(c.get("name", ""), c.get("look", "")))
+    W = H = int(height * 1.15)
+    canvas = np.full((H, W, 3), (246, 238, 222), np.uint8)
+    cam = np.array([[1.0, 0, 0], [0, 1.0, 0]])
+    if kit["species"] == "human":
+        rig = film_rig.Rig(kit, height * 0.95, 3, sty)
+        p = film_act.pose("idle", 0.5, 3)
+        p.update(x=W / 2, y=H - height * 0.06, dir=1, look=0.3)
+    else:
+        rig = film_rig.AnimalRig(kit, height * 1.4, 3)
+        p = {"x": W / 2, "y": H - height * 0.06, "dir": 1}
+    rig.draw(canvas, p, cam, 1.0)
+    return Image.fromarray(canvas)
 
 
 def place_preview(p: dict, time: str, size) -> Image.Image:

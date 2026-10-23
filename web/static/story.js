@@ -166,12 +166,14 @@
     var s = (st.data && st.data.story) || {};
     var body = {
       title: $("st-title").value.trim(),
+      brief: $("st-brief").value.trim(),
       author: $("st-author").value.trim(),
       minutes: parseInt($("st-minutes").value, 10) || 25,
       format: $("st-format").value,
       style: $("st-style").value,
       visual: $("st-visual").value,
       mode: $("st-mode").value,
+      char_style: $("st-charstyle").value,
       sync_style: $("st-sync-style").value,
       bg_mode: $("st-bgmode").value,
       dialogue: $("st-dialogue").value,
@@ -261,6 +263,7 @@
     st.data = d;
     var s = d.story || {};
     $("st-title").value = s.title || "";
+    $("st-brief").value = s.brief || "";
     $("st-author").value = s.author || "";
     $("st-minutes").value = s.minutes || 25;
     $("st-format").value = d.format || "16:9";
@@ -270,6 +273,19 @@
     sty.value = s.style || "doodle";
     $("st-visual").value = s.visual || "tool";
     $("st-mode").value = s.mode || "story";
+    var cs = $("st-charstyle");
+    cs.innerHTML = "";
+    (d.char_styles || []).forEach(function (kv) { cs.appendChild(new Option(kv[1], kv[0])); });
+    cs.appendChild(new Option("Chưa chọn kiểu — theo ảnh nhân vật mẫu (tải lên)", "sample"));
+    cs.value = s.char_style || "capsule";
+    var smp = d.char_sample || {};
+    if (smp.has) {
+      $("st-sample-img").src = "/api/story/" + encodeURIComponent(d.id) + "/char_sample.png?v=" + Date.now();
+      $("st-sample-img").hidden = false;
+      $("st-sample-note").textContent = "Claude thấy: " + (smp.note || "") + " — các nhân vật vẽ theo nét này. Tải ảnh khác để đổi.";
+    } else {
+      $("st-sample-img").hidden = true;
+    }
     var ss = $("st-sync-style");
     ss.innerHTML = "";
     (d.sync_styles || []).forEach(function (kv) { ss.appendChild(new Option(kv[1], kv[0])); });
@@ -832,6 +848,7 @@
     var filmMode = $("st-mode").value === "film";
     if (scr) scr.classList.toggle("st-film", filmMode);
     if (scr) scr.classList.toggle("st-sync", isSync());
+    $("st-sample-box").hidden = !(tool || filmMode) || isSync() || $("st-charstyle").value !== "sample";
     if (filmMode) tool = true;
     if (scr) scr.classList.toggle("st-tool", tool);
     if (scr) scr.classList.toggle("st-3d", tool && $("st-bgmode").value === "ai3d");
@@ -876,7 +893,7 @@
         if (s.state === "done" && !(st.data && st.data.video_ready)) open(st.id);
         if (last === "drawing" && s.state === "drawn") { toast("ok", "Đã vẽ bối cảnh 3D", s.message || ""); open(st.id); }
         if (last && last !== s.state) {
-          if (s.state === "written") { toast("ok", "AI đã viết xong lời kể"); open(st.id); }
+          if (s.state === "written") { toast("ok", "AI đã viết xong lời kể"); open(st.id).then(function () { return loadList(st.id); }); }
           if (s.state === "done") { toast("ok", "Đã dựng xong video"); open(st.id); }
           if (s.state === "error") toast("error", "Có lỗi", s.message || "");
         }
@@ -897,6 +914,28 @@
     });
     $("st-pick").addEventListener("change", function () { open(this.value); });
     $("st-part-make").addEventListener("click", newPart);
+    $("st-charstyle").addEventListener("change", function () {
+      applyVisual();
+      if (st.id) save(true);
+    });
+    $("st-sample-file").addEventListener("change", function () {
+      var f = this.files && this.files[0];
+      if (!f || !st.id) {
+        if (!st.id) toast("warn", "Chưa có truyện", "Bấm “+ Truyện mới” hoặc Lưu trước.");
+        return;
+      }
+      var input = this;
+      var fd = new FormData();
+      fd.append("file", f);
+      toast("ok", "Claude đang xem nhân vật mẫu…", "Khoảng 20–60 giây.");
+      api("/api/story/" + encodeURIComponent(st.id) + "/char_sample", { body: fd })
+        .then(function (d) {
+          st.stamp = Date.now();
+          render(d);
+          toast("ok", "Đã rút nét vẽ từ ảnh mẫu", (d.char_sample || {}).note || "");
+          input.value = "";
+        }).catch(fail("Không phân tích được ảnh mẫu"));
+    });
     $("st-sync-file").addEventListener("change", function () {
       var f = this.files && this.files[0];
       if (!f) return;

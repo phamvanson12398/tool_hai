@@ -12,11 +12,12 @@ Tác giả: {{author}}
    {{look_hint}}
    - Mọi địa điểm chính: id, tên tiếng Việt, mô tả bằng tiếng Anh (kiến trúc, đồ vật, cây cối, ánh sáng) đúng thời đại, vùng miền của truyện.
    - "era": một câu tiếng Anh về thời đại, vùng miền (vd "rural northern Vietnam village in the 1940s").
-3. Không bịa thêm nhân vật hay tình tiết không có trong truyện.
+3. Làm đúng theo YÊU CẦU (nếu có): chuyển thể một phần truyện thì bám nguyên tác, không thêm tình tiết; yêu cầu tình huống mới (vd "một ngày bình thường của ...") thì sáng tác mới nhưng giữ đúng tính cách, hoàn cảnh, thời đại, cách xưng hô của nhân vật trong truyện. Không có yêu cầu thì kể đúng nguyên tác, không bịa thêm.
+4. Đặt "title": tên video ngắn, hấp dẫn, đúng nội dung yêu cầu.
 {{visual_block}}
 
 Output JSON đúng dạng này, không có gì khác:
-{"chapters":[{"title":"tên chương","summary":"tóm tắt 2-3 câu"}],
+{"title":"tên video","chapters":[{"title":"tên chương","summary":"tóm tắt 2-3 câu"}],
  "characters":[{"id":"lao_hac","name":"Lão Hạc","look":"English description"}],
  "places":[{"id":"nha_lao_hac","name":"Nhà Lão Hạc","look":"English description"}],
  "era":"English sentence"}

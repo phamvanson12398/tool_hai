@@ -465,7 +465,7 @@ class FilmShot:
             c = chars[cid]
             kit = doodle.clean_kit(c.get("kit") or doodle.kit_from_look(c.get("name", ""), c.get("look", "")))
             seed = zlib.crc32(cid.encode()) % 997
-            self.rigs[cid] = (film_rig.Rig(kit, plan["T"], seed) if kit["species"] == "human"
+            self.rigs[cid] = (film_rig.Rig(kit, plan["T"], seed, film_rig.style_of(st)) if kit["species"] == "human"
                               else film_rig.AnimalRig(kit, plan["T"], seed), kit, seed)
         self.shots = shots(plan)
         self.env = {}

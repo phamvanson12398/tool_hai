@@ -905,3 +905,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 
 .st-furn { display: inline-flex; gap: 4px; align-items: center; }
 .st-furn select { width: auto; padding: 4px 6px; font-size: 12px; }
+
+.st-sample-box { border: 1px dashed var(--line); border-radius: var(--radius); padding: 10px; margin: 6px 0 10px; }
+.st-sample-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
+.st-sample-img { width: 120px; height: 120px; object-fit: contain; background: #f6eede; border-radius: 8px; }

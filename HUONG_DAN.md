@@ -618,6 +618,25 @@ hình có hai cách (ô **Cách làm hình**):
 - **Tranh tự vẽ ở công cụ khác**: chị vẽ tranh (Midjourney, Gemini, ChatGPT...) từ
   **bộ câu lệnh vẽ** tool xuất ra rồi tải lên.
 
+### Ra lệnh bằng một câu yêu cầu
+Ô **Yêu cầu** ở đầu mục 1: gõ như nói với người làm phim, vd *"Làm đoạn phim về
+chương 1 truyện Lão Hạc"*, *"Một ngày bình thường của Lão Hạc"*, *"Kể lại truyện
+Tấm Cám cho trẻ con"*. AI tự hiểu nên **chuyển thể đúng một phần truyện** (bám
+nguyên tác) hay **sáng tác tình huống mới** (nhiều việc đời thường) nhưng giữ đúng
+tính cách, hoàn cảnh, thời đại, cách nói của nhân vật. Tên video AI tự đặt nếu để
+trống; tên truyện, tác giả, nguyên văn không bắt buộc.
+
+### Kiểu nhân vật (Kể chuyện tool vẽ và Phim)
+Ô **Kiểu nhân vật**:
+- Chọn sẵn một kiểu: **Con nhộng tay chân ngắn** (vẽ tay Hàn, mặc định), **Chibi
+  đầu thật to, mắt tròn**, **Người tỉ lệ cao** (đầu nhỏ, chân tay dài), **Anime mắt
+  to, nét mảnh**, **Tối giản mắt chấm** (kiểu meme).
+- Chưa chọn kiểu → chọn **"Chưa chọn kiểu — theo ảnh nhân vật mẫu"** rồi tải ảnh
+  một nhân vật mẫu lên: Claude xem ảnh, rút ra nét vẽ (tỉ lệ đầu – thân – chân – tay,
+  độ dày tay chân, kiểu mắt, nét viền, độ run nét) và ngoại hình nhân vật đó. Khi
+  viết, nhân vật chính dùng đúng ngoại hình mẫu, các nhân vật liên quan được thiết
+  kế cùng nét vẽ, màu hài hoà nhưng phân biệt rõ. Ảnh xem trước ở mục 2 vẽ đúng kiểu.
+
 ### Hai kiểu video: Kể chuyện và Phim
 Ô **Kiểu video** ở đầu mục 1:
 

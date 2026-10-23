@@ -368,8 +368,13 @@
               <option value="sync">Ảnh theo lời — tải giọng có sẵn, AI vẽ ảnh từng câu, ảnh đổi đúng lúc lời tới</option>
             </select>
           </div>
+          <div class="field st-nosync">
+            <label for="st-brief">Yêu cầu</label>
+            <textarea id="st-brief" rows="2" placeholder="VD: Làm đoạn phim về chương 1 truyện Lão Hạc · Một ngày bình thường của Lão Hạc · Kể lại truyện Tấm Cám cho trẻ con"></textarea>
+            <p class="hint">Gõ như nói với người làm phim. AI tự hiểu nên chuyển thể đúng một phần truyện hay sáng tác tình huống mới nhưng giữ đúng nhân vật, thời đại. Tên truyện, tác giả bên dưới không bắt buộc.</p>
+          </div>
           <div class="field-row">
-            <div class="field"><label for="st-title">Tên truyện</label><input type="text" id="st-title" placeholder="Lão Hạc"></div>
+            <div class="field"><label for="st-title">Tên truyện / tên video</label><input type="text" id="st-title" placeholder="Lão Hạc"></div>
             <div class="field"><label for="st-author">Tác giả</label><input type="text" id="st-author" placeholder="Nam Cao"></div>
           </div>
           <div class="field-row">
@@ -382,11 +387,23 @@
                 <option value="images">Tranh tự vẽ ở công cụ khác (xuất câu lệnh)</option>
               </select></div>
             <div class="field st-img-only st-nosync"><label for="st-style">Phong cách tranh</label><select id="st-style"></select></div>
+            <div class="field st-tool-only st-nosync"><label for="st-charstyle">Kiểu nhân vật</label>
+              <select id="st-charstyle"></select></div>
             <div class="field st-tool-only"><label for="st-bgmode">Bối cảnh</label>
               <select id="st-bgmode">
                 <option value="draw">Vẽ tay (nhanh, có sẵn)</option>
                 <option value="ai3d">3D — AI vẽ trên máy (Stable Diffusion)</option>
               </select></div>
+          </div>
+          <div class="st-sample-box" id="st-sample-box" hidden>
+            <div class="st-sample-row">
+              <img id="st-sample-img" class="st-sample-img" alt="Nhân vật mẫu" hidden>
+              <div>
+                <label for="st-sample-file">Ảnh nhân vật mẫu</label>
+                <input type="file" id="st-sample-file" accept="image/*">
+                <p class="hint" id="st-sample-note">Chưa chọn kiểu nhân vật thì tải ảnh một nhân vật mẫu lên: Claude xem nét vẽ (tỉ lệ đầu – thân – tay chân, kiểu mắt, nét viền) và ngoại hình, tool vẽ nhân vật đó và các nhân vật liên quan theo đúng nét ấy.</p>
+              </div>
+            </div>
           </div>
           <div class="field-row">
             <div class="field st-nosync"><label for="st-voice">Giọng người kể (Thư viện)</label>

@@ -77,6 +77,8 @@ def clean_kit(k: dict | None) -> dict:
         if v in ok:
             out[key] = v
     out["patched"] = bool(k.get("patched"))
+    if isinstance(k.get("_sty"), dict):            # kiểu nhân vật (film_rig.CHAR_STYLES)
+        out["_sty"] = k["_sty"]
     return out
 
 
@@ -559,6 +561,7 @@ def _draw_face(pen: _Pen, kit, cx, hy, R, f, expr, mouth_open, blink):
     if expr == "shocked":
         eye_r = (0.19 * R, 0.17 * R)
     closed = blink or expr in ("sleep", "cry", "happy")
+    eye_style = (kit.get("_sty") or {}).get("eyes", "dot")
     for sx in (-1, 1):
         ex = fx + sx * sep
         if closed:
@@ -571,12 +574,32 @@ def _draw_face(pen: _Pen, kit, cx, hy, R, f, expr, mouth_open, blink):
             else:
                 pen.line(_ellipse_pts(ex, ey - 0.02 * R, 0.13 * R, 0.07 * R, 10, 170, 8),
                          width=lw)
+        elif eye_style == "line":                         # mắt chấm đen kiểu meme
+            rr = 0.07 * R * (1.4 if expr == "shocked" else 1.0)
+            pen.dot(ex + f * 0.04 * R, ey, rr)
+        elif eye_style == "big":                          # mắt anime: tròng to, đốm sáng
+            ry = eye_r[1] * 2.0
+            rx = eye_r[0] * 1.1
+            pen.ell(ex, ey, rx, ry, (255, 255, 255), width=thin)
+            iris = HAIR_COLORS.get(kit.get("hair_color"), OUT) if kit.get("hair_color") not in \
+                ("white", "gray", "salt") else (90, 70, 60)
+            pen.ell(ex + f * 0.04 * R, ey + ry * 0.12, rx * 0.72, ry * 0.8, iris, width=thin,
+                    wob=False)
+            pen.dot(ex + f * 0.04 * R, ey + ry * 0.15, rx * 0.38)
+            pen.dot(ex + f * 0.04 * R - rx * 0.3, ey - ry * 0.25, rx * 0.22, (255, 255, 255))
+            pen.line(_ellipse_pts(ex, ey + ry * 0.05, rx * 1.15, ry * 1.1, 200, 340, 8),
+                     width=int(lw * 1.4))
+        elif eye_style == "round":                        # mắt tròn to kiểu chibi
+            r0 = eye_r[0] * 1.35
+            pen.ell(ex, ey, r0, r0, (255, 255, 255), width=thin)
+            pen.dot(ex + f * 0.07 * R, ey + 0.02 * R, r0 * 0.55)
+            pen.dot(ex + f * 0.07 * R - r0 * 0.2, ey - r0 * 0.2, r0 * 0.2, (255, 255, 255))
         else:
             pen.ell(ex, ey, eye_r[0], eye_r[1], (255, 255, 255), width=thin)
             pr = 0.055 * R if expr != "shocked" else 0.04 * R
             py = ey + (0.03 * R if expr in ("sad", "worried") else 0.0)
             pen.dot(ex + f * 0.06 * R, py, pr)
-            if expr in ("neutral", "sad", "sly", "think", "worried"):   # mí mắt trên nặng
+            if expr in ("neutral", "sad", "sly", "think", "worried") and eye_style == "dot":   # mí mắt nặng
                 k = 0.55 if expr == "sly" else 0.0
                 pen.line(_ellipse_pts(ex, ey - k * eye_r[1], eye_r[0] * 1.05, eye_r[1] * 1.1,
                                       200, 340, 8), width=lw)

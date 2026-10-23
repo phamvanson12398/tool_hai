@@ -269,32 +269,78 @@ def marks(canvas, act, t, head, T, face):
 
 # ------------------------------------------------------------ người
 
+# Kiểu nhân vật: tỉ lệ đầu (bán kính / chiều cao), bề ngang thân, chân, tay, độ dày
+# tay chân, kiểu mắt, độ dày nét viền, độ run nét
+CHAR_STYLES = {
+    "capsule": {"label": "Con nhộng tay chân ngắn (vẽ tay Hàn)", "head": 0.25, "body": 1.0,
+                "leg": 0.15, "arm": 1.0, "limb": 1.0, "eyes": "dot", "outline": 1.0, "wobble": 1.0},
+    "chibi": {"label": "Chibi đầu thật to, mắt tròn", "head": 0.31, "body": 1.05, "leg": 0.11,
+              "arm": 0.9, "limb": 1.15, "eyes": "round", "outline": 1.15, "wobble": 1.0},
+    "tall": {"label": "Người tỉ lệ cao (đầu nhỏ, chân tay dài)", "head": 0.16, "body": 0.82,
+             "leg": 0.32, "arm": 1.75, "limb": 0.75, "eyes": "dot", "outline": 0.8, "wobble": 0.6},
+    "anime": {"label": "Anime mắt to, nét mảnh", "head": 0.2, "body": 0.8, "leg": 0.27, "arm": 1.55,
+              "limb": 0.68, "eyes": "big", "outline": 0.65, "wobble": 0.25},
+    "simple": {"label": "Tối giản mắt chấm (kiểu meme)", "head": 0.24, "body": 0.95, "leg": 0.16,
+               "arm": 1.05, "limb": 0.95, "eyes": "line", "outline": 1.1, "wobble": 1.2},
+}
+_RANGES = {"head": (0.12, 0.36), "body": (0.6, 1.3), "leg": (0.06, 0.38), "arm": (0.7, 2.0),
+           "limb": (0.5, 1.4), "outline": (0.4, 1.6), "wobble": (0.0, 1.6)}
+EYES = ("dot", "round", "big", "line")
+
+
+def clean_style(d: dict | None) -> dict:
+    """Thông số kiểu nhân vật hợp lệ (thiếu thì lấy kiểu con nhộng)."""
+    out = {k: v for k, v in CHAR_STYLES["capsule"].items() if k != "label"}
+    for k, (lo, hi) in _RANGES.items():
+        try:
+            out[k] = max(lo, min(hi, float((d or {}).get(k, out[k]))))
+        except (TypeError, ValueError):
+            pass
+    if (d or {}).get("eyes") in EYES:
+        out["eyes"] = d["eyes"]
+    return out
+
+
+def style_of(st: dict) -> dict:
+    """Kiểu nhân vật của truyện: kiểu chọn sẵn, hoặc rút từ ảnh nhân vật mẫu."""
+    name = st.get("char_style") or "capsule"
+    if name == "sample":
+        return clean_style(((st.get("char_sample") or {}).get("style")))
+    return clean_style(CHAR_STYLES.get(name, CHAR_STYLES["capsule"]))
+
+
 class Rig:
     """Nhân vật người có tay chân. T = chiều cao (đơn vị thế giới, px ở góc rộng)."""
 
-    def __init__(self, kit: dict, T: float, seed: int = 0):
+    def __init__(self, kit: dict, T: float, seed: int = 0, sty: dict | None = None):
+        self.sty = clean_style(sty or kit.get("_sty"))
+        sty = self.sty
         self.kit = doodle.clean_kit(kit)
+        self.kit["_sty"] = sty
         self.seed = seed
         child = self.kit["age"] == "child"
         self.T = T * (0.8 if child else 1.0)
         T = self.T
-        self.R = T * (0.29 if child else 0.25)
+        self.R = T * sty["head"] * (1.16 if child else 1.0)
         R = self.R
-        self.leg = T * (0.13 if child else 0.15)
+        self.Rb = T * 0.25 * sty["body"] * (1.06 if child else 1.0)    # "bán kính" bề ngang thân
+        self.leg = T * sty["leg"] * (0.87 if child else 1.0)
         self.hip_h = self.leg * 0.82                      # hông cao hơn đất
         self.head_y = -T + R                              # tâm đầu (đất = 0)
         self.body_top = self.head_y + 0.78 * R
         self.body_bot = -self.hip_h + R * 0.12
         female = self.kit["sex"] == "female"
-        wt = R * (0.66 if female else 0.74)
-        wb = R * (0.98 if self.kit["top"] == "dress" else (0.84 if female else 0.86))
+        Rb = self.Rb
+        wt = Rb * (0.66 if female else 0.74)
+        wb = Rb * (0.98 if self.kit["top"] == "dress" else (0.84 if female else 0.86))
         if child:
             wt, wb = wt * 0.92, wb * 0.92
         self.wt, self.wb = wt, wb
-        self.shoulder = (wt * 0.86, self.body_top + 0.36 * R)
+        self.shoulder = (wt * 0.86, self.body_top + 0.36 * min(R, Rb))
         self.hipx = wb * 0.42
-        self.arm = (T * 0.12, T * 0.11, T * 0.062, T * 0.036)   # trên, dưới, dày, bàn tay
-        self.legd = (self.leg * 0.52, self.leg * 0.5, T * 0.075)
+        a, lm = sty["arm"], sty["limb"]
+        self.arm = (T * 0.12 * a, T * 0.11 * a, T * 0.062 * lm, T * 0.036 * max(0.8, lm))
+        self.legd = (self.leg * 0.52, self.leg * 0.5, T * 0.075 * lm)
         top_c = doodle.CLOTH[self.kit["top_color"]]
         self.sleeve = top_c
         self.skin = doodle.SKINS[self.kit["skin"]]
@@ -326,6 +372,9 @@ class Rig:
         hb = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         pen = doodle._Pen(head, self.T * S, self.seed)
         pb = doodle._Pen(hb, self.T * S, self.seed)
+        for pp in (pen, pb):
+            pp.lw = max(1, int(pp.lw * self.sty["outline"]))
+            pp.amp *= self.sty["wobble"]
         doodle._draw_head_parts(pb, kit, cx, hy, R, "back")
         doodle._draw_hair_back(pb, kit, cx, hy, R, face_dir or 1)
         pen.ell(cx, hy, R, R * 0.97, self.skin)
@@ -338,11 +387,14 @@ class Rig:
         head_m = _aff(_tr(0, self.body_top), _aff(_sc(1 / kq), _tr(-neck[0] / doodle.SS,
                                                                       -neck[1] / doodle.SS)))
         # thân (gốc = giữa hông)
-        bw = int(R * 2.6)
-        top, bot = R * 0.15, R * 0.15 + (self.body_bot - self.body_top) * S
-        body = Image.new("RGBA", (bw, int(bot + R * 0.2)), (0, 0, 0, 0))
+        Rb = self.Rb * S
+        bw = int(Rb * 2.6)
+        top, bot = Rb * 0.15, Rb * 0.15 + (self.body_bot - self.body_top) * S
+        body = Image.new("RGBA", (bw, int(bot + Rb * 0.2)), (0, 0, 0, 0))
         pbody = doodle._Pen(body, self.T * S, self.seed)
-        doodle._draw_body(body, pbody, kit, bw / 2, top, bot, R, self.seed)
+        pbody.lw = max(1, int(pbody.lw * self.sty["outline"]))
+        pbody.amp *= self.sty["wobble"]
+        doodle._draw_body(body, pbody, kit, bw / 2, top, bot, Rb, self.seed)
         body_m = _aff(_tr(0, self.body_top), _aff(_sc(1 / kq), _tr(-bw / 2 / doodle.SS,
                                                                       -top / doodle.SS)))
         hb_s = hb.resize(sz, Image.LANCZOS)
@@ -439,7 +491,7 @@ class Rig:
         self._last_elbow = pts[1]
         P = np.array([[int(px * 4), int(py * 4)] for px, py in pts], np.int32)
         wz = max(2, int(w * zoom))
-        lw = max(1, int(self.T * zoom * 0.016))
+        lw = max(1, int(self.T * zoom * 0.016 * self.sty["outline"]))
         cv2.polylines(canvas, [P], False, OUT, wz + 2 * lw, cv2.LINE_AA, shift=2)
         for p in P:
             cv2.circle(canvas, tuple(int(v) for v in p), (wz + 2 * lw) * 2, OUT, -1, cv2.LINE_AA, shift=2)
