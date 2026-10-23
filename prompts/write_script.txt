@@ -29,6 +29,7 @@ Quy tắc:
 - Có thêm cử chỉ khung xương trong ngoặc (chọn từ danh sách, cách nhau bằng dấu phẩy):
   {{gestures_block}}
 - Có thêm hiệu ứng cả người trong ngoặc (chọn từ): nhun, nhay, rung, nghieng, quay, nga.
+- Tên biểu cảm, cử chỉ, tiếng động phải chép ĐÚNG Y HỆT danh sách trên (vd vỗ tay là `voratay`, không viết `vortay`/`votay`); không tự đặt tên mới.
 - Tuỳ chọn thêm: pause=0.5 (nghỉ thêm sau câu, giây), Tên=biểu_cảm (đổi biểu cảm người nghe), zoom=Tên (zoom vào người khác).
 - Dòng bắt đầu bằng `>` là nhịp phản ứng KHÔNG có lời, kèm số giây (0.5–1.2). Đây là khoảng lặng có chủ đích.
 - Bối cảnh: nếu câu chuyện diễn ra ở nhiều nơi (vd ở nhà rồi ra quán, hoặc cú lật ở chỗ khác), chuyển cảnh bằng một dòng riêng `## canh: <mô tả ngắn bằng tiếng Việt, kèm ngày/đêm nếu cần>` (vd `## canh: quán cà phê, buổi tối`). Các câu phía sau thuộc cảnh đó. Tối đa 3 cảnh, chỉ đổi cảnh khi giúp câu chuyện buồn cười hơn; truyện ở một chỗ thì đặt một dòng `## canh:` ở đầu. Quay lại chỗ cũ thì viết đúng mô tả cũ.

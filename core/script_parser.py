@@ -135,6 +135,39 @@ def _split_cast(spec: str) -> tuple[list[str], dict[str, str]]:
     return names, sides
 
 
+# Tên dễ nhớ / viết khác của cử chỉ
+GESTURE_ALIASES = {
+    "votay": "voratay", "vo_tay": "voratay", "clap": "voratay",
+    "wave": "vaytay", "vay_tay": "vaytay", "point": "chitay", "chi_tay": "chitay",
+    "om_dau": "omdau", "khoanh_tay": "khoanhtay", "gio_hai_tay": "giohaitay",
+    "nhun_vai": "nhunvai", "shrug": "nhunvai", "gat_dau": "gatdau", "nod": "gatdau",
+    "lac_dau": "lacdau", "di_bo": "dibo", "walk": "dibo", "nhay_len": "nhaylen",
+    "jump": "nhaylen",
+}
+
+
+def _guess_mod(tok: str, valid_gestures: set[str]) -> tuple[str, str] | None:
+    """Đoán tên đúng cho một tuỳ chọn viết sai. Trả về (loại, tên) hoặc None."""
+    import difflib
+
+    if tok in GESTURE_ALIASES and GESTURE_ALIASES[tok] in valid_gestures:
+        return "gesture", GESTURE_ALIASES[tok]
+    pools = [("gesture", sorted(valid_gestures)), ("expr", sorted(VALID_EXPRESSIONS)),
+             ("effect", list(EFFECT_NAMES)), ("sfx", sorted(VALID_SFX))]
+    flat = tok.replace("_", "").replace(" ", "").replace("-", "")
+    for kind, names in pools:                       # khác nhau mỗi dấu gạch
+        for n in names:
+            if n.replace("_", "") == flat:
+                return kind, n
+    best = None
+    for kind, names in pools:
+        for n in difflib.get_close_matches(flat, names, n=1, cutoff=0.75):
+            r = difflib.SequenceMatcher(None, flat, n).ratio()
+            if best is None or r > best[0]:
+                best = (r, kind, n)
+    return (best[1], best[2]) if best else None
+
+
 def _parse_mods(mods: str, beat: Beat, errors: list[str], warnings: list[str],
                 line_no: int) -> None:
     """Parse tuỳ chọn trong ngoặc: biểu cảm, zoom, tiếng động, cử chỉ,
@@ -181,14 +214,27 @@ def _parse_mods(mods: str, beat: Beat, errors: list[str], warnings: list[str],
         elif tok_lower in ("gesture", "cu_chi", "gestures"):
             continue
         else:
-            # Tên biểu cảm / cử chỉ viết sai -> báo lỗi tiếng Việt kèm số dòng
-            errors.append(
-                f"Dòng {line_no}: không nhận ra '{tok}' (không phải biểu cảm, "
-                f"tiếng động hay cử chỉ). "
-                f"Biểu cảm hợp lệ: {', '.join(sorted(VALID_EXPRESSIONS))}. "
-                f"Các cử chỉ hợp lệ: {', '.join(sorted(valid_gestures))}. "
-                f"Hiệu ứng cả người: {', '.join(EFFECT_NAMES)}."
-            )
+            # Viết sai (thường do AI gõ nhầm, vd 'vortay'): sửa về tên gần nhất
+            # nếu đủ giống; không thì bỏ qua. Chỉ cảnh báo, không chặn dựng.
+            fixed = _guess_mod(tok_lower, valid_gestures)
+            if fixed:
+                kind, name = fixed
+                if kind == "expr":
+                    beat.expression = name
+                elif kind == "sfx":
+                    beat.sfx = name
+                elif kind == "gesture":
+                    beat.gestures.append(name)
+                else:
+                    beat.effects.append(name)
+                warnings.append(f"Dòng {line_no}: '{tok}' không có, tool hiểu là '{name}'.")
+            else:
+                warnings.append(
+                    f"Dòng {line_no}: bỏ qua '{tok}' (không phải biểu cảm, tiếng động "
+                    f"hay cử chỉ). Biểu cảm: {', '.join(sorted(VALID_EXPRESSIONS))}. "
+                    f"Cử chỉ: {', '.join(sorted(valid_gestures))}. "
+                    f"Hiệu ứng cả người: {', '.join(EFFECT_NAMES)}."
+                )
 
 
 def parse_script(text: str) -> Script:
