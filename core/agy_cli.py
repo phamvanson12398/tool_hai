@@ -21,7 +21,10 @@ from pathlib import Path
 
 from . import config
 
-TAIL = "Làm đúng yêu cầu ở trên. Chỉ trả lời nội dung được yêu cầu, không dùng công cụ sửa file."
+TAIL = ("Làm đúng yêu cầu ở trên và trả lời thẳng bằng chữ. KHÔNG dùng công cụ nào "
+        "(không chạy lệnh, không đọc hay sửa file, không tìm web). Chỉ trả lời nội "
+        "dung được yêu cầu.")
+_DENIED_RE = re.compile(r"auto-denied|permission that headless|no output produced", re.I)
 
 # Lỗi đăng nhập: lần sau trong phiên bỏ qua agy, dùng Claude luôn cho nhanh
 _AUTH_ERROR: str | None = None
@@ -93,6 +96,11 @@ def run(prompt: str, *, timeout: int = 300) -> str:
     err = (proc.stderr or "").strip()
     if proc.returncode != 0 or not out:
         msg = _short(err or out) or f"mã lỗi {proc.returncode}"
+        if _DENIED_RE.search(err + " " + out):
+            raise RuntimeError(
+                "Antigravity định dùng công cụ (chạy lệnh trên máy) nhưng khi chạy ngầm "
+                "không được phép nên không trả lời. Việc này nên chọn Claude trong "
+                "Cài đặt → Trợ lý AI cho từng việc.")
         if _AUTH_RE.search(err + " " + out):
             _AUTH_ERROR = ("Antigravity chưa đăng nhập được: " + msg.rstrip(".") + ". Mở cửa sổ lệnh, "
                            "gõ agy rồi đăng nhập Google một lần; xong bấm Lưu cài đặt "

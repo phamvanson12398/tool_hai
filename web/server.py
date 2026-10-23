@@ -250,7 +250,8 @@ def api_meta():
     return jsonify({
         "claude_calls": claude_cli.call_count(),
         "ai_calls": claude_cli.call_counts(),
-        "ai_tasks": [{"id": k, "label": v[0], "default": v[1]}
+        "ai_tasks": [{"id": k, "label": v[0], "default": v[1],
+                      "engines": claude_cli.engines_for_task(k)}
                      for k, v in claude_cli.AI_TASKS.items()],
         "ai_engines": [{"id": k, "label": v} for k, v in claude_cli.ENGINES.items()],
         "languages": [{"code": k, "label": v["label"]}

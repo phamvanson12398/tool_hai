@@ -38,7 +38,7 @@ Mỗi việc chọn riêng dùng Claude hay Antigravity (model Gemini của Goog
 | Rà soát kịch bản | Claude |
 | Áp dụng góp ý vào kịch bản | Claude |
 | 3 hướng khác | Antigravity |
-| Bắt trend | Antigravity |
+| Bắt trend | **Luôn Claude** — cần tìm trên web; Antigravity chạy ngầm không được phép dùng công cụ nên không tìm được |
 | Chọn nhân vật, chọn bối cảnh, mô tả giọng | Antigravity |
 
 - Nếu AI đã chọn lỗi, chưa cài hoặc hết hạn mức, tool **tự chuyển sang AI còn

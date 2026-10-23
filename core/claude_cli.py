@@ -60,7 +60,7 @@ AI_TASKS = {
     "review": ("Rà soát kịch bản", "claude"),
     "apply": ("Áp dụng góp ý vào kịch bản", "claude"),
     "ideas": ("3 hướng khác", "agy"),
-    "trends": ("Bắt trend", "agy"),
+    "trends": ("Bắt trend (cần tìm web — chỉ Claude làm được an toàn)", "claude"),
     "characters": ("Chọn nhân vật (bộ ghép)", "agy"),
     "background": ("Chọn bối cảnh", "agy"),
     "voices": ("Mô tả giọng", "agy"),
@@ -70,8 +70,21 @@ ENGINES = {"claude": "Claude", "agy": "Antigravity (Gemini)"}
 _LEGACY = {"gemini": "agy"}
 
 
+# Việc phải tìm trên web: Antigravity chạy ngầm không được phép dùng công cụ
+# (nó tự từ chối, không trả lời gì) và không có cách an toàn chỉ cho phép tìm
+# web, còn Claude CLI có WebSearch chỉ đọc — nên những việc này luôn dùng Claude.
+CLAUDE_ONLY = {"trends"}
+
+
+def engines_for_task(task: str) -> list[str]:
+    """Các AI chọn được cho một việc."""
+    return ["claude"] if task in CLAUDE_ONLY else list(ENGINES)
+
+
 def engine_for(task: str) -> str:
     """AI được chọn cho một việc (theo Cài đặt, không có thì mặc định)."""
+    if task in CLAUDE_ONLY:
+        return "claude"
     chosen = (config.load_settings().get("ai_engines") or {}).get(task)
     chosen = _LEGACY.get(chosen, chosen)
     if chosen in ENGINES:

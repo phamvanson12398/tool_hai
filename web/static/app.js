@@ -1921,9 +1921,13 @@
       var sel = document.createElement("select");
       sel.id = "ai-task-" + t.id;
       sel.setAttribute("data-task", t.id);
-      engines.forEach(function (e) { sel.appendChild(new Option(e.label, e.id)); });
+      var allowed = t.engines || null;
+      engines.forEach(function (e) {
+        if (!allowed || allowed.indexOf(e.id) >= 0) sel.appendChild(new Option(e.label, e.id));
+      });
       var v = chosen[t.id] === "gemini" ? "agy" : chosen[t.id];   // cài đặt cũ
       sel.value = v || t["default"];
+      if (!sel.value) sel.value = t["default"];
       f.appendChild(lb);
       f.appendChild(sel);
       box.appendChild(f);
