@@ -851,3 +851,4 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 .photo-char { border-top: 1px dashed var(--line); margin-top: 12px; padding-top: 12px; }
 .photo-char input[type=file] { max-width: 100%; }
 #photo-char-note { flex: 1 1 200px; min-width: 0; }
+.st-ref { width: 100%; border-radius: var(--radius-sm); border: 1px solid var(--line); margin-top: 6px; }

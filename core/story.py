@@ -32,6 +32,17 @@ logger = logging.getLogger(__name__)
 
 # Phong cách tranh: (tên hiển thị, câu mở đầu cho câu lệnh vẽ)
 STYLES = {
+    "doodle": ("Vẽ tay webtoon Hàn (đầu tròn, thân con nhộng)",
+               "hand-drawn Korean webtoon doodle style like a Korean storytime YouTube animation, "
+               "simple cute chibi characters: big round head, tiny simple face with small dot eyes "
+               "and short line eyebrows, small mouth, body is a simple rounded capsule or bell "
+               "shape with NO visible arms and NO legs, clothing drawn as flat color blocks on the "
+               "capsule body, thick slightly wobbly black marker outlines, flat muted pastel colors "
+               "with no gradients and no shading, background drawn in the same hand-drawn line "
+               "style with simple perspective, plain beige walls with a few short vertical scratch "
+               "strokes, sparse simple furniture, subtle grainy paper texture over the whole "
+               "image, characters standing on the floor at different depths, consistent "
+               "character design"),
     "anim2d": ("Hoạt hình 2D",
                "2D animated film still, clean confident line art, soft cel shading, "
                "warm muted earthy palette, gentle storybook lighting, expressive faces, "
@@ -48,6 +59,19 @@ STYLES = {
 }
 NEGATIVE = "no text, no letters, no watermark, no logo, no frame border"
 
+# Gợi ý cho AI khi tả ngoại hình nhân vật theo từng phong cách
+LOOK_HINTS = {
+    "doodle": ("Phong cách này vẽ nhân vật đầu tròn, thân hình con nhộng KHÔNG có tay chân, "
+               "nên mô tả ngoại hình tập trung vào thứ nhìn thấy được: kiểu tóc và màu tóc "
+               "(búi, tóc ngắn, tóc bạc...), kính, râu, nếp nhăn, nét mặt thường trực, màu và "
+               "kiểu áo, váy, quần (vd \"beige jacket with name tag, dark gray trousers\"); "
+               "không tả dáng đi, cơ bắp, tay chân. Con vật vẽ tròn, đơn giản cùng kiểu."),
+}
+
+STYLE_REF = "style_ref.png"     # ảnh mẫu phong cách chị tải lên, gửi kèm mọi lần vẽ
+_REF_EN = ("Match the art style of the attached style reference image exactly: same line "
+           "weight, colors, character proportions and background drawing style")
+
 CAMERAS = ("zoom_in", "zoom_out", "pan_left", "pan_right", "pan_up", "pan_down", "still")
 
 # Nhịp kể: chữ (âm tiết) mỗi phút khi viết lời kể; giọng kể đọc chậm hơn thoại
@@ -62,7 +86,7 @@ _NUM = re.compile(r"(\d+)")
 def default_story(title: str = "", author: str = "") -> dict:
     return {
         "title": title, "author": author, "source_text": "", "minutes": 25,
-        "style": "anim2d", "narrator": {"voice": "", "instruct": "male, elderly, low pitch"},
+        "style": "doodle", "narrator": {"voice": "", "instruct": "male, elderly, low pitch"},
         "subtitles": False, "era": "", "characters": [], "places": [], "chapters": [],
     }
 
@@ -109,11 +133,13 @@ def write_story(st: dict, progress=None) -> dict:
     source_block = (f"### Nguyên văn truyện\n{src}" if src else
                     "(Không có nguyên văn: kể lại theo đúng nội dung truyện mà bạn biết, "
                     "không bịa thêm.)")
+    look_hint = LOOK_HINTS.get(st.get("style"), "")
     say(0.03, "AI chia chương và lập danh sách nhân vật, địa điểm")
     plan = claude_cli._run_json(claude_cli._load_prompt(
         "story_plan", minutes=str(int(minutes)), style_vi=style_vi,
         title=st.get("title") or "", author=st.get("author") or "(không rõ)",
-        source_block=source_block, n_chapters=str(n)), task="story", timeout=600)
+        source_block=source_block, n_chapters=str(n), look_hint=look_hint),
+        task="story", timeout=600)
     if not isinstance(plan, dict) or not plan.get("chapters"):
         raise RuntimeError("AI không lập được dàn chương.")
     chapters = plan["chapters"][:16]
@@ -187,8 +213,10 @@ def _aspect(fmt: str) -> str:
         fmt, "vertical 9:16 composition")
 
 
-def image_prompt(st: dict, sc: dict, fmt: str) -> str:
+def image_prompt(st: dict, sc: dict, fmt: str, ref: bool = False) -> str:
     style = STYLES.get(st.get("style"), STYLES["anim2d"])[1]
+    if ref:
+        style = _REF_EN + ". " + style
     looks = {c["id"]: c for c in st.get("characters") or []}
     places = {p["id"]: p for p in st.get("places") or []}
     parts = [style, sc.get("prompt") or ""]
@@ -204,15 +232,18 @@ def image_prompt(st: dict, sc: dict, fmt: str) -> str:
     return ". ".join(x.strip().rstrip(".") for x in parts if x and x.strip()) + "."
 
 
-def character_prompt(st: dict, c: dict) -> str:
+def character_prompt(st: dict, c: dict, ref: bool = False) -> str:
     style = STYLES.get(st.get("style"), STYLES["anim2d"])[1]
+    if ref:
+        style = _REF_EN + ". " + style
     return (f"{style}. Character reference sheet of {c['name']}: {c['look']}. "
             f"Full body, front view and three-quarter view, neutral pose, plain light background. "
             f"{st.get('era') or ''}. {NEGATIVE}.")
 
 
-def prompts_text(st: dict, fmt: str) -> str:
-    """Bộ câu lệnh vẽ để chị dán vào công cụ vẽ tranh (Midjourney, Gemini...)."""
+def prompts_text(st: dict, fmt: str, ref: bool = False) -> str:
+    """Bộ câu lệnh vẽ để chị dán vào công cụ vẽ tranh (Midjourney, Gemini...).
+    ref: chị đã tải ảnh mẫu phong cách -> nhắc gửi kèm ảnh đó mọi lần vẽ."""
     lines = [
         f"BỘ CÂU LỆNH VẼ — {st.get('title')} ({st.get('author') or ''})",
         f"Phong cách: {STYLES.get(st.get('style'), STYLES['anim2d'])[0]} · Khung: {fmt}",
@@ -223,17 +254,25 @@ def prompts_text(st: dict, fmt: str) -> str:
         "   (Midjourney: --cref; Gemini/ChatGPT: gửi kèm ảnh) để nhân vật giống nhau.",
         "3. Lưu ảnh đúng tên scene_001.png, scene_002.png... rồi bấm 'Tải ảnh lên' trong tool",
         "   (hoặc chép vào thư mục story_images của tập). Ảnh thiếu tool dựng tạm khung chữ.",
+    ]
+    if ref:
+        lines += [
+            "4. MỌI lần vẽ (nhân vật và cảnh) đều gửi kèm ảnh mẫu phong cách style_ref.png",
+            "   (tải ở mục 4 của tool). Midjourney: --sref <link ảnh>; Gemini/ChatGPT: đính kèm",
+            "   ảnh và giữ nguyên câu lệnh (câu lệnh đã dặn vẽ đúng phong cách ảnh đính kèm).",
+        ]
+    lines += [
         "",
         "=== NHÂN VẬT (ảnh tham chiếu) ===",
     ]
     for c in st.get("characters") or []:
-        lines += [f"[char_{c['id']}.png] {c['name']}", character_prompt(st, c), ""]
+        lines += [f"[char_{c['id']}.png] {c['name']}", character_prompt(st, c, ref), ""]
     lines.append("=== CẢNH ===")
     for ci, sc in all_scenes(st):
         ch = st["chapters"][ci]
         lines += [f"[scene_{sc['id']}.png] Chương {ci + 1}: {ch['title']} — camera: {sc.get('camera')}",
                   f"Lời kể: {sc.get('text')}",
-                  image_prompt(st, sc, fmt), ""]
+                  image_prompt(st, sc, fmt, ref), ""]
     return "\n".join(lines)
 
 
@@ -250,7 +289,8 @@ def scene_images(pdir: Path) -> dict[str, Path]:
     (scene_001.png, 001.jpg, canh 1.webp...). Ảnh char_* bỏ qua."""
     out: dict[str, Path] = {}
     for p in sorted(image_dir(pdir).iterdir()):
-        if p.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp") or p.name.startswith("char_"):
+        if p.suffix.lower() not in (".png", ".jpg", ".jpeg", ".webp") \
+                or p.name.startswith("char_") or p.name == STYLE_REF:
             continue
         m = _NUM.search(p.stem)
         if m:

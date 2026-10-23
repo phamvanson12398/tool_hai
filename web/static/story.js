@@ -134,6 +134,16 @@
 
   /* ----------------------------------------------------------- hiển thị */
 
+  function showStyleRef(d) {
+    var has = !!(d && d.style_ref);
+    var img = $("st-ref-img");
+    $("st-ref-wrap").hidden = !has;
+    if (has) {
+      img.src = "/api/story/" + encodeURIComponent(st.id) + "/style_ref?v=" + Date.now();
+      $("st-ref-dl").href = "/api/story/" + encodeURIComponent(st.id) + "/style_ref?dl=1";
+    }
+  }
+
   function render(d) {
     st.data = d;
     var s = d.story || {};
@@ -143,8 +153,9 @@
     $("st-format").value = d.format || "16:9";
     var sty = $("st-style");
     sty.innerHTML = "";
-    Object.keys(d.styles || {}).forEach(function (k) { sty.appendChild(new Option(d.styles[k], k)); });
-    sty.value = s.style || "anim2d";
+    (d.styles || []).forEach(function (kv) { sty.appendChild(new Option(kv[1], kv[0])); });
+    sty.value = s.style || "doodle";
+    showStyleRef(d);
     $("st-subs").value = s.subtitles ? "1" : "0";
     $("st-source").value = s.source_text || "";
     var nar = s.narrator || {};
@@ -335,6 +346,25 @@
           input.value = "";
         }).catch(fail("Tải ảnh thất bại"));
     });
+    $("st-ref-file").addEventListener("change", function () {
+      if (!st.id || !this.files.length) return;
+      var fd = new FormData();
+      fd.append("file", this.files[0]);
+      var input = this;
+      api("/api/story/" + encodeURIComponent(st.id) + "/style_ref", { body: fd })
+        .then(function (d) {
+          showStyleRef(d);
+          toast("ok", "Đã lưu ảnh mẫu phong cách", "Tải lại bộ câu lệnh vẽ để có hướng dẫn gửi kèm ảnh.");
+          input.value = "";
+        }).catch(fail("Tải ảnh mẫu thất bại"));
+    });
+    $("st-ref-remove").addEventListener("click", function () {
+      if (!st.id) return;
+      var fd = new FormData();
+      fd.append("remove", "1");
+      api("/api/story/" + encodeURIComponent(st.id) + "/style_ref", { body: fd })
+        .then(showStyleRef).catch(fail("Xoá ảnh mẫu thất bại"));
+    });
     $("st-render").addEventListener("click", function () {
       if (!st.id) return;
       save(true).then(function () {
@@ -348,7 +378,7 @@
     if (!$("screen-story")) return;
     wire();
     var sty = $("st-style");               // có sẵn lựa chọn khi chưa mở truyện nào
-    [["anim2d", "Hoạt hình 2D"], ["watercolor", "Tranh màu nước"], ["oil", "Tranh sơn dầu"],
+    [["doodle", "Vẽ tay webtoon Hàn (đầu tròn, thân con nhộng)"], ["anim2d", "Hoạt hình 2D"], ["watercolor", "Tranh màu nước"], ["oil", "Tranh sơn dầu"],
      ["book", "Tranh minh hoạ sách"]].forEach(function (o) { sty.appendChild(new Option(o[1], o[0])); });
     var last = null;
     try { last = localStorage.getItem(LS_STORY); } catch (e) {}

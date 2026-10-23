@@ -615,7 +615,9 @@ lệnh vẽ** tool xuất ra; tool lo phần còn lại.
 
 ### Các bước
 1. **Truyện:** tên truyện, tác giả, thời lượng (phút), khung (16:9 cho YouTube),
-   phong cách tranh (mặc định **Hoạt hình 2D**), giọng người kể (chọn giọng trong
+   phong cách tranh (mặc định **Vẽ tay webtoon Hàn**: nhân vật đầu tròn, thân
+   con nhộng không tay chân, viền đen nét bút, màu phẳng nhạt, nền vẽ tay có vân
+   giấy, giống các kênh kể chuyện Hàn), giọng người kể (chọn giọng trong
    Thư viện, hoặc mô tả giọng), có/không phụ đề. Có thể **dán nguyên văn** để AI
    bám sát truyện gốc.
 2. Bấm **AI viết lời kể & chia cảnh**: Claude chia chương, lập danh sách nhân vật
@@ -629,6 +631,10 @@ lệnh vẽ** tool xuất ra; tool lo phần còn lại.
    địa điểm + thời đại, nên tranh nào cũng ra cùng một Lão Hạc, cùng một cậu Vàng.
    Khi vẽ, gửi kèm ảnh tham chiếu nhân vật (Midjourney `--cref`; Gemini/ChatGPT gửi
    kèm ảnh) để giống nhau hơn nữa.
+   **Ảnh mẫu phong cách** (mục 4, không bắt buộc): tải lên một khung hình có bối
+   cảnh và nhân vật đúng kiểu chị muốn. Bộ câu lệnh sẽ dặn vẽ đúng phong cách ảnh
+   đó và nhắc gửi kèm ảnh mọi lần vẽ (Midjourney `--sref`; Gemini/ChatGPT đính kèm
+   ảnh), tranh ra giống mẫu hơn hẳn so với chỉ tả bằng chữ.
 4. **Tải ảnh lên**: chọn nhiều ảnh một lúc; tên file có số cảnh (scene_001.png,
    001.jpg, "Cảnh 4.png"... đều được). Cảnh chưa có tranh vẫn dựng được (khung chữ
    tạm) để nghe thử nhịp kể trước.

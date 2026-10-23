@@ -416,6 +416,18 @@
             <input type="file" id="st-files" accept="image/*" multiple>
           </div>
           <p class="hint">Cảnh chưa có tranh vẫn dựng được (hiện khung chữ tạm) để chị nghe thử nhịp kể.</p>
+          <div class="field">
+            <label for="st-ref-file">Ảnh mẫu phong cách (không bắt buộc)</label>
+            <input type="file" id="st-ref-file" accept="image/*">
+          </div>
+          <p class="hint">Một khung hình có bối cảnh và nhân vật đúng kiểu chị muốn. Bộ câu lệnh sẽ nhắc gửi kèm ảnh này mọi lần vẽ để tranh ra cùng phong cách.</p>
+          <div id="st-ref-wrap" hidden>
+            <img id="st-ref-img" class="st-ref" alt="Ảnh mẫu phong cách">
+            <div class="row-actions">
+              <a class="btn btn-sm" id="st-ref-dl" href="#" download>Tải ảnh mẫu</a>
+              <button class="btn btn-sm" id="st-ref-remove" type="button">Bỏ ảnh mẫu</button>
+            </div>
+          </div>
         </section>
         <section class="card">
           <h2 class="card-title">5. Dựng video</h2>

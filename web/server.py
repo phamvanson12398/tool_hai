@@ -1755,7 +1755,8 @@ def _story_view(pid: str, data: dict) -> dict:
     out["images"] = sorted(imgs)
     out["scene_count"] = len(scenes)
     out["missing"] = [sc["id"] for _ci, sc in scenes if sc["id"] not in imgs]
-    out["styles"] = {k: v[0] for k, v in story_mod.STYLES.items()}
+    out["styles"] = [[k, v[0]] for k, v in story_mod.STYLES.items()]   # giữ thứ tự
+    out["style_ref"] = (story_mod.image_dir(pdir) / story_mod.STYLE_REF).exists()
     out["cameras"] = list(story_mod.CAMERAS)
     out["status"] = _status(pid)
     out["video_ready"] = (pdir / "out" / "video.mp4").exists()
@@ -1879,7 +1880,9 @@ def api_story_prompts(pid):
         return _err("Chưa có cảnh nào — bấm 'AI viết lời kể' trước.")
     p = config.project_dir(pid) / "out" / "cau_lenh_ve.txt"
     p.parent.mkdir(parents=True, exist_ok=True)
-    p.write_text(story_mod.prompts_text(st, data.get("format") or "16:9"), encoding="utf-8")
+    ref = (story_mod.image_dir(config.project_dir(pid)) / story_mod.STYLE_REF).exists()
+    p.write_text(story_mod.prompts_text(st, data.get("format") or "16:9", ref),
+                 encoding="utf-8")
     return send_file(str(p), mimetype="text/plain; charset=utf-8", as_attachment=True,
                      download_name=f"cau_lenh_ve_{pid}.txt")
 
@@ -1913,6 +1916,39 @@ def api_story_images(pid):
     out = _story_view(pid, data)
     out.update({"saved": saved, "skipped": skipped})
     return jsonify(out)
+
+
+@app.post("/api/story/<pid>/style_ref")
+def api_story_style_ref(pid):
+    """Ảnh mẫu phong cách (vd một khung hình kênh chị thích): gửi kèm mọi lần vẽ."""
+    from PIL import Image
+    from core import story as story_mod
+    try:
+        data, _st = _load_story(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    f = request.files.get("file")
+    dest = story_mod.image_dir(config.project_dir(pid)) / story_mod.STYLE_REF
+    if request.form.get("remove"):
+        dest.unlink(missing_ok=True)
+        return jsonify(_story_view(pid, data))
+    if not f:
+        return _err("Chưa chọn ảnh.")
+    try:
+        Image.open(f.stream).convert("RGB").save(dest)
+    except Exception:  # noqa: BLE001
+        return _err("Không đọc được ảnh (chị thử ảnh JPG, PNG hoặc WEBP).")
+    return jsonify(_story_view(pid, data))
+
+
+@app.get("/api/story/<pid>/style_ref")
+def api_story_style_ref_get(pid):
+    from core import story as story_mod
+    p = story_mod.image_dir(config.project_dir(pid)) / story_mod.STYLE_REF
+    if not p.exists():
+        return _err("Chưa có ảnh mẫu.", 404)
+    return send_file(str(p), as_attachment=request.args.get("dl") == "1",
+                     download_name="style_ref.png")
 
 
 @app.get("/api/story/<pid>/image/<sid>")

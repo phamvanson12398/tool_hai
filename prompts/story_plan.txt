@@ -9,6 +9,7 @@ Tác giả: {{author}}
 1. Chia truyện thành {{n_chapters}} chương theo diễn biến (mở đầu – các biến cố – cao trào – kết), mỗi chương một tên ngắn gợi cảm xúc.
 2. Lập "kinh thánh hình ảnh" để mọi tranh vẽ nhất quán:
    - Mọi nhân vật xuất hiện (kể cả con vật như con chó). Mỗi nhân vật: id ngắn không dấu (vd "lao_hac"), tên tiếng Việt, và mô tả ngoại hình CỐ ĐỊNH bằng tiếng Anh cho AI vẽ tranh: tuổi, dáng người, khuôn mặt, tóc/râu, quần áo đúng thời đại và vùng miền, đặc điểm dễ nhận. Viết cụ thể để vẽ ở cảnh nào cũng ra cùng một người.
+   {{look_hint}}
    - Mọi địa điểm chính: id, tên tiếng Việt, mô tả bằng tiếng Anh (kiến trúc, đồ vật, cây cối, ánh sáng) đúng thời đại, vùng miền của truyện.
    - "era": một câu tiếng Anh về thời đại, vùng miền (vd "rural northern Vietnam village in the 1940s").
 3. Không bịa thêm nhân vật hay tình tiết không có trong truyện.
