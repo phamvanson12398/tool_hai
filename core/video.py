@@ -121,6 +121,8 @@ class Line:
     gestures: list[str] = field(default_factory=list)   # cử chỉ: vaytay, omdau...
     effects: list[str] = field(default_factory=list)    # hiệu ứng cả người
     scene: int = 0                  # bối cảnh của câu (chỉ số Script.scenes)
+    props: dict[str, str] = field(default_factory=dict)  # đạo cụ đổi ở câu này
+    shot: str = ""                  # góc máy ghi trong kịch bản ("" = tự chọn)
 
 
 @dataclass
@@ -134,6 +136,10 @@ class Beat:
     start: float = 0.0
     duration: float = 0.8
     scene: int = 0
+    gestures: list[str] = field(default_factory=list)
+    effects: list[str] = field(default_factory=list)
+    props: dict[str, str] = field(default_factory=dict)
+    shot: str = ""
 
 
 @dataclass
@@ -154,8 +160,12 @@ class Stage:
         # nhiều bối cảnh: chỉ số cảnh -> ảnh nền (cảnh không có thì dùng self.bg)
         self.scene_bgs: dict[int, Image.Image] = {}
         self.scene = 0
+        # máy quay ảo: (độ phóng, tâm x, tâm y) theo toạ độ khung gốc
+        self.cam = (1.0, width / 2, height / 2)
+        self.ots: tuple | None = None        # (nhân vật quay lưng, bên trái?) cho cảnh qua vai
         self.title = ""
         self.subtitle_style = config.SUBTITLE_STYLES["yellow"]
+        self.subtitle_pos = "tren"          # tren | duoi
         self.font = find_font(bold=True)
         self.font_small = find_font(bold=False)
         self._char_cache: dict[tuple, Image.Image] = {}
@@ -197,6 +207,96 @@ class Stage:
             prev = self.background_for(prev_scene)
             if prev is not None and prev is not cur:
                 img = Image.blend(prev, img, max(0.0, min(1.0, mix)))
+        s, cx, cy = self.cam
+        if s > 1.001:
+            w, h = self.w / s, self.h / s
+            box = (int(cx - w / 2), int(cy - h / 2), int(cx + w / 2), int(cy + h / 2))
+            img = img.crop(box).resize((self.w, self.h), Image.BILINEAR)
+        return img
+
+    # ------------------------------------------------------ máy quay ảo
+    def _cam_map(self, x: float, y: float) -> tuple[int, int]:
+        s, cx, cy = self.cam
+        return int((x - cx) * s + self.w / 2), int((y - cy) * s + self.h / 2)
+
+    def anchors(self, chars: list["Character"]) -> dict[str, tuple[float, float, float]]:
+        """Vị trí từng nhân vật trên sân khấu: {tên: (x giữa, y đầu, cao người)}."""
+        n = len(chars)
+        out = {}
+        if not n:
+            return out
+        slots = layout_slots(n)
+        base_y = self.h * 0.80
+        for i, ch in enumerate(chars):
+            target_h = self.h * (0.50 if n < 3 else 0.42) * ch.scale
+            ratio = 0.22
+            anim = ch.rig_animator
+            spec = getattr(getattr(anim, "rig", None), "spec", None)
+            if spec:
+                try:
+                    from .rig import geometry, CH
+                    g = geometry(spec.get("body", "adult"), spec.get("style", "flat"))
+                    ratio = g.head_cy / CH
+                except Exception:  # noqa: BLE001
+                    pass
+            last = getattr(anim, "last_angles", None) or {}
+            x = self.w * slots[i] + last.get("dich_x", 0.0) * self.w
+            head_y = base_y - target_h + ratio * target_h - last.get("dich_y", 0.0) * self.h
+            hp = getattr(anim, "head_pos", None)
+            if hp:
+                # vị trí đầu thật của khung trước (nằm, bò, ngã vẫn quay trúng mặt)
+                from .rig import CH, CW
+                k = target_h / CH
+                x += (hp[0] - CW / 2) * k
+                head_y = base_y - target_h + hp[1] * k - last.get("dich_y", 0.0) * self.h
+            out[ch.name] = (x, head_y, target_h)
+        return out
+
+    def set_camera(self, shot: str, focus: str | None, chars: list["Character"],
+                   other: str | None = None) -> None:
+        """Đặt góc máy: toan (toàn cảnh), trung (nửa người), can (cận mặt),
+        sieucan (siêu cận), quavai (qua vai người nghe)."""
+        self.ots = None
+        an = self.anchors(chars)
+        if shot not in SHOTS or shot == "toan" or focus not in an:
+            self.cam = (1.0, self.w / 2, self.h / 2)
+            return
+        s, dy = SHOTS[shot]
+        x, head_y, th = an[focus]
+        cx, cy = x, head_y + dy * th
+        if shot == "quavai" and other in an and other != focus:
+            left = an[other][0] < x
+            ch_other = next(c for c in chars if c.name == other)
+            if getattr(ch_other.rig_animator, "back_head", None):
+                self.ots = (ch_other, left)
+                cx += (-1 if left else 1) * self.w * 0.14 / s   # chừa chỗ cho gáy người nghe
+            else:
+                s, dy = SHOTS["can"]
+                cy = head_y + dy * th
+        hw, hh = self.w / (2 * s), self.h / (2 * s)
+        cx = min(max(cx, hw), self.w - hw)
+        cy = min(max(cy, hh), self.h - hh)
+        self.cam = (s, cx, cy)
+
+    def draw_ots(self, img: Image.Image) -> Image.Image:
+        """Cảnh qua vai: gáy + vai người nghe to ở tiền cảnh, một bên dưới khung."""
+        if not self.ots:
+            return img
+        ch, left = self.ots
+        try:
+            head, shirt = ch.rig_animator.back_head()
+        except Exception:  # noqa: BLE001
+            return img
+        hw = int(self.w * 0.66)
+        sc = hw / head.width
+        head = head.resize((hw, max(1, int(head.height * sc))), Image.LANCZOS)
+        x0 = int(-self.w * 0.16) if left else int(self.w * 0.5)
+        top = int(self.h * 0.6)
+        d = ImageDraw.Draw(img)
+        sx0, sx1 = x0 - int(self.w * 0.15), x0 + hw + int(self.w * 0.15)
+        d.rounded_rectangle([sx0, top + int(head.height * 0.8), sx1, self.h + 200],
+                            radius=int(self.w * 0.18), fill=shirt[:3], outline=(24, 22, 28), width=10)
+        img.paste(head, (x0, top), head)
         return img
 
     def place_characters(self, img: Image.Image, chars: list[Character],
@@ -232,8 +332,9 @@ class Stage:
                     ox, oy = getattr(anim, "frame_origin", None) or (0, 0)
                     target_h = int(self.h * (0.50 if n < 3 else 0.42) * ch.scale)
                     sc = target_h / fh
-                    im = im.resize((max(1, int(im.width * sc)), max(1, int(im.height * sc))),
-                                   Image.LANCZOS)
+                    cam_s = self.cam[0]
+                    im = im.resize((max(1, int(im.width * sc * cam_s)),
+                                    max(1, int(im.height * sc * cam_s))), Image.LANCZOS)
                     bounce = int(2 * math.sin(t * 1.6))
                     # dịch cả người theo cử chỉ (vào/ra khung, nhảy lên...)
                     last = getattr(anim, "last_angles", None) or {}
@@ -241,7 +342,7 @@ class Stage:
                          + int(last.get("dich_x", 0.0) * self.w))
                     y = (base_y - target_h - int(oy * sc) - bounce
                          - int(last.get("dich_y", 0.0) * self.h))
-                    img.paste(im, (x, y), im)
+                    img.paste(im, self._cam_map(x, y), im)
                     continue
                 except Exception as e:  # lỗi cử động -> quay về ảnh tĩnh
                     from . import config as _cfg
@@ -296,7 +397,10 @@ class Stage:
 
             x = cx - im.width // 2
             y = base_y - im.height - bounce
-            img.paste(im, (x, y), im)
+            if self.cam[0] > 1.001:
+                im = im.resize((max(1, int(im.width * self.cam[0])),
+                                max(1, int(im.height * self.cam[0]))), Image.LANCZOS)
+            img.paste(im, self._cam_map(x, y), im)
         return img
 
     def _scaled(self, path: Path, n: int, scale: float) -> Image.Image:
@@ -367,7 +471,11 @@ class Stage:
             lines.append(cur)
         lh = int(st["size"] * 1.25)
         total_h = lh * len(lines)
-        y = int(self.h * 0.86) - total_h // 2
+        if self.subtitle_pos == "tren":
+            # phía trên (như các kênh hoạt hình hài): dưới tiêu đề nếu có
+            y = int(self.h * (0.15 if self.title else 0.085))
+        else:
+            y = int(self.h * 0.86) - total_h // 2
         for ln in lines:
             bbox = d.textbbox((0, 0), ln, font=f)
             tw = bbox[2] - bbox[0]
@@ -391,6 +499,67 @@ def _ffmpeg_path() -> str:
 # ---------------------------------------------------------------- render
 
 SCENE_FADE = 0.35   # giây chuyển mờ khi đổi bối cảnh
+
+# góc máy -> (độ phóng, tâm dọc lệch xuống so với đầu, theo chiều cao người)
+SHOTS = {
+    "toan": (1.0, 0.0),
+    "trung": (1.5, 0.3),
+    "can": (2.05, 0.13),
+    "sieucan": (2.7, 0.03),
+    "quavai": (1.85, 0.16),
+}
+# cử chỉ cần thấy cả người -> toàn cảnh; cử chỉ phần trên -> nửa người
+_FULL_BODY = {"nam", "bo", "ngoi", "om_goi", "nga_ngua", "nhaylen", "dibo", "chay",
+              "vao_trai", "vao_phai", "ra_trai", "ra_phai", "voi", "dam_dat"}
+_UPPER = {"vaytay", "chitay", "omdau", "khoanhtay", "giohaitay", "voratay", "nhunvai",
+          "xem_dt", "cam_tai", "bung", "cam_coc", "gio_do", "an", "ve_tu_the"}
+_STRONG = {"shocked", "scared", "angry", "crying", "surprised", "disgusted"}
+
+
+def plan_shots(timeline: "Timeline", n_chars: int, auto: bool = True) -> dict:
+    """Chọn góc máy cho từng câu / nhịp như phim hoạt hình hài ngắn.
+
+    Kịch bản ghi goc=... thì theo kịch bản. Tự chọn: mở đầu toàn cảnh; cử chỉ
+    cả người -> toàn cảnh; cử chỉ tay / cầm đồ -> nửa người; câu zoom hoặc
+    phản ứng mạnh -> cận/siêu cận; hội thoại xen kẽ qua vai và cận mặt; cứ
+    vài câu lại về toàn cảnh cho khán giả định vị. Đổi cảnh -> toàn cảnh.
+    Trả về {("line"|"beat", idx): (góc, người được quay, người nghe)}.
+    """
+    events = sorted([(ln.start, "line", ln) for ln in timeline.lines] +
+                    [(b.start, "beat", b) for b in timeline.beats], key=lambda e: e[0])
+    out: dict = {}
+    prev_who, prev_scene, since_wide = None, None, 0
+    for i, (_, kind, ev) in enumerate(events):
+        who = ev.speaker if kind == "line" else ev.actor
+        other = prev_who if prev_who and prev_who != who else None
+        # chỉ cử chỉ MỚI cả người mới cần toàn cảnh; đang nằm/bò giữ nguyên thì
+        # máy quay vẫn cận được (bám theo vị trí đầu thật)
+        g = ev.gestures[0] if ev.gestures else ""
+        expr = ev.expression
+        shot = ev.shot
+        if not shot and not auto:
+            shot = "can" if ev.zoom else "toan"
+        if not shot:
+            if i == 0 or ev.scene != prev_scene or n_chars == 0:
+                shot = "toan"
+            elif g in _FULL_BODY:
+                shot = "toan"
+            elif ev.zoom:
+                shot = "sieucan" if expr in _STRONG else "can"
+            elif kind == "beat":
+                shot = "sieucan" if expr in _STRONG else "can"
+            elif g in _UPPER or ev.props:
+                shot = "trung"
+            elif since_wide >= 5:
+                shot = "toan"
+            elif n_chars >= 2 and other:
+                shot = "quavai" if i % 2 else "can"
+            else:
+                shot = "trung"
+        since_wide = 0 if shot == "toan" else since_wide + 1
+        out[(kind, ev.idx)] = (shot, who, other)
+        prev_who, prev_scene = who, ev.scene
+    return out
 
 def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
                  stage: Stage, settings: dict, progress=None) -> Path:
@@ -428,6 +597,9 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
     events.sort(key=lambda e: e[0])
 
     # Cache khung hình theo trạng thái: (biểu cảm, miệng mở/ngậm, camera)
+    # góc máy từng câu / nhịp
+    shots = plan_shots(timeline, len(chars), bool(settings.get("auto_camera", True)))
+
     # bối cảnh đang hiện và cảnh trước đó (để chuyển mờ)
     cur_scene: int | None = None
     prev_scene: int | None = None
@@ -440,30 +612,52 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
         if ch.rig_animator is not None:
             rig_animators[ch.name] = ch.rig_animator
 
-    def _apply_gestures(line: Line) -> None:
-        """Áp cử chỉ + hiệu ứng cả người của câu cho NGƯỜI NÓI câu đó.
+    from .gestures import POSTURES as _POSTURES
+    _last_scene = None
 
-        Người khác thôi cử chỉ đang làm, trừ khi họ vừa ra khỏi khung hình
-        (ra_trai / ra_phai) thì vẫn đứng ngoài khung.
+    def _apply_gestures(ev) -> None:
+        """Áp cử chỉ, hiệu ứng, đạo cụ của câu (hoặc nhịp '>') cho NGƯỜI ĐÓ.
+
+        - Có cử chỉ mới: làm cử chỉ đó (cử chỉ cũ nhạt dần, không giật).
+        - Không có: giữ tư thế cả người (nằm, ngồi, bò, khoanh tay, đứng
+          ngoài khung...), còn cử chỉ khác thì thả tay về.
+        - Người khác: giữ tư thế cả người, thôi các cử chỉ lặp (vẫy tay...).
         """
         if not rig_animators:
             return
-        gesture = line.gestures[0] if line.gestures else None
-        effect = line.effects[0] if line.effects else None
+        nonlocal _last_scene
+        if ev.scene != _last_scene:
+            # sang bối cảnh mới: mọi người đứng dậy (bỏ tư thế nằm/ngồi/bò cũ)
+            for anim in rig_animators.values():
+                try:
+                    if getattr(anim, "current_gesture", None) is not None:
+                        anim.set_gesture(None, None, ev.start)
+                except Exception:  # pragma: no cover
+                    pass
+            _last_scene = ev.scene
+        who = getattr(ev, "speaker", None) or getattr(ev, "actor", "")
+        gesture = ev.gestures[0] if ev.gestures else None
+        effect = ev.effects[0] if ev.effects else None
         for name, anim in rig_animators.items():
             try:
-                if name == line.speaker:
-                    anim.set_gesture(gesture, effect, line.start)
-                else:
-                    cur = getattr(anim, "current_gesture", None)
-                    if cur is not None and cur.name in ("ra_trai", "ra_phai"):
-                        continue
-                    anim.set_gesture(None, None, line.start)
+                cur = getattr(anim, "current_gesture", None)
+                keep = cur is not None and cur.name in _POSTURES
+                if name == who:
+                    if getattr(ev, "props", None) and hasattr(anim, "set_props"):
+                        anim.set_props(ev.props, ev.start)
+                    if gesture:
+                        anim.set_gesture(gesture, effect, ev.start)
+                    elif keep:
+                        anim.current_effect = effect
+                    else:
+                        anim.set_gesture(None, effect, ev.start)
+                elif not keep and cur is not None:
+                    anim.set_gesture(None, None, ev.start)
             except Exception:  # pragma: no cover - cố gắng thay thế
                 pass
 
     # Theo dõi câu hiện tại để chỉ áp cử chỉ ở khung đầu của mỗi câu
-    _current_line_idx: int | None = None
+    _current_line_idx: object = None
 
     # Trạng thái miệng từng khung (đã giữ tối thiểu 2 khung cho mỗi lần đổi)
     mouth_states = {
@@ -541,6 +735,11 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
                     mouth_open = True
                 sub = _current_phrase(cur, t)
         elif isinstance(cur, Beat):
+            # nhịp phản ứng: áp cử chỉ/đạo cụ ở khung đầu của nhịp
+            if (cur.start <= t < cur.start + cur.duration
+                    and ("beat", cur.idx) != _current_line_idx):
+                _current_line_idx = ("beat", cur.idx)
+                _apply_gestures(cur)
             # nhịp phản ứng: người đó đổi biểu cảm, không nói
             if cur.actor and cur.actor in held:
                 held[cur.actor] = cur.expression
@@ -551,15 +750,17 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
         # Dựng khung mới mỗi lần: nhân vật thở, nhún, làm cử chỉ theo thời
         # gian nên không dùng lại khung cũ được (trước đây cache theo biểu
         # cảm làm cử động bị đứng hình).
+        # góc máy của câu/nhịp hiện tại (trước câu đầu: góc của câu đầu)
+        ev = cur if cur is not None else (events[0][2] if events else None)
+        if ev is not None:
+            key = ("line" if isinstance(ev, Line) else "beat", ev.idx)
+            shot, who, other = shots.get(key, ("toan", None, None))
+            if zoom_focus:
+                who = zoom_focus
+            stage.set_camera(shot, who, chars, other)
         img = stage.blank(cur_scene, prev_scene, mix)
         img = stage.place_characters(img, chars, held, speaking, mouth_open, t)
-
-        if zoom:
-            focus = zoom_focus or speaking
-            if focus is None and isinstance(cur, Beat):
-                focus = cur.actor
-            if focus:
-                img = _zoom_speaker(img, chars, focus)
+        img = stage.draw_ots(img)
 
         # Vẽ phụ đề và tiêu đề (không cache được vì text thay đổi mỗi khung)
         stage.draw_subtitle(img, sub)

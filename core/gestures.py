@@ -27,7 +27,7 @@ KIEU_GIU = "giu"           # giữ nguyên tư thế cuối
 KIEU_LAP = "lap"           # lặp lại liên tục
 
 # Phiên bản thư viện: tăng khi đổi cử chỉ mặc định để file cũ được tạo lại
-LIBRARY_VERSION = 2
+LIBRARY_VERSION = 4
 
 # Khoá dịch cả người (không phải xương)
 OFFSET_KEYS = ("dich_x", "dich_y")
@@ -323,7 +323,140 @@ def _default_gestures() -> list[Gesture]:
         ],
     ))
 
+    # ---------------- tư thế cầm đồ (tự dùng khi nhân vật cầm đạo cụ) -------------
+    g.append(Gesture(
+        name="xem_dt", label="Xem điện thoại", mo_ta="Cầm điện thoại trước ngực, cúi nhìn.",
+        keyframes=[K({"vai_right": -8, "khuyu_right": 128, "dau": 4}, 0.3),
+                   K({"vai_right": -8, "khuyu_right": 128, "dau": 4}, 0.4, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="cam_tai", label="Áp điện thoại lên tai", mo_ta="Nghe điện thoại, tay áp lên tai.",
+        keyframes=[K({"vai_right": -38, "khuyu_right": -142, "dau": -5}, 0.3),
+                   K({"vai_right": -38, "khuyu_right": -142, "dau": -5}, 0.4, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="bung", label="Bưng bằng hai tay", mo_ta="Hai tay bưng đồ trước bụng (nồi, hộp quà).",
+        keyframes=[K({"vai_left": -6, "vai_right": -6, "khuyu_left": 72, "khuyu_right": 72}, 0.3),
+                   K({"vai_left": -6, "vai_right": -6, "khuyu_left": 72, "khuyu_right": 72}, 0.4, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="cam_coc", label="Cầm đồ trước ngực", mo_ta="Cầm cốc, bát, sách trước ngực.",
+        keyframes=[K({"vai_right": -14, "khuyu_right": 104}, 0.3),
+                   K({"vai_right": -14, "khuyu_right": 104}, 0.4, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="gio_do", label="Giơ đồ lên", mo_ta="Giơ đồ vật lên cao cho người khác xem (vẻ ghê, tức).",
+        keyframes=[K({"vai_right": -150, "khuyu_right": -8}, 0.3),
+                   K({"vai_right": -154, "khuyu_right": -10}, 0.4, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="an", label="Ăn", mo_ta="Đưa đồ ăn lên miệng liên tục.",
+        keyframes=[K({"vai_right": -18, "khuyu_right": 100, "dau": 0}, 0.22, KIEU_LAP),
+                   K({"vai_right": -26, "khuyu_right": 150, "dau": 5}, 0.22, KIEU_LAP)],
+        loop=True,
+    ))
+
+    # ---------------- tư thế đời thường (xoay cả người bằng xương thân) ----------
+    g.append(Gesture(
+        name="ngoi", label="Ngồi xổm", mo_ta="Ngồi xổm, hai tay đặt lên gối.",
+        keyframes=[K({"dui_left": -38, "dui_right": -38, "goi_left": 82, "goi_right": 82,
+                      "vai_left": -26, "vai_right": -26, "khuyu_left": 40, "khuyu_right": 40,
+                      "dich_y": -0.085}, 0.35),
+                   K({"dui_left": -38, "dui_right": -38, "goi_left": 82, "goi_right": 82,
+                      "vai_left": -26, "vai_right": -26, "khuyu_left": 40, "khuyu_right": 40,
+                      "dich_y": -0.085}, 0.4, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="om_goi", label="Ngồi bó gối", mo_ta="Ngồi bó gối, ôm chân (khóc, tủi thân).",
+        keyframes=[K({"dui_left": -32, "dui_right": -32, "goi_left": 84, "goi_right": 84,
+                      "vai_left": -16, "vai_right": -16, "khuyu_left": 118, "khuyu_right": 118,
+                      "dau": 6, "dich_y": -0.1}, 0.4),
+                   K({"dui_left": -32, "dui_right": -32, "goi_left": 84, "goi_right": 84,
+                      "vai_left": -16, "vai_right": -16, "khuyu_left": 118, "khuyu_right": 118,
+                      "dau": 3, "dich_y": -0.1}, 0.5, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="nam", label="Nằm dài", mo_ta="Nằm dài thư giãn, một tay gối đầu (nằm giường, sofa).",
+        # tay TRÁI gối đầu, tay phải để tự do (cầm điện thoại khi có đạo cụ)
+        keyframes=[K({"than": 90, "vai_left": -160, "khuyu_left": -70,
+                      "dui_left": 26, "goi_left": -40, "dich_y": -0.12, "dich_x": -0.04}, 0.45),
+                   K({"than": 90, "vai_left": -160, "khuyu_left": -70,
+                      "dui_left": 26, "goi_left": -40, "dich_y": -0.12, "dich_x": -0.04}, 0.5, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="bo", label="Bò", mo_ta="Bò bằng hai tay hai chân (xin lỗi, bò đi).",
+        keyframes=[K({"than": 72, "vai_right": -72, "vai_left": 52, "khuyu_right": 4,
+                      "dui_right": -110, "dui_left": 96, "goi_right": 80, "goi_left": -64,
+                      "dau": -40, "dich_y": -0.13, "dich_x": -0.12}, 0.25, KIEU_LAP),
+                   K({"than": 72, "vai_right": -52, "vai_left": 72, "khuyu_right": -4,
+                      "dui_right": -96, "dui_left": 110, "goi_right": 64, "goi_left": -80,
+                      "dau": -40, "dich_y": -0.125, "dich_x": -0.12}, 0.25, KIEU_LAP)],
+        loop=True,
+    ))
+    g.append(Gesture(
+        name="nga_ngua", label="Ngã ngửa", mo_ta="Ngã ngửa ra sau, chân tay quơ quào (sốc, bị đẩy).",
+        keyframes=[K({"than": -25, "vai_left": -120, "vai_right": -120, "dich_y": 0.02}, 0.15),
+                   K({"than": -85, "vai_left": -150, "vai_right": -150, "dui_left": 40, "dui_right": -60,
+                      "goi_left": -30, "goi_right": 20, "dich_y": -0.12}, 0.25),
+                   K({"than": -85, "vai_left": -130, "vai_right": -160, "dui_left": 60, "dui_right": -40,
+                      "goi_left": -10, "goi_right": 30, "dich_y": -0.12}, 0.4, KIEU_GIU)],
+    ))
+    g.append(Gesture(
+        name="voi", label="Với lên cao", mo_ta="Kiễng chân với tay lên cao (lấy đồ trên tủ).",
+        keyframes=[K({"vai_left": -168, "vai_right": -168, "khuyu_left": -4, "khuyu_right": -4,
+                      "dich_y": 0.025}, 0.3, KIEU_LAP),
+                   K({"vai_left": -172, "vai_right": -162, "khuyu_left": -8, "khuyu_right": 0,
+                      "dich_y": 0.035}, 0.3, KIEU_LAP)],
+        loop=True,
+    ))
+    g.append(Gesture(
+        name="chay", label="Chạy", mo_ta="Chạy tại chỗ thật nhanh, tay đánh mạnh (hoảng, đuổi theo).",
+        keyframes=[K({"dui_left": -30, "dui_right": 18, "goi_left": 40, "goi_right": -10,
+                      "vai_left": 30, "vai_right": -40, "khuyu_left": -60, "khuyu_right": -70,
+                      "dich_y": 0.03}, 0.16, KIEU_LAP),
+                   K({"dui_left": 18, "dui_right": -30, "goi_left": -10, "goi_right": 40,
+                      "vai_left": -40, "vai_right": 30, "khuyu_left": -70, "khuyu_right": -60,
+                      "dich_y": 0.0}, 0.16, KIEU_LAP)],
+        loop=True,
+    ))
+    g.append(Gesture(
+        name="dam_dat", label="Dậm chân", mo_ta="Dậm chân giận dỗi, hai tay nắm chặt.",
+        keyframes=[K({"dui_right": -10, "goi_right": 50, "vai_left": -14, "vai_right": -14,
+                      "khuyu_left": -40, "khuyu_right": -40, "dich_y": 0.0}, 0.14, KIEU_LAP),
+                   K({"dui_right": 0, "goi_right": 0, "vai_left": -18, "vai_right": -18,
+                      "khuyu_left": -50, "khuyu_right": -50, "dich_y": -0.01}, 0.14, KIEU_LAP)],
+        loop=True,
+    ))
+
     return g
+
+
+# Tư thế cả người: giữ qua các câu sau cho tới khi có cử chỉ khác
+POSTURES = {"ngoi", "om_goi", "nam", "bo", "nga_ngua", "ra_trai", "ra_phai", "khoanhtay"}
+
+
+def fade_pose(pose: dict[str, float] | None, since: float, t: float) -> dict[str, float]:
+    """Tư thế cũ nhạt dần về tư thế đứng trong RETURN_TIME giây (không giật)."""
+    if not pose:
+        return {}
+    u = (t - since) / RETURN_TIME
+    if u >= 1.0 or u < 0:
+        return {}
+    k = 1.0 - u * u * (3 - 2 * u)
+    return {name: v * k for name, v in pose.items()}
+
+
+def swap_sides(angles: dict[str, float]) -> dict[str, float]:
+    """Đổi tay/chân phải <-> trái (tư thế cầm đồ tay trái dùng chung tư thế tay phải)."""
+    out = {}
+    for k, v in angles.items():
+        if k.endswith("_right"):
+            out[k[:-6] + "_left"] = v
+        elif k.endswith("_left"):
+            out[k[:-5] + "_right"] = v
+        else:
+            out[k] = v
+    return out
 
 
 # Hiệu ứng cả người: tên -> (nhãn, mô tả, hàm sinh góc)

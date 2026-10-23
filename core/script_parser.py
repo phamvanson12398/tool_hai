@@ -67,6 +67,8 @@ class Beat:
     gestures: list[str] = field(default_factory=list)   # cử chỉ: vaytay, omdau...
     effects: list[str] = field(default_factory=list)    # hiệu ứng cả người
     scene: int = 0                 # chỉ số bối cảnh (Script.scenes)
+    props: dict[str, str] = field(default_factory=dict)  # tay -> đạo cụ ("" = bỏ)
+    shot: str = ""                 # góc máy: toan | trung | can | sieucan | quavai
 
     def mods(self) -> list[str]:
         out = [self.expression]
@@ -82,6 +84,11 @@ class Beat:
             out.append(f"zoom={self.zoom_target}")
         if self.pause:
             out.append(f"pause={self.pause:g}")
+        for side, name in self.props.items():
+            key = {"right": "cam", "left": "cam_trai", "both": "cam", "all": "cam"}[side]
+            out.append(f"{key}={name or 'bo'}")
+        if self.shot:
+            out.append(f"goc={self.shot}")
         return out
 
 
@@ -135,6 +142,15 @@ def _split_cast(spec: str) -> tuple[list[str], dict[str, str]]:
     return names, sides
 
 
+# Góc máy (khung hình) cho từng câu
+SHOT_ALIASES = {
+    "toan": "toan", "toan_canh": "toan", "wide": "toan", "rong": "toan",
+    "trung": "trung", "nua_nguoi": "trung", "medium": "trung", "vua": "trung",
+    "can": "can", "can_mat": "can", "close": "can", "closeup": "can",
+    "sieucan": "sieucan", "sieu_can": "sieucan", "extreme": "sieucan",
+    "quavai": "quavai", "qua_vai": "quavai", "ots": "quavai", "over_shoulder": "quavai",
+}
+
 # Tên dễ nhớ / viết khác của cử chỉ
 GESTURE_ALIASES = {
     "votay": "voratay", "vo_tay": "voratay", "clap": "voratay",
@@ -182,6 +198,32 @@ def _parse_mods(mods: str, beat: Beat, errors: list[str], warnings: list[str],
         if kv:
             key = kv.group(1).strip().lower()
             val = kv.group(2).strip()
+            if key in ("cam", "cam_phai", "cam_trai", "tay", "do", "prop"):
+                from . import props as props_mod
+                side = "left" if key == "cam_trai" else "right"
+                if val.lower() in props_mod.DROP_WORDS:
+                    # cam=bo: bỏ hết đồ trên tay; cam_trai=bo: chỉ tay trái
+                    beat.props["left" if key == "cam_trai" else "all"] = ""
+                    continue
+                name = props_mod.resolve(val)
+                if not name:
+                    warnings.append(f"Dòng {line_no}: không có đạo cụ '{val}', bỏ qua. "
+                                    f"Đạo cụ: {props_mod.catalog_text()}.")
+                elif props_mod.two_handed(name):
+                    beat.props["both"] = name
+                else:
+                    if name != val.lower():
+                        warnings.append(f"Dòng {line_no}: tool hiểu đạo cụ '{val}' là '{name}'.")
+                    beat.props[side] = name
+                continue
+            if key in ("goc", "khung", "shot", "camera"):
+                shot = SHOT_ALIASES.get(val.lower().replace(" ", "_"))
+                if shot:
+                    beat.shot = shot
+                else:
+                    warnings.append(f"Dòng {line_no}: góc máy '{val}' không có (dùng: "
+                                    f"toan, trung, can, sieucan, quavai), bỏ qua.")
+                continue
             if key == "pause":
                 try:
                     beat.pause = max(0.0, float(val.replace(",", ".")))

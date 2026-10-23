@@ -29,6 +29,10 @@ Quy tắc:
 - Có thêm cử chỉ khung xương trong ngoặc (chọn từ danh sách, cách nhau bằng dấu phẩy):
   {{gestures_block}}
 - Có thêm hiệu ứng cả người trong ngoặc (chọn từ): nhun, nhay, rung, nghieng, quay, nga.
+- ĐẠO CỤ: nhân vật cầm đồ bằng `cam=<đạo cụ>` (tay phải) hoặc `cam_trai=<đạo cụ>`, `cam=bo` để bỏ xuống. Đạo cụ có: {{props_block}}. Nhân vật giữ đồ qua các câu sau cho tới khi đổi. Hãy dùng đạo cụ cho tình huống sống động (đang nằm bấm điện thoại, bưng nồi mì, cầm chiếc tất bẩn...).
+- TƯ THẾ ĐỜI THƯỜNG (cũng là cử chỉ): nam (nằm dài), ngoi (ngồi xổm), om_goi (ngồi bó gối khóc), bo (bò), nga_ngua (ngã ngửa), voi (với lên cao), chay (chạy), dam_dat (dậm chân), an (ăn), xem_dt (xem điện thoại), cam_tai (áp điện thoại lên tai), bung (bưng hai tay), gio_do (giơ đồ lên). Tư thế nằm/ngồi/bò được giữ qua các câu sau tới khi có cử chỉ khác.
+- GÓC MÁY (tuỳ chọn, tool tự chọn nếu không ghi): `goc=toan` (toàn cảnh), `goc=trung` (nửa người), `goc=can` (cận mặt), `goc=sieucan` (siêu cận khi sốc), `goc=quavai` (qua vai người nghe). Mở cảnh nên toàn cảnh, cú lật nên siêu cận.
+- Viết như phim hoạt hình hài ngắn: nhân vật làm việc gì đó cụ thể (nằm chơi điện thoại, nấu mì, dọn nhà...), có hành động và đạo cụ trong hầu hết các câu, phản ứng cơ thể mạnh ở cú lật.
 - Tên biểu cảm, cử chỉ, tiếng động phải chép ĐÚNG Y HỆT danh sách trên (vd vỗ tay là `voratay`, không viết `vortay`/`votay`); không tự đặt tên mới.
 - Tuỳ chọn thêm: pause=0.5 (nghỉ thêm sau câu, giây), Tên=biểu_cảm (đổi biểu cảm người nghe), zoom=Tên (zoom vào người khác).
 - Dòng bắt đầu bằng `>` là nhịp phản ứng KHÔNG có lời, kèm số giây (0.5–1.2). Đây là khoảng lặng có chủ đích.

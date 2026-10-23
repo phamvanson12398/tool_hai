@@ -97,6 +97,8 @@ def build_timeline(script: Script, segments: list[dict],
             tl.beats.append(video.Beat(
                 idx=idx, actor=b.speaker, expression=b.expression, zoom=b.zoom,
                 sfx=_sfx_file(b.sfx), start=t, duration=dur, scene=b.scene,
+                gestures=list(b.gestures), effects=list(b.effects),
+                props=dict(b.props), shot=b.shot,
             ))
             # nhịp phản ứng: giữ nguyên độ dài, không cộng thêm gap
             t += dur
@@ -110,6 +112,8 @@ def build_timeline(script: Script, segments: list[dict],
                 gestures=list(b.gestures),
                 effects=list(b.effects),
                 scene=b.scene,
+                props=dict(b.props),
+                shot=b.shot,
             )
             ln.words = _phrase_times(b.text, t, dur)
             # tuỳ chọn thay đổi biểu cảm người nghe ngay khi câu bắt đầu
@@ -252,8 +256,16 @@ class _PhotoRigAnimator:
         self.current_effect = None
         self.gesture_start = None
 
+    def set_props(self, change, t: float) -> None:
+        """Ảnh tải lên chưa hỗ trợ đạo cụ — bỏ qua."""
+        return None
+
     def set_gesture(self, name: str | None, effect: str | None,
                     start_time: float) -> None:
+        if self.current_gesture is not None and self.gesture_start is not None:
+            self._fade_from = gmod.gesture_pose(self.current_gesture,
+                                                start_time - self.gesture_start)
+            self._fade_t0 = start_time
         if name is None:
             self.current_gesture = None
             self.gesture_start = None
@@ -272,6 +284,8 @@ class _PhotoRigAnimator:
             angles = gmod.merge_angles(angles,
                                        gmod.effect_angles(self.current_effect,
                                                           t, gmod.stable_seed(self.name)))
+        angles = gmod.merge_angles(angles, gmod.fade_pose(getattr(self, "_fade_from", None),
+                                                          getattr(self, "_fade_t0", 0.0), t))
         if self.current_gesture is not None and self.gesture_start is not None:
             pose = gmod.gesture_pose(self.current_gesture, t - self.gesture_start)
             if pose:
@@ -317,6 +331,7 @@ def render_episode(pdir: Path, script: Script, chars_cfg: list[dict],
     if scene_bgs:
         stage.set_scene_backgrounds(scene_bgs)
     stage.title = settings.get("title_text") or script.title
+    stage.subtitle_pos = "duoi" if settings.get("subtitle_position") == "duoi" else "tren"
     stage.subtitle_style = config.SUBTITLE_STYLES.get(
         settings.get("subtitle_style", "yellow"), config.SUBTITLE_STYLES["yellow"]
     )

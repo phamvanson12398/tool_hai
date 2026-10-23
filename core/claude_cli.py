@@ -264,6 +264,7 @@ def write_script(title: str, language: str, kind: str | None = None,
         history_block=_history_block(language),
         language=language,
         gestures_block=gesture_catalog_text(),
+        props_block=_props_catalog(),
         cast_header=("지은=trai, 수아=phai" if language == "ko"
                      else "Mike=left, Sarah=right"),
         sample=sample,
@@ -351,6 +352,11 @@ KOREAN_CAST_HINT = """- Tập tiếng Hàn: phối theo các vai quen thuộc c�
 
 US_CAST_HINT = """- Phối outfit theo vai trong truyện (suit cho dân văn phòng, hoodie cho sinh viên,
   apron cho người nấu ăn, dress/cardigan cho buổi hẹn...), mỗi người một màu áo khác nhau."""
+
+
+def _props_catalog() -> str:
+    from .props import catalog_text
+    return catalog_text()
 
 
 def pick_character_specs(names: list[str], script: str,

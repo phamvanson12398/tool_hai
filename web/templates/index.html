@@ -388,6 +388,13 @@
         </div>
       </div>
       <div class="field">
+        <label for="s-subtitle-pos">Vị trí phụ đề</label>
+        <select id="s-subtitle-pos">
+          <option value="tren">Phía trên (như video hoạt hình hài)</option>
+          <option value="duoi">Phía dưới</option>
+        </select>
+      </div>
+      <div class="field">
         <label for="s-subtitle-mode">Hiển thị phụ đề</label>
         <select id="s-subtitle-mode">
           <option value="chunks">Từng cụm ngắn (theo nhịp)</option>
@@ -449,6 +456,14 @@
     <section class="card">
       <h2 class="card-title">Cử động nhân vật</h2>
       <div class="field">
+        <label for="s-auto-camera">Góc máy</label>
+        <select id="s-auto-camera">
+          <option value="1">Tự đổi góc máy như phim (cận mặt, qua vai, toàn cảnh)</option>
+          <option value="0">Luôn toàn cảnh (chỉ cận khi câu có zoom)</option>
+        </select>
+        <p class="hint">Kịch bản ghi được góc riêng cho từng câu: goc=toan / trung / can / sieucan / quavai.</p>
+      </div>
+      <div class="field">
         <label for="s-char-style">Kiểu nhân vật AI vẽ</label>
         <select id="s-char-style">
           <option value="auto">Tự chọn theo ngôn ngữ (Anh → người xám TikTok, Hàn → vẽ tay kiểu Hàn)</option>
@@ -465,8 +480,8 @@
         <label for="s-enable-rig">Bật cử động nhân vật (khung xương, cử chỉ, thở)</label>
         <div class="field-row">
           <select id="s-enable-rig">
-            <option value="0">Tắt (cách dựng cũ — ảnh tĩnh, nhép miệng, nhún nhẹ)</option>
-            <option value="1">Bật (cử động bằng khung xương, yêu cầu nhân vật có rig.json)</option>
+            <option value="1">Bật (cử chỉ, tư thế, đạo cụ, thở — nên dùng)</option>
+            <option value="0">Tắt (ảnh tĩnh, chỉ nhép miệng và nhún nhẹ)</option>
           </select>
         </div>
         <p class="hint">

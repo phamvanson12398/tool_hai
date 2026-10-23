@@ -26,7 +26,7 @@ from PIL import Image, ImageDraw
 from . import character_kit as ck
 from .character_kit import CharSpec
 from .gestures import (Gesture, breathe_angles, effect_angles,  # noqa: E402
-                       ensure_library, gesture_pose, idle_arm_angles,
+                       ensure_library, fade_pose, gesture_pose, idle_arm_angles,
                        stable_seed)
 
 # Khung vẽ bộ phận. Bộ phận được vẽ trên canvas 2x cho rộng rãi, khi
@@ -1342,6 +1342,27 @@ def _soft_head(spec: CharSpec, g: Geometry, mouth_open: bool,
         d.chord([cx - rx, cy - ry, cx + rx, cy + ry], 180, 360, fill=skin)
         d.ellipse([cx - rx * 1.02, cy - ry * 0.35, cx + rx * 1.02, cy + ry * 1.02], fill=skin)
 
+    if expression == "__back__":
+        # nhìn từ sau lưng (cảnh qua vai): tóc phủ nửa trên đầu, không mặt
+        if st == "buzz" and not gray:
+            for k in (-0.25, 0.0, 0.22):
+                x = cx + k * rx
+                d.arc([x - 28, cy - ry - 36, x + 28, cy - ry + 18], 200, 330, fill=INK, width=5)
+        elif st == "curly":
+            for i in range(14):
+                a = math.pi * (-0.1 + 0.093 * i)
+                x = cx - math.cos(a) * rx * 0.85
+                y = cy - math.sin(a) * ry * 0.75
+                d.ellipse([x - rx * 0.26, y - rx * 0.26, x + rx * 0.26, y + rx * 0.26], fill=hair)
+        else:
+            d.chord([cx - rx * 1.02, cy - ry * 1.04, cx + rx * 1.02, cy + ry * 0.5], 180, 360, fill=hair)
+            d.rectangle([cx - rx * 0.98, cy - ry * 0.3, cx + rx * 0.98, cy - ry * 0.2], fill=hair)
+            if st in ("long", "wavy", "bob"):
+                d.rounded_rectangle([cx - rx * 0.98, cy - ry * 0.3, cx + rx * 0.98, cy + ry * 0.9],
+                                    radius=int(rx * 0.4), fill=hair)
+        img.alpha_composite(layer, (PAD_X, PAD_Y))
+        return img
+
     # tóc phía trước
     if st == "buzz" and not gray:                      # hói, vài sợi tóc (kiểu ông bố)
         for k in (-0.25, 0.0, 0.22):
@@ -1554,6 +1575,27 @@ def _parts_for(spec: CharSpec, g: Geometry):
     return {"torso": draw_torso, "neck": draw_neck, "head": draw_head,
             "upper": draw_upper_arm, "fore": draw_forearm, "hand": draw_hand,
             "thigh": draw_thigh, "shin": draw_shin, "foot": draw_foot}
+
+
+def hold_angles(held: dict[str, str], since: dict[str, float], t: float) -> dict[str, float]:
+    """Góc tay khi cầm đạo cụ (tư thế cầm mặc định của từng đạo cụ)."""
+    if not held:
+        return {}
+    from . import props as props_mod
+    from .gestures import swap_sides
+    _, lib = ensure_library()
+    out: dict[str, float] = {}
+    for side, name in held.items():
+        g = lib.get(props_mod.hold_pose(name))
+        if g is None:
+            continue
+        pose = gesture_pose(g, t - since.get(side, 0.0)) or {}
+        if side == "left":
+            # góc đã là góc thực của tay phải: đổi sang tay trái và lật chiều
+            pose = {k: (-v if k.endswith(("_left", "_right")) else v)
+                    for k, v in swap_sides(pose).items()}
+        out.update({k: v for k, v in pose.items() if k not in ("dich_x", "dich_y")})
+    return out
 
 
 def stick_arm_limits(angles: dict[str, float]) -> dict[str, float]:
@@ -1871,6 +1913,11 @@ class RigRenderer:
         self._np_cache: dict[str, object] = {}
         # đầu theo biểu cảm, vẽ khi cần: tên file -> pivot
         self._head_pivots: dict[str, tuple[float, float]] = {}
+        try:
+            sp = CharSpec.from_dict(rig.spec) if rig.spec else None
+            self._hand_r = geometry(sp.body, sp.style).hand_r if sp else 30
+        except Exception:  # noqa: BLE001
+            self._hand_r = 30
         # OpenCV tăng tốc render (nếu không có thì dùng đường PIL)
         self._cv = None
         self._np = None
@@ -1886,12 +1933,76 @@ class RigRenderer:
     def _part(self, filename: str) -> Image.Image:
         img = self._cache.get(filename)
         if img is None:
-            if filename.endswith("#o"):
+            if filename.startswith("#prop:"):
+                from . import props as props_mod
+                img = props_mod.render(filename[6:])[0]
+            elif filename.endswith("#o"):
                 img = _outline_img(self._part(filename[:-2]))
             else:
                 img = Image.open(self.parts_dir / filename).convert("RGBA")
             self._cache[filename] = img
         return img
+
+    def _add_props(self, ordered: list["Bone"], world: dict, held: dict | None) -> list["Bone"]:
+        """Thêm đạo cụ như xương tạm: đặt ở lòng bàn tay, đứng thẳng, vẽ ngay
+        dưới cánh tay cầm nó (bàn tay che lên chỗ cầm)."""
+        if not held:
+            return ordered
+        from . import props as props_mod
+
+        def hand_center(side):
+            w = world.get(f"co_tay_{side}")
+            if w is None:
+                return None
+            a = w["angle"]
+            dy = self._hand_r * 0.75
+            return ((w["pivot"][0] - dy * math.sin(a), w["pivot"][1] + dy * math.cos(a)),
+                    a, w["layer"])
+
+        extra = []
+        for side, name in held.items():
+            if not name or name not in props_mod.PROPS:
+                continue
+            if side == "both":
+                hr, hl = hand_center("right"), hand_center("left")
+                if not hr or not hl:
+                    continue
+                pos = ((hr[0][0] + hl[0][0]) / 2, (hr[0][1] + hl[0][1]) / 2)
+                tilt, lay = 0.0, min(hr[2], hl[2])
+            else:
+                hc = hand_center(side)
+                if not hc:
+                    continue
+                pos, a, lay = hc
+                tilt = max(-0.35, min(0.35, a * 0.2))
+            torso_layer = world.get("than", {}).get("layer", LAYER_THAN)
+            if side == "both":
+                # đồ bưng hai tay: sau hai cánh tay (tay ôm hai bên)
+                layer = lay - 0.01 if lay > torso_layer else lay + 0.01
+            else:
+                # đồ cầm một tay: cùng lớp cánh tay, xếp ngay trước bàn tay
+                # (đè lên cẳng tay, dưới ngón tay) — xem _order_props
+                layer = lay
+            img, pivot = props_mod.render(name)
+            bname = f"prop_{side}"
+            extra.append(Bone(name=bname, parent=None, offset=(0, 0), part=f"#prop:{name}",
+                              pivot=pivot, layer=layer))
+            world[bname] = {"pivot": pos, "angle": tilt, "layer": layer}
+        out = ordered + extra
+        out.sort(key=lambda b: world[b.name]["layer"])
+        return self._order_props(out)
+
+    @staticmethod
+    def _order_props(bones: list["Bone"]) -> list["Bone"]:
+        """Đặt đạo cụ cầm một tay ngay trước bàn tay cầm nó."""
+        out = [b for b in bones if not (b.name in ("prop_right", "prop_left"))]
+        for side in ("right", "left"):
+            pb = next((b for b in bones if b.name == f"prop_{side}"), None)
+            if pb is None:
+                continue
+            idx = next((i for i, b in enumerate(out) if b.name == f"co_tay_{side}"), len(out))
+            out.insert(idx, pb)
+        return out
 
     def _sequence(self, ordered: list["Bone"], world: dict) -> list[tuple["Bone", bool]]:
         """Thứ tự vẽ (xương, là_viền). Kiểu nét mềm: mỗi lớp vẽ viền của mọi
@@ -1906,7 +2017,8 @@ class RigRenderer:
             while i < len(ordered) and world[ordered[i].name]["layer"] == lay:
                 group.append(ordered[i])
                 i += 1
-            seq += [(b, True) for b in group] + [(b, False) for b in group]
+            seq += [(b, True) for b in group if not b.name.startswith("prop_")]
+            seq += [(b, False) for b in group]
         return seq
 
     def _resolve(self, b: "Bone", outline: bool, mouth_open: bool,
@@ -1938,7 +2050,8 @@ class RigRenderer:
 
     def render(self, angles: dict[str, float] | None = None,
                mouth_open: bool = False,
-               crop: bool = True, expression: str | None = None) -> Image.Image:
+               crop: bool = True, expression: str | None = None,
+               props: dict[str, str] | None = None) -> Image.Image:
         """Vẽ một khung nhân vật theo góc xương cho trước.
 
         Kết quả trả về trong khung gốc 600x1000 (nếu crop=True thì cắt sát
@@ -1947,6 +2060,7 @@ class RigRenderer:
         world = self.rig.solve(angles)
         ordered = self.rig._ordered()
         ordered.sort(key=lambda b: world[b.name]["layer"])
+        ordered = self._add_props(ordered, world, props)
 
         if self._cv_ok:
             return self._render_cv(world, ordered, mouth_open, crop, expression)
@@ -2144,10 +2258,65 @@ class CharacterAnimator:
         self.current_gesture: Gesture | None = None
         self.current_effect: str | None = None
         self.gesture_start: float | None = None
+        # đạo cụ đang cầm: {"right"/"left"/"both": tên}, và lúc cầm lên
+        self.props: dict[str, str] = {}
+        self.prop_since: dict[str, float] = {}
+        # gáy (cảnh qua vai) — chỉ kiểu nét mềm có hình sau lưng
+        self.back_head = self._back_head if rig.spec.get("style") in SOFT_STYLES else None
+        self._back_cache = None
+
+    def _head_center(self, angles: dict[str, float]) -> tuple[float, float] | None:
+        """Tâm đầu thật (toạ độ khung gốc 600x1000) — máy quay bám theo khi
+        nhân vật nằm, bò, ngã."""
+        try:
+            w = self.rig.solve(angles).get("dau")
+            spec = CharSpec.from_dict(self.rig.spec)
+            ry = geometry(spec.body, spec.style).head_ry
+            a = w["angle"]
+            return (w["pivot"][0] + ry * 0.9 * math.sin(a), w["pivot"][1] - ry * 0.9 * math.cos(a))
+        except Exception:  # noqa: BLE001
+            return None
+
+    def _back_head(self):
+        """(ảnh gáy cắt sát, màu áo) cho cảnh qua vai."""
+        if self._back_cache is None:
+            spec = CharSpec.from_dict(self.rig.spec)
+            dong, _mo, _pv = head_images(spec, "__back__")
+            img = dong.crop(dong.getbbox()) if dong.getbbox() else dong
+            img = _outline_img(img).copy()
+            img.alpha_composite(dong.crop(dong.getbbox()), (SOFT_OUTLINE, SOFT_OUTLINE))
+            shirt = (GRAY_SKIN if spec.style == "gray"
+                     else ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,))
+            self._back_cache = (img, shirt)
+        return self._back_cache
+
+    def set_props(self, change: dict[str, str] | None, t: float) -> None:
+        """Đổi đạo cụ đang cầm ("" = bỏ xuống). Không đổi thì giữ nguyên."""
+        if not change:
+            return
+        for side, name in change.items():
+            if side == "all":                      # bỏ hết đồ trên tay
+                self.props.clear()
+                continue
+            if side == "both" and name:
+                self.props.clear()
+            elif name and "both" in self.props:
+                self.props.pop("both", None)
+            if name:
+                if self.props.get(side) != name:
+                    self.prop_since[side] = t
+                self.props[side] = name
+            else:
+                self.props.pop(side, None)
 
     def set_gesture(self, name: str | None, effect: str | None,
                     start_time: float) -> None:
-        """Thiet lap cu chi / hieu ung moi, bat dau tinh gio tu start_time."""
+        """Thiet lap cu chi / hieu ung moi, bat dau tinh gio tu start_time.
+        Cu chi cu nhat dan ve tu the dung (khong giat)."""
+        if self.current_gesture is not None and self.gesture_start is not None:
+            self._fade_from = gesture_pose(self.current_gesture,
+                                           start_time - self.gesture_start)
+            self._fade_t0 = start_time
         if name is None:
             self.current_gesture = None
             self.gesture_start = None
@@ -2173,7 +2342,12 @@ class CharacterAnimator:
         if self.current_effect:
             angles = merge(angles, effect_angles(self.current_effect, t, self.seed))
 
-        # 4. Cu chi (lap / giu tu the cuoi / ve tu tu, xem gesture_pose)
+        # 3b. Tu the cam do (dien thoai truoc nguc, bung noi...) — cu chi de len
+        angles = merge(angles, hold_angles(self.props, self.prop_since, t))
+
+        # 4. Cu chi cu nhat dan + cu chi hien tai
+        angles = merge(angles, fade_pose(getattr(self, "_fade_from", None),
+                                         getattr(self, "_fade_t0", 0.0), t))
         if self.current_gesture is not None and self.gesture_start is not None:
             pose = gesture_pose(self.current_gesture, t - self.gesture_start)
             if pose:
@@ -2196,12 +2370,14 @@ class CharacterAnimator:
             # trả về ảnh sát nội dung, kèm vị trí khung gốc trong ảnh để
             # người đặt nhân vật giữ đúng chỗ đứng (frame_origin, frame_size).
             img = self.renderer.render(angles, mouth_open=mouth_open, crop=False,
-                                       expression=expression)
+                                       expression=expression, props=self.props)
+            self.head_pos = self._head_center(angles)
             bbox = img.getbbox() or (PAD_X, PAD_Y, PAD_X + CW, PAD_Y + CH)
             self.frame_origin = (PAD_X - bbox[0], PAD_Y - bbox[1])
             self.frame_size = (CW, CH)
             return img.crop(bbox)
-        img = self.renderer.render(angles, mouth_open=mouth_open, expression=expression)
+        img = self.renderer.render(angles, mouth_open=mouth_open, expression=expression,
+                                   props=self.props)
         if img.size != canvas_size:
             img = img.resize(canvas_size, Image.LANCZOS)
         return img

@@ -130,6 +130,45 @@ trừ khi chị chỉ định.
 
 ---
 
+## 6a. Đạo cụ, tư thế, góc máy (như phim hoạt hình hài)
+
+Ghi thêm trong ngoặc của câu thoại hoặc nhịp `>`:
+
+```
+## canh: phòng ngủ, buổi tối
+민준 (happy, nam, cam=dienthoai): 아우~ 개 편해
+## canh: nhà bếp
+수아 (happy, cam=noi_mi): 밥이나 먹어야겠당
+민준 (shocked, zoom, nhaylen): 뜨거워!!!
+> 수아 (crying, om_goi, cam=bo) 1.0
+수아 (sad, bo, goc=can): 진짜 미안해...
+```
+
+**Đạo cụ** — `cam=<đạo cụ>` (tay phải), `cam_trai=<đạo cụ>`, `cam=bo` bỏ hết đồ:
+`dienthoai` (điện thoại), `noi_mi` (nồi mì, bưng hai tay), `coc`, `bat_com`,
+`sach`, `tui` (túi xách), `tat` (chiếc tất), `banh`, `chai` (chai nước/soju),
+`hop_qua` (hai tay), `remote`, `chao`. Nhân vật **giữ đồ qua các câu sau** cho
+tới khi đổi; cầm đồ thì tay tự vào tư thế cầm (điện thoại trước ngực, bưng nồi).
+
+**Tư thế đời thường** (ghi như cử chỉ): `nam` (nằm dài), `ngoi` (ngồi xổm),
+`om_goi` (ngồi bó gối), `bo` (bò), `nga_ngua` (ngã ngửa), `voi` (với lên cao),
+`chay`, `dam_dat` (dậm chân), `an`, `xem_dt`, `cam_tai` (nghe điện thoại),
+`bung`, `gio_do`. Nằm/ngồi/bò/khoanh tay được **giữ qua các câu sau** cho tới khi
+có cử chỉ khác; sang bối cảnh mới thì mọi người đứng dậy.
+
+**Góc máy** — tool **tự đổi góc như phim** (mở cảnh toàn cảnh, câu thường xen kẽ
+cận mặt và qua vai có gáy người nghe ở tiền cảnh, phản ứng mạnh thì siêu cận,
+cử chỉ cả người thì toàn cảnh). Muốn chỉ định: `goc=toan`, `goc=trung`,
+`goc=can`, `goc=sieucan`, `goc=quavai`. Tắt tự đổi ở **Cài đặt → Góc máy**.
+
+**Phụ đề** mặc định ở **phía trên** như các kênh hoạt hình hài; đổi ở
+**Cài đặt → Vị trí phụ đề**.
+
+> Đạo cụ, tư thế và góc máy cần **bật cử động** (Cài đặt → Cử động nhân vật,
+> nay mặc định bật).
+
+---
+
 ## 6b. Nhiều bối cảnh trong một tập
 
 Truyện diễn ra ở nhiều nơi thì thêm dòng `## canh:` vào kịch bản, mỗi lần đổi

@@ -88,9 +88,11 @@ DEFAULT_SETTINGS = {
     "ffmpeg_bin": "",           # rỗng = dùng mặc định "ffmpeg"
     "tts_engine": "",           # rỗng = dùng mặc định "omnivoice"
     # --- Cử động nhân vật (Bước D) ---
-    "enable_rig": False,        # True = bật cử động bằng khung xương + cử chỉ
+    "enable_rig": True,         # True = bật cử động bằng khung xương + cử chỉ + đạo cụ
     # kiểu nhân vật AI vẽ: auto (tiếng Hàn -> khand, tiếng Anh -> gray) | gray | khand | stick | box | kchibi | flat
     "char_style": "auto",
+    "auto_camera": True,        # tự đổi góc máy (cận, qua vai, toàn cảnh) như phim
+    "subtitle_position": "tren",  # tren (như video hoạt hình hài) | duoi
     # --- Xuất dự án CapCut (thử nghiệm) ---
     "capcut_drafts_root": "",   # rỗng = mặc định %LOCALAPPDATA%\\CapCut\\User Data\\Projects\\com.lveditor.draft
     "capcut_template_draft": "",  # tên dự án mẫu dùng để học cấu trúc

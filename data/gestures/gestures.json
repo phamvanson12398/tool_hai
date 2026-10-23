@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 4,
   "gestures": [
     {
       "name": "vaytay",
@@ -698,6 +698,462 @@
           },
           "thoi_luong": 0.3,
           "kieu": "mot_lan"
+        }
+      ]
+    },
+    {
+      "name": "xem_dt",
+      "label": "Xem điện thoại",
+      "mo_ta": "Cầm điện thoại trước ngực, cúi nhìn.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -0.13962634015954636,
+            "khuyu_right": 2.234021442552742,
+            "dau": 0.06981317007977318
+          },
+          "thoi_luong": 0.3,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_right": -0.13962634015954636,
+            "khuyu_right": 2.234021442552742,
+            "dau": 0.06981317007977318
+          },
+          "thoi_luong": 0.4,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "cam_tai",
+      "label": "Áp điện thoại lên tai",
+      "mo_ta": "Nghe điện thoại, tay áp lên tai.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -0.6632251157578453,
+            "khuyu_right": -2.478367537831948,
+            "dau": -0.08726646259971647
+          },
+          "thoi_luong": 0.3,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_right": -0.6632251157578453,
+            "khuyu_right": -2.478367537831948,
+            "dau": -0.08726646259971647
+          },
+          "thoi_luong": 0.4,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "bung",
+      "label": "Bưng bằng hai tay",
+      "mo_ta": "Hai tay bưng đồ trước bụng (nồi, hộp quà).",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_left": -0.10471975511965978,
+            "vai_right": -0.10471975511965978,
+            "khuyu_left": 1.2566370614359172,
+            "khuyu_right": 1.2566370614359172
+          },
+          "thoi_luong": 0.3,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_left": -0.10471975511965978,
+            "vai_right": -0.10471975511965978,
+            "khuyu_left": 1.2566370614359172,
+            "khuyu_right": 1.2566370614359172
+          },
+          "thoi_luong": 0.4,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "cam_coc",
+      "label": "Cầm đồ trước ngực",
+      "mo_ta": "Cầm cốc, bát, sách trước ngực.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -0.24434609527920614,
+            "khuyu_right": 1.8151424220741028
+          },
+          "thoi_luong": 0.3,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_right": -0.24434609527920614,
+            "khuyu_right": 1.8151424220741028
+          },
+          "thoi_luong": 0.4,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "gio_do",
+      "label": "Giơ đồ lên",
+      "mo_ta": "Giơ đồ vật lên cao cho người khác xem (vẻ ghê, tức).",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -2.6179938779914944,
+            "khuyu_right": -0.13962634015954636
+          },
+          "thoi_luong": 0.3,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "vai_right": -2.6878070480712677,
+            "khuyu_right": -0.17453292519943295
+          },
+          "thoi_luong": 0.4,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "an",
+      "label": "Ăn",
+      "mo_ta": "Đưa đồ ăn lên miệng liên tục.",
+      "loop": true,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_right": -0.3141592653589793,
+            "khuyu_right": 1.7453292519943295,
+            "dau": 0.0
+          },
+          "thoi_luong": 0.22,
+          "kieu": "lap"
+        },
+        {
+          "goc": {
+            "vai_right": -0.4537856055185257,
+            "khuyu_right": 2.6179938779914944,
+            "dau": 0.08726646259971647
+          },
+          "thoi_luong": 0.22,
+          "kieu": "lap"
+        }
+      ]
+    },
+    {
+      "name": "ngoi",
+      "label": "Ngồi xổm",
+      "mo_ta": "Ngồi xổm, hai tay đặt lên gối.",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "dui_left": -0.6632251157578453,
+            "dui_right": -0.6632251157578453,
+            "goi_left": 1.4311699866353502,
+            "goi_right": 1.4311699866353502,
+            "vai_left": -0.4537856055185257,
+            "vai_right": -0.4537856055185257,
+            "khuyu_left": 0.6981317007977318,
+            "khuyu_right": 0.6981317007977318,
+            "dich_y": -0.085
+          },
+          "thoi_luong": 0.35,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "dui_left": -0.6632251157578453,
+            "dui_right": -0.6632251157578453,
+            "goi_left": 1.4311699866353502,
+            "goi_right": 1.4311699866353502,
+            "vai_left": -0.4537856055185257,
+            "vai_right": -0.4537856055185257,
+            "khuyu_left": 0.6981317007977318,
+            "khuyu_right": 0.6981317007977318,
+            "dich_y": -0.085
+          },
+          "thoi_luong": 0.4,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "om_goi",
+      "label": "Ngồi bó gối",
+      "mo_ta": "Ngồi bó gối, ôm chân (khóc, tủi thân).",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "dui_left": -0.5585053606381855,
+            "dui_right": -0.5585053606381855,
+            "goi_left": 1.4660765716752369,
+            "goi_right": 1.4660765716752369,
+            "vai_left": -0.2792526803190927,
+            "vai_right": -0.2792526803190927,
+            "khuyu_left": 2.059488517353309,
+            "khuyu_right": 2.059488517353309,
+            "dau": 0.10471975511965978,
+            "dich_y": -0.1
+          },
+          "thoi_luong": 0.4,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "dui_left": -0.5585053606381855,
+            "dui_right": -0.5585053606381855,
+            "goi_left": 1.4660765716752369,
+            "goi_right": 1.4660765716752369,
+            "vai_left": -0.2792526803190927,
+            "vai_right": -0.2792526803190927,
+            "khuyu_left": 2.059488517353309,
+            "khuyu_right": 2.059488517353309,
+            "dau": 0.05235987755982989,
+            "dich_y": -0.1
+          },
+          "thoi_luong": 0.5,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "nam",
+      "label": "Nằm dài",
+      "mo_ta": "Nằm dài thư giãn, một tay gối đầu (nằm giường, sofa).",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "than": 1.5707963267948966,
+            "vai_left": -2.792526803190927,
+            "khuyu_left": -1.2217304763960306,
+            "dui_left": 0.4537856055185257,
+            "goi_left": -0.6981317007977318,
+            "dich_y": -0.12,
+            "dich_x": -0.04
+          },
+          "thoi_luong": 0.45,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "than": 1.5707963267948966,
+            "vai_left": -2.792526803190927,
+            "khuyu_left": -1.2217304763960306,
+            "dui_left": 0.4537856055185257,
+            "goi_left": -0.6981317007977318,
+            "dich_y": -0.12,
+            "dich_x": -0.04
+          },
+          "thoi_luong": 0.5,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "bo",
+      "label": "Bò",
+      "mo_ta": "Bò bằng hai tay hai chân (xin lỗi, bò đi).",
+      "loop": true,
+      "keyframes": [
+        {
+          "goc": {
+            "than": 1.2566370614359172,
+            "vai_right": -1.2566370614359172,
+            "vai_left": 0.9075712110370514,
+            "khuyu_right": 0.06981317007977318,
+            "dui_right": -1.9198621771937625,
+            "dui_left": 1.6755160819145565,
+            "goi_right": 1.3962634015954636,
+            "goi_left": -1.117010721276371,
+            "dau": -0.6981317007977318,
+            "dich_y": -0.13,
+            "dich_x": -0.12
+          },
+          "thoi_luong": 0.25,
+          "kieu": "lap"
+        },
+        {
+          "goc": {
+            "than": 1.2566370614359172,
+            "vai_right": -0.9075712110370514,
+            "vai_left": 1.2566370614359172,
+            "khuyu_right": -0.06981317007977318,
+            "dui_right": -1.6755160819145565,
+            "dui_left": 1.9198621771937625,
+            "goi_right": 1.117010721276371,
+            "goi_left": -1.3962634015954636,
+            "dau": -0.6981317007977318,
+            "dich_y": -0.125,
+            "dich_x": -0.12
+          },
+          "thoi_luong": 0.25,
+          "kieu": "lap"
+        }
+      ]
+    },
+    {
+      "name": "nga_ngua",
+      "label": "Ngã ngửa",
+      "mo_ta": "Ngã ngửa ra sau, chân tay quơ quào (sốc, bị đẩy).",
+      "loop": false,
+      "keyframes": [
+        {
+          "goc": {
+            "than": -0.4363323129985824,
+            "vai_left": -2.0943951023931953,
+            "vai_right": -2.0943951023931953,
+            "dich_y": 0.02
+          },
+          "thoi_luong": 0.15,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "than": -1.4835298641951802,
+            "vai_left": -2.6179938779914944,
+            "vai_right": -2.6179938779914944,
+            "dui_left": 0.6981317007977318,
+            "dui_right": -1.0471975511965976,
+            "goi_left": -0.5235987755982988,
+            "goi_right": 0.3490658503988659,
+            "dich_y": -0.12
+          },
+          "thoi_luong": 0.25,
+          "kieu": "mot_lan"
+        },
+        {
+          "goc": {
+            "than": -1.4835298641951802,
+            "vai_left": -2.2689280275926285,
+            "vai_right": -2.792526803190927,
+            "dui_left": 1.0471975511965976,
+            "dui_right": -0.6981317007977318,
+            "goi_left": -0.17453292519943295,
+            "goi_right": 0.5235987755982988,
+            "dich_y": -0.12
+          },
+          "thoi_luong": 0.4,
+          "kieu": "giu"
+        }
+      ]
+    },
+    {
+      "name": "voi",
+      "label": "Với lên cao",
+      "mo_ta": "Kiễng chân với tay lên cao (lấy đồ trên tủ).",
+      "loop": true,
+      "keyframes": [
+        {
+          "goc": {
+            "vai_left": -2.9321531433504737,
+            "vai_right": -2.9321531433504737,
+            "khuyu_left": -0.06981317007977318,
+            "khuyu_right": -0.06981317007977318,
+            "dich_y": 0.025
+          },
+          "thoi_luong": 0.3,
+          "kieu": "lap"
+        },
+        {
+          "goc": {
+            "vai_left": -3.001966313430247,
+            "vai_right": -2.827433388230814,
+            "khuyu_left": -0.13962634015954636,
+            "khuyu_right": 0.0,
+            "dich_y": 0.035
+          },
+          "thoi_luong": 0.3,
+          "kieu": "lap"
+        }
+      ]
+    },
+    {
+      "name": "chay",
+      "label": "Chạy",
+      "mo_ta": "Chạy tại chỗ thật nhanh, tay đánh mạnh (hoảng, đuổi theo).",
+      "loop": true,
+      "keyframes": [
+        {
+          "goc": {
+            "dui_left": -0.5235987755982988,
+            "dui_right": 0.3141592653589793,
+            "goi_left": 0.6981317007977318,
+            "goi_right": -0.17453292519943295,
+            "vai_left": 0.5235987755982988,
+            "vai_right": -0.6981317007977318,
+            "khuyu_left": -1.0471975511965976,
+            "khuyu_right": -1.2217304763960306,
+            "dich_y": 0.03
+          },
+          "thoi_luong": 0.16,
+          "kieu": "lap"
+        },
+        {
+          "goc": {
+            "dui_left": 0.3141592653589793,
+            "dui_right": -0.5235987755982988,
+            "goi_left": -0.17453292519943295,
+            "goi_right": 0.6981317007977318,
+            "vai_left": -0.6981317007977318,
+            "vai_right": 0.5235987755982988,
+            "khuyu_left": -1.2217304763960306,
+            "khuyu_right": -1.0471975511965976,
+            "dich_y": 0.0
+          },
+          "thoi_luong": 0.16,
+          "kieu": "lap"
+        }
+      ]
+    },
+    {
+      "name": "dam_dat",
+      "label": "Dậm chân",
+      "mo_ta": "Dậm chân giận dỗi, hai tay nắm chặt.",
+      "loop": true,
+      "keyframes": [
+        {
+          "goc": {
+            "dui_right": -0.17453292519943295,
+            "goi_right": 0.8726646259971648,
+            "vai_left": -0.24434609527920614,
+            "vai_right": -0.24434609527920614,
+            "khuyu_left": -0.6981317007977318,
+            "khuyu_right": -0.6981317007977318,
+            "dich_y": 0.0
+          },
+          "thoi_luong": 0.14,
+          "kieu": "lap"
+        },
+        {
+          "goc": {
+            "dui_right": 0.0,
+            "goi_right": 0.0,
+            "vai_left": -0.3141592653589793,
+            "vai_right": -0.3141592653589793,
+            "khuyu_left": -0.8726646259971648,
+            "khuyu_right": -0.8726646259971648,
+            "dich_y": -0.01
+          },
+          "thoi_luong": 0.14,
+          "kieu": "lap"
         }
       ]
     }
