@@ -104,6 +104,7 @@ SUBTITLE_STYLES = {
 
 DEFAULT_SETTINGS = {
     "gap_between_lines": GAP_BETWEEN_LINES,
+    "natural_pacing": True,     # nghỉ giữa câu như nói chuyện thật (core/pacing.py)
     "subtitle_style": "yellow",
     "subtitle_mode": "chunks",   # "chunks" = từng cụm ngắn, "full" = cả câu
     "bgm_volume": 0.0,          # 0 = không nhạc nền

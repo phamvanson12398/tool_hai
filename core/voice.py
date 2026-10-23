@@ -87,6 +87,9 @@ def trim_silence(a: np.ndarray, sr: int, thresh: float = 0.02,
     # smoothing để tránh nhói do noise
     k = max(1, int(sr * 0.02))
     smooth = np.convolve(amp, np.ones(k) / k, mode="same")
+    # ngưỡng theo độ to của chính câu đó: câu đọc nhỏ (thì thầm, nói nhẹ)
+    # không bị coi là im lặng rồi cắt mất chữ
+    thresh = min(thresh, 0.08 * float(smooth.max()))
     voiced = np.where(smooth > thresh)[0]
     if voiced.size == 0:
         return a

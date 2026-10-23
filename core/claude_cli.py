@@ -13,7 +13,7 @@ import sys
 import threading
 from pathlib import Path
 
-from . import config
+from . import config, pacing
 from .comedy_lib import COMEDY_KINDS, MARKETS
 from .gestures import gesture_catalog_text  # noqa: E402
 
@@ -223,21 +223,70 @@ def _comedy_block(lang: str) -> str:
     return "\n".join(lines)
 
 
-def length_hint(duration: float | None) -> tuple[str, int]:
-    """Câu dặn độ dài cho prompt + số cảnh tối đa, theo số giây đích."""
+def length_hint(duration: float | None, language: str = "ko") -> tuple[str, int]:
+    """Câu dặn độ dài cho prompt + số cảnh tối đa, theo số giây đích.
+
+    Đưa cho Claude lượng chữ cụ thể (tính theo tốc độ đọc thật của OmniVoice)
+    vì Claude đoán "giây" theo cảm tính thường viết thiếu lời."""
     if not duration:
         lo, hi = config.TARGET_DURATION
-        return (f"{lo}–{hi} giây khi đọc lên. Khoảng 8–16 nhịp (câu + nhịp phản ứng).", 3)
-    d = max(15, min(600, int(duration)))
-    beats = max(5, round(d / 3.8))
-    lo, hi = max(4, int(beats * 0.85)), int(beats * 1.15) + 1
+        return (f"{lo}–{hi} giây khi đọc lên. Khoảng 12–30 câu thoại.", 3)
+    b = pacing.length_budget(duration, language)
+    d = b["seconds"]
+    lo, hi = int(b["lines"] * 0.85), int(b["lines"] * 1.15) + 1
     scenes = 3 if d <= 90 else (4 if d <= 180 else 6)
-    txt = (f"khoảng {d} giây khi đọc lên (chênh tối đa 15%). Cần khoảng {lo}–{hi} "
-           f"nhịp (câu + nhịp phản ứng), mỗi câu thoại ngắn 2–4 giây.")
+    txt = (f"{d} giây khi đọc lên (chênh tối đa 8%). Giọng AI đọc nhanh, nên cần "
+           f"khoảng {lo}–{hi} câu thoại và TỔNG CỘNG khoảng {b['amount']} "
+           f"{b['unit']} trên tất cả câu thoại (đừng viết thiếu). Trộn câu ngắn "
+           f"1–3 chữ với câu dài vừa; nhịp '>' chỉ 2–5 cái cho cả tập.")
     if d > 120:
         txt += (" Tập dài: chia thành vài đoạn có mở đầu, leo thang, cú lật giữa tập "
                 "và cú lật cuối; mỗi đoạn có một tình huống buồn cười riêng.")
     return txt, scenes
+
+
+def _fix_length(script: str, language: str, duration: float | None) -> str:
+    """Kịch bản lệch đích quá 10% thì nhờ Claude thêm/bớt lời một lần."""
+    if not duration:
+        return script
+    from .script_parser import estimate_duration, parse_script
+
+    try:
+        s = parse_script(script)
+        est = estimate_duration(s)
+    except Exception:  # noqa: BLE001
+        return script
+    target = float(duration)
+    if not s.beats or abs(est - target) <= target * 0.10:
+        return script
+    b = pacing.length_budget(target, language)
+    have = sum(pacing.count_amount(x.text, language) for x in s.beats if x.kind == "line")
+    if est < target:
+        how = (f"QUÁ NGẮN: ước tính {est:.0f} giây, cần {target:.0f} giây. Hiện có "
+               f"{have} {b['unit']}, cần khoảng {b['amount']}. Hãy THÊM câu thoại "
+               f"(thêm phản ứng, hỏi vặn, leo thang tình huống, một cú lật nhỏ giữa "
+               f"chừng), giữ nguyên mở đầu và câu chốt.")
+    else:
+        how = (f"QUÁ DÀI: ước tính {est:.0f} giây, cần {target:.0f} giây. Hiện có "
+               f"{have} {b['unit']}, cần khoảng {b['amount']}. Hãy BỚT các câu "
+               f"thừa, giữ nguyên mở đầu, cú lật và câu chốt.")
+    prompt = (f"Sửa độ dài kịch bản hài dưới đây. {how}\n"
+              f"Giữ đúng quy cách ghi, tên nhân vật, ngôn ngữ, giọng nói chuyện "
+              f"đời thường, các dòng `## canh:` và dòng dịch `//`.\n"
+              f"CHỈ output kịch bản hoàn chỉnh, không giải thích, không code fence.\n\n"
+              f"{script}")
+    try:
+        fixed = _run(prompt, timeout=TIMEOUT).strip()
+    except RuntimeError:
+        return script
+    try:
+        s2 = parse_script(fixed)
+    except Exception:  # noqa: BLE001
+        return script
+    if not s2.beats or len(s2.errors) > len(s.errors):
+        return script
+    new_est = estimate_duration(s2)
+    return fixed if abs(new_est - target) < abs(est - target) else script
 
 
 def write_script(title: str, language: str, kind: str | None = None,
@@ -272,7 +321,7 @@ def write_script(title: str, language: str, kind: str | None = None,
         cast_txt = (f"\nDàn nhân vật phải dùng đúng các tên sau: "
                     f"{', '.join(cast)}. Không thêm nhân vật mới.")
 
-    length_block, max_scenes = length_hint(duration)
+    length_block, max_scenes = length_hint(duration, language)
     prompt = _load_prompt(
         "write_script",
         length_block=length_block,
@@ -293,8 +342,8 @@ def write_script(title: str, language: str, kind: str | None = None,
         sample=sample,
     )
 
-    out = _run(prompt, timeout=TIMEOUT)
-    return out.strip()
+    out = _run(prompt, timeout=TIMEOUT).strip()
+    return _fix_length(out, language, duration)
 
 
 def three_ideas(title: str, language: str) -> list[dict]:

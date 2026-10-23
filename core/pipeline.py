@@ -20,7 +20,7 @@ import numpy as np
 import soundfile as sf
 from PIL import Image
 
-from . import assets, config, video, voice
+from . import assets, config, pacing, video, voice
 from .script_parser import Script, parse_script
 
 # Cử động (Bước D) — import được cả hai kiểu nhân vật (kit + ảnh tải lên)
@@ -81,20 +81,49 @@ def synth_lines(script: Script, pdir: Path, voices: dict,
     return out
 
 
-def build_timeline(script: Script, segments: list[dict],
-                   gap: float) -> video.Timeline:
-    """Xếp các câu liền nhau; nhịp '>' là khoảng lặng có chủ đích.
+def _natural_gaps(segments: list[dict], gap: float, natural: bool) -> list[float]:
+    """Khoảng nghỉ sau mỗi câu (0 cho nhịp '>')."""
+    beats = [s["beat"] for s in segments]
+    out = []
+    for i, b in enumerate(beats):
+        if b.kind != "line":
+            out.append(0.0)
+        elif natural:
+            out.append(pacing.natural_gap(b.text, b.speaker,
+                                          pacing.next_speaker_of(beats, i), gap))
+        else:
+            out.append(gap)
+    return out
+
+
+def build_timeline(script: Script, segments: list[dict], gap: float,
+                   target: float | None = None,
+                   natural: bool = True) -> video.Timeline:
+    """Xếp các câu; nhịp '>' là khoảng lặng có chủ đích.
+
+    natural: khoảng nghỉ đổi theo ngữ cảnh như nói chuyện thật (core/pacing).
+    target: thời lượng đích (giây); video ngắn hơn thì giãn nhẹ các khoảng
+    nghỉ và nhịp phản ứng cho sát đích, không kéo chậm giọng.
 
     Video bắt đầu sau VIDEO_START_DELAY giây và giữ khung cuối
     VIDEO_END_HOLD giây, nên tổng thời lượng = nội dung + delay + hold.
     """
+    gaps = _natural_gaps(segments, gap, natural)
+    reacts = [s["beat"].duration or config.DEFAULT_REACT_SECONDS
+              for s in segments if s["kind"] == "react"]
+    raw = (config.VIDEO_START_DELAY + config.VIDEO_END_HOLD + sum(gaps) + sum(reacts)
+           + sum(max(s["duration"], config.MIN_LINE_SECONDS) + (s["beat"].pause or 0.0)
+                 for s in segments if s["kind"] == "line"))
+    gx, rx = pacing.fit_extra(target, raw, gaps, reacts)
+    rx_iter = iter(rx)
+
     tl = video.Timeline()
     tl.scene_cast = [list(c) if c else None for c in getattr(script, "scene_cast", [])]
     t = config.VIDEO_START_DELAY
     for idx, seg in enumerate(segments):
         b = seg["beat"]
         if seg["kind"] == "react":
-            dur = b.duration or config.DEFAULT_REACT_SECONDS
+            dur = (b.duration or config.DEFAULT_REACT_SECONDS) + next(rx_iter)
             tl.beats.append(video.Beat(
                 idx=idx, actor=b.speaker, expression=b.expression, zoom=b.zoom,
                 sfx=_sfx_file(b.sfx), start=t, duration=dur, scene=b.scene,
@@ -124,7 +153,7 @@ def build_timeline(script: Script, segments: list[dict],
             if b.zoom_target:
                 ln.zoom_target = b.zoom_target
             tl.lines.append(ln)
-            t += dur + gap + (b.pause or 0.0)
+            t += dur + gaps[idx] + gx[idx] + (b.pause or 0.0)
     # giữ khung cuối thêm một lúc
     t += config.VIDEO_END_HOLD
     tl.total = max(t, 1.0)
@@ -318,8 +347,14 @@ def render_episode(pdir: Path, script: Script, chars_cfg: list[dict],
     _say(progress, 0.02, "chuẩn bị")
     segments = synth_lines(script, pdir, voices, progress)
     gap = float(settings.get("gap_between_lines", config.GAP_BETWEEN_LINES))
-    tl = build_timeline(script, segments, gap)
-    _say(progress, 0.52, f"độ dài video: {tl.total:.1f} giây")
+    target = settings.get("target_duration") or None
+    tl = build_timeline(script, segments, gap, target=target,
+                        natural=bool(settings.get("natural_pacing", True)))
+    msg = f"độ dài video: {tl.total:.1f} giây"
+    if target and tl.total < target * 0.93:
+        msg += (f" (ngắn hơn đích {target:.0f} giây — kịch bản ít lời, "
+                f"nên thêm vài câu)")
+    _say(progress, 0.52, msg)
 
     chars = resolve_characters(script, chars_cfg,
                                enable_rig=bool(settings.get("enable_rig")))

@@ -501,17 +501,23 @@ def serialize_script(s: Script) -> str:
 
 
 def estimate_duration(s: Script) -> float:
-    """Ước lượng độ dài video (giây): giọng + nhịp phản ứng + khoảng cách."""
-    from .config import get_settings
+    """Ước lượng độ dài video (giây), tính giống hệt lúc dựng: giọng (theo
+    tốc độ đọc thật của OmniVoice) + nghỉ tự nhiên + nhịp phản ứng + đầu/cuối.
+    Chưa tính phần giãn cho khớp thời lượng đích."""
+    from . import config, pacing
 
-    st = get_settings()
-    total = 0.0
-    for b in s.beats:
+    st = config.get_settings()
+    base = float(st.gap_between_lines)
+    natural = bool(st.get("natural_pacing", True))
+    total = config.VIDEO_START_DELAY + config.VIDEO_END_HOLD
+    for i, b in enumerate(s.beats):
         if b.kind == "react":
-            total += b.duration
+            total += b.duration or config.DEFAULT_REACT_SECONDS
+            continue
+        total += pacing.speech_seconds(b.text, s.language) + (b.pause or 0.0)
+        if natural:
+            total += pacing.natural_gap(b.text, b.speaker,
+                                        pacing.next_speaker_of(s.beats, i), base)
         else:
-            # ~4.5 ký tự/giây cho tiếng Hàn, ~15 ký tự/giây cho tiếng Anh
-            cps = 4.5 if s.language == "ko" else 15.0
-            total += max(0.8, len(b.text) / cps)
-        total += st.gap_between_lines
+            total += base
     return total

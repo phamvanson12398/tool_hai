@@ -80,6 +80,11 @@ Nhân vật hoặc giọng nào chị không tải lên thì tool tự chuyển 
   viết đủ số câu cho độ dài đó (khoảng 1 nhịp cho mỗi 4 giây), tập dài hơn
   được phép nhiều bối cảnh hơn. Để trống thì AI tự chọn 30–90 giây như trước.
   Ô “Mục tiêu” ở mục kịch bản đổi theo thời lượng này.
+  - Giọng AI đọc nhanh nên tool báo cho Claude **số chữ cần viết** (âm tiết
+    Hangul hoặc số từ tiếng Anh), không chỉ số giây. Viết xong mà ước tính
+    lệch đích quá 10%, Claude tự thêm/bớt câu một lần.
+  - Ô ước tính độ dài tính theo tốc độ đọc thật của OmniVoice và nhịp nghỉ
+    tự nhiên, nên sát với video dựng ra.
 
 ---
 
@@ -305,7 +310,11 @@ mọi biểu cảm × miệng mở/ngậm, luôn khớp nhau.
 ## 9. Dựng video
 
 1. Tạo giọng từng câu, đo độ dài thật, cắt bỏ khoảng im ở đầu và cuối.
-2. Xếp câu sau ngay sau câu trước, cách 0,1 giây; chỉ dừng lâu hơn ở nhịp `>`.
+2. Xếp câu theo **nhịp nói chuyện thật**: bị cắt lời (câu kết thúc bằng `—`)
+   thì nối ngay; sau câu hỏi người kia ngẫm một chút rồi đáp; câu bỏ lửng `...`
+   lặng lâu hơn; cùng người nói tiếp thì chỉ lấy hơi. Nhịp `>` là khoảng lặng
+   có chủ đích. Nếu video vẫn ngắn hơn **Thời lượng** đã đặt, tool giãn nhẹ
+   các chỗ nghỉ (tối đa ~0,45 giây mỗi chỗ) cho sát đích, không kéo chậm giọng.
 3. Miệng mở khi có tiếng, ngậm khi im (đo theo âm lượng giọng).
 4. Đổi biểu cảm, zoom vào người nói ở câu có zoom, chèn tiếng động.
 5. Tiêu đề cố định trên cùng; phụ đề vàng viền đen, từng cụm ngắn nhảy theo lời.

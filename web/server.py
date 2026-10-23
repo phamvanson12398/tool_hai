@@ -1177,6 +1177,7 @@ def api_project_render(pid):
             if not settings.get("title_text"):
                 settings["title_text"] = data.get("title", "")
             settings["video_format"] = _norm_format(data.get("format"))
+            settings["target_duration"] = data.get("duration")
             if _fit_scene_bgs(data, pdir):
                 _save_project(pid, data)
             bg = (data["assets"].get("background") or {}).get("image")
