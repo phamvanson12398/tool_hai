@@ -852,11 +852,21 @@ def api_project_apply(pid):
     except FileNotFoundError as e:
         return _err(str(e), 404)
     body = request.get_json(silent=True) or {}
-    ids = set(body.get("ids") or [])
-    sugg = [s for s in (data.get("suggestions") or [])
-            if s.get("id") in ids]
+    # Giao diện gửi kèm nội dung góp ý đã chọn: dùng luôn, không phụ thuộc bản
+    # lưu trên server (bản lưu có thể bị một lần lưu khác ghi đè trong lúc
+    # Claude đang rà soát).
+    sugg = []
+    for it in body.get("items") or []:
+        if isinstance(it, dict) and (it.get("suggestion") or it.get("quote")):
+            sugg.append({k: str(it.get(k, ""))[:1000]
+                         for k in ("category", "quote", "suggestion", "severity")})
+    if not sugg:
+        ids = {str(i) for i in (body.get("ids") or [])}
+        sugg = [s for s in (data.get("suggestions") or []) if str(s.get("id")) in ids]
     if not sugg:
         return _err("Chưa chọn góp ý nào.")
+    if isinstance(body.get("script"), str) and body["script"].strip():
+        data["script"] = body["script"]          # bản đang hiện trên màn hình
     try:
         new_script = claude_cli.apply_suggestions(data.get("script", ""), sugg)
     except RuntimeError as e:

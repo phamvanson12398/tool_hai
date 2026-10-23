@@ -313,10 +313,11 @@ def review_script(script: str, language: str) -> list[dict]:
         data = data.get("suggestions", [])
     if not isinstance(data, list):
         return []
-    for i, s in enumerate(data, 1):
-        if isinstance(s, dict):
-            s.setdefault("id", i)
-    return data
+    # đánh số lại 1..n (Claude có thể tự ghi id dạng chữ, làm lệch khi áp dụng)
+    out = [s for s in data if isinstance(s, dict)]
+    for i, s in enumerate(out, 1):
+        s["id"] = i
+    return out
 
 
 def apply_suggestions(script: str, suggestions: list[dict]) -> str:

@@ -624,9 +624,13 @@
 
   function applyReview() {
     var boxes = $("review-list").querySelectorAll("input[data-sug-id]");
-    var ids = [];
+    var ids = [], items = [];
     Array.prototype.forEach.call(boxes, function (b) {
-      if (b.checked) ids.push(parseInt(b.dataset.sugId, 10));
+      if (!b.checked) return;
+      ids.push(b.dataset.sugId);
+      state.review.forEach(function (s) {
+        if (String(s.id) === b.dataset.sugId) items.push(s);
+      });
     });
     if (!ids.length) {
       toast("warn", "Chưa chọn góp ý", "Hãy chọn ít nhất một góp ý để áp dụng.");
@@ -635,7 +639,7 @@
     withBusy($("btn-apply"), function () {
       return api("/api/project/" + encodeURIComponent(state.project.id) + "/apply", {
         method: "POST",
-        body: { ids: ids }
+        body: { ids: ids, items: items, script: $("p-script").value }
       }).then(function (data) {
         applyScript(data && data.script);
         renderReview([]);
