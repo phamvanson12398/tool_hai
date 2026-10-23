@@ -104,6 +104,7 @@ def _scene_kinds(data: dict, s) -> dict[int, dict]:
     out: dict[int, dict] = {}
     for i, desc in enumerate(s.scenes or [""]):
         rec = (_scene_bg(data, desc) if _scene_key(desc) else None) or {}
+        own = bool(rec.get("image")) and _scene_key(desc)
         if not rec.get("image") and not _scene_key(desc):
             rec = general
         kind = rec.get("kind") or furniture.kind_from_desc(desc) \
@@ -112,7 +113,9 @@ def _scene_kinds(data: dict, s) -> dict[int, dict]:
             kind = general.get("kind") or furniture.kind_from_desc(general.get("desc") or "")
         if kind or desc:
             out[i] = {"kind": kind, "desc": desc,
-                      "accent": (rec.get("spec") or {}).get("accent")}
+                      "accent": (rec.get("spec") or {}).get("accent"),
+                      # bối cảnh AI vẽ: vẽ lại được bản rộng cho sân khấu lia ngang
+                      "spec": rec.get("spec") if own else None}
     return out
 
 
@@ -1240,6 +1243,7 @@ def api_project_render(pid):
                 settings["title_text"] = data.get("title", "")
             settings["video_format"] = _norm_format(data.get("format"))
             settings["target_duration"] = data.get("duration")
+            settings["bg_spec"] = (data["assets"].get("background") or {}).get("spec")
             if _fit_scene_bgs(data, pdir):
                 _save_project(pid, data)
             bg = (data["assets"].get("background") or {}).get("image")

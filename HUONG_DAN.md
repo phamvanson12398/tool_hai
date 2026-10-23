@@ -251,6 +251,15 @@ Tuấn (shocked, dung_day, zoom): Hả?!
 `che_mieng` (đưa tay lên miệng), `chong_nanh` (chống nạnh), `lac_tay` (lắc ngón tay
 "không không").
 
+**Sân khấu rộng, máy quay lia theo người nói (khung dọc 9:16)** — bối cảnh rộng
+gấp khoảng 2,3 lần khung hình, các nhân vật đứng giãn ra chứ không chen nhau; ai
+nói thì máy quay lia mượt (~0,45 giây) sang người đó, người kia ló ở mép khung.
+Nhịp phản ứng `>` thì lia sang người phản ứng; sang cảnh mới thì máy đặt ngay chỗ
+người nói đầu tiên. Bối cảnh AI vẽ được vẽ lại bản rộng (đồ đạc trải dài như khung
+ngang); ảnh chị tự tải lên thì được phóng và cắt cho vừa, nên nên dùng ảnh ngang.
+Khung 16:9 và 1:1 vốn đã rộng nên giữ như cũ. Tắt ở **Cài đặt → Cử động nhân vật
+→ Sân khấu rộng ở khung dọc**.
+
 **Quay vào nhau khi nói chuyện** — khi hai người trở lên nói chuyện, người nghe
 quay hẳn về phía người đang nói, người nói quay về phía người vừa nói với mình:
 mặt vẽ lại theo hướng nhìn (mắt mũi miệng dồn sang, tai phía đó khuất), người

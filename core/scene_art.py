@@ -76,11 +76,13 @@ class _Pen:
     s = tỉ lệ xa gần (1 = mặt phẳng tường sau; <1 xa hơn, >1 gần hơn).
     """
 
-    def __init__(self, img: Image.Image):
+    def __init__(self, img: Image.Image, layout_size: tuple[int, int] | None = None):
+        """layout_size: khung video thật khi ảnh nền rộng hơn khung (sân khấu
+        rộng ở khung dọc) — tỉ lệ người / đồ vật lấy theo khung thật."""
         self.img = img
         self.d = ImageDraw.Draw(img)
         self.w, self.h = img.size
-        lay = config.stage_layout(self.w, self.h)
+        lay = config.stage_layout(*(layout_size or (self.w, self.h)))
         ch = self.h * lay["height"][0]          # khung nhân vật 1-2 người
         self.floor = self.h * lay["floor"]       # vạch chân người
         self.ppc = ch * 0.92 / PERSON_CM * BACK   # px / cm ở tường sau
@@ -528,9 +530,11 @@ def _draw_kind(p: _Pen, kind: str, wall, floor, accent, night: bool, rng):
 
 def render_scene(kind: str = "phong_khach", time: str = "ngay",
                  wall=None, floor=None, accent=None, seed: int = 0,
-                 size: tuple[int, int] | None = None) -> Image.Image:
+                 size: tuple[int, int] | None = None,
+                 layout_size: tuple[int, int] | None = None) -> Image.Image:
     """Vẽ một bối cảnh theo khung size (mặc định 9:16). Màu không truyền
-    thì dùng màu mặc định của mẫu."""
+    thì dùng màu mặc định của mẫu. layout_size: khung video thật khi size rộng
+    hơn khung (sân khấu rộng, máy quay lia theo người nói)."""
     spec = KINDS.get(kind) or KINDS["phong_khach"]
     kind = kind if kind in KINDS else "phong_khach"
     night = time == "dem"
@@ -541,7 +545,7 @@ def render_scene(kind: str = "phong_khach", time: str = "ngay",
         wall, floor = _mix(wall, (40, 44, 80), 0.45), _mix(floor, (30, 30, 50), 0.4)
     w, h = size or (config.WIDTH, config.HEIGHT)
     img = Image.new("RGB", (w, h), wall)
-    pen = _Pen(img)
+    pen = _Pen(img, layout_size)
     _draw_kind(pen, kind, wall, floor, accent, night, random.Random(seed))
     # đồ đời thường (đèn trần, điều hoà, kệ, thảm, xe máy...) cho giống thật
     from . import scene_decor
@@ -550,6 +554,15 @@ def render_scene(kind: str = "phong_khach", time: str = "ngay",
         # phủ tối nhẹ cho cảnh đêm, giữ đồ vật vẫn rõ
         img = Image.blend(img, Image.new("RGB", (w, h), (20, 24, 60)), 0.18)
     return img
+
+
+def render_spec(spec: dict, size: tuple[int, int],
+                layout_size: tuple[int, int] | None = None) -> Image.Image:
+    """Vẽ lại bối cảnh từ spec đã lưu (cùng seed với lúc vẽ lần đầu)."""
+    return render_scene(spec.get("kind", "phong_khach"), spec.get("time", "ngay"),
+                        spec.get("wall"), spec.get("floor"), spec.get("accent"),
+                        seed=zlib.crc32(str(spec.get("name", "")).encode("utf-8")) % 1000,
+                        size=size, layout_size=layout_size)
 
 
 def save_scene(spec: dict, out_path: Path,

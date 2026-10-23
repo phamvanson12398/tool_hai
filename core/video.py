@@ -84,6 +84,12 @@ def _sit_geom(anim) -> tuple[float, float, float, float] | None:
     return out or None
 
 
+# Sân khấu rộng ở khung dọc: rộng gấp bao nhiêu khung (≈ bề ngang bối cảnh
+# khung ngang, nên đồ đạc xếp cho khung ngang dùng lại được) và chỗ đứng
+WIDE_FACTOR = 2.3
+WIDE_SLOTS = {1: [0.5], 2: [0.37, 0.63], 3: [0.26, 0.5, 0.74], 4: [0.2, 0.4, 0.6, 0.8]}
+PAN_TIME = 0.45            # giây để máy quay lia sang người nói
+
 # Mức quay khi hai người nói chuyện (1 = quay hẳn vào nhau)
 TURN_TALK = 1.0
 # Quay hẳn sang thì bề ngang người hẹp lại bấy nhiêu (trông như đứng nghiêng)
@@ -254,6 +260,8 @@ class Stage:
         self.scene_seats: dict[int, str] = {}
         self.scene_colors: dict[int, tuple] = {}
         self.seat_fallback = False            # ngồi ở cảnh không có ghế: tự đặt ghế gỗ
+        self.world_w = width                  # bề ngang sân khấu (rộng hơn khung khi lia)
+        self.pan = 0.0                        # máy quay đang lia tới đâu (px sân khấu)
         self.t = 0.0                          # thời điểm khung đang dựng
         self._seat_cache: dict = {}
         self._sprite_cache: dict = {}
@@ -291,7 +299,7 @@ class Stage:
                 fh, drop, seat_c, sh_c, hip_c = g
                 th = self.char_h(n, ch.scale)
                 sc = th / fh
-                rows.append([ch.name, self.w * slots[i], base_y - th + seat_c * sc,
+                rows.append([ch.name, self.world_w * slots[i], base_y - th + seat_c * sc,
                              drop * sc, th, base_y - th + sh_c * sc,
                              base_y - th + hip_c * sc])
         if rows:
@@ -308,7 +316,7 @@ class Stage:
                     r[2] = top
             k = sum(r[4] for r in rows) / len(rows) / 160.0
             back, front = furniture.draw(seat, [(r[1], r[2], r[5]) for r in rows], k,
-                                         self.floor_y, (self.w, self.h),
+                                         self.floor_y, (self.world_w, self.h),
                                          self.scene_colors.get(self.scene))
             out = {"drops": {} if standing else {r[0]: r[3] for r in rows},
                    "back": _sprite(back), "front": _sprite(front)}
@@ -351,12 +359,37 @@ class Stage:
                                 Image.BILINEAR)
                 self._sprite_cache[key] = hit
             im = hit
-        img.paste(im, self._cam_map(x0, y0), im)
+        img.paste(im, self._cam_map(x0 - self.pan, y0), im)
         return img
 
     # ------------------------------------------------------ bố cục theo khung
     def slots(self, n: int) -> list[float]:
+        """Vị trí ngang của n nhân vật, theo phần bề ngang SÂN KHẤU (world_w)."""
+        if self.wide:
+            return WIDE_SLOTS.get(n) or [0.2 + 0.6 * i / max(1, n - 1) for i in range(n)]
         return self.layout["slots"].get(n) or [(i + 1) / (n + 1) for i in range(n)]
+
+    # ------------------------------------------------------ sân khấu rộng (9:16)
+    @property
+    def wide(self) -> bool:
+        return self.world_w > self.w
+
+    def set_world(self, factor: float) -> None:
+        """Sân khấu rộng hơn khung hình: máy quay lia ngang theo người nói."""
+        self.world_w = max(self.w, int(self.w * factor))
+        self.pan = 0.0
+
+    def slot_x(self, i: int, n: int) -> float:
+        """Toạ độ x (px trên khung hình) của chỗ đứng thứ i, đã trừ phần lia."""
+        return self.world_w * self.slots(n)[i] - self.pan
+
+    def pan_target(self, name: str | None, chars: list["Character"]) -> float | None:
+        """Lia tới đâu để người `name` ở giữa khung (None nếu không có ai)."""
+        names = [c.name for c in chars]
+        if not self.wide or name not in names:
+            return None
+        x = self.world_w * self.slots(len(names))[names.index(name)]
+        return min(max(x - self.w / 2, 0.0), float(self.world_w - self.w))
 
     @property
     def floor_y(self) -> int:
@@ -380,8 +413,8 @@ class Stage:
 
     def _fit(self, path: Path) -> Image.Image:
         img = Image.open(path).convert("RGB")
-        # cắt và căn cho đầy khung 9:16
-        tw, th = self.w, self.h
+        # cắt và căn cho đầy sân khấu (bằng khung, hoặc rộng hơn khi lia ngang)
+        tw, th = self.world_w, self.h
         ir = img.width / img.height
         tr = tw / th
         if ir > tr:
@@ -399,11 +432,15 @@ class Stage:
         """Nền của khung: ảnh của cảnh hiện tại, chuyển mờ từ cảnh trước
         nếu mix < 1."""
         cur = self.background_for(self.scene if scene is None else scene)
-        img = cur.copy() if cur else Image.new("RGB", (self.w, self.h), (30, 30, 40))
+        box = (int(self.pan), 0, int(self.pan) + self.w, self.h)
+
+        def view(bg):          # phần nền máy quay đang thấy (sân khấu rộng: theo lia)
+            return bg.crop(box) if bg.width > self.w else bg.copy()
+        img = view(cur) if cur else Image.new("RGB", (self.w, self.h), (30, 30, 40))
         if prev_scene is not None and mix < 1.0:
             prev = self.background_for(prev_scene)
             if prev is not None and prev is not cur:
-                img = Image.blend(prev, img, max(0.0, min(1.0, mix)))
+                img = Image.blend(view(prev), img, max(0.0, min(1.0, mix)))
         s, cx, cy = self.cam
         if s > 1.001:
             w, h = self.w / s, self.h / s
@@ -437,7 +474,7 @@ class Stage:
                 except Exception:  # noqa: BLE001
                     pass
             last = getattr(anim, "last_angles", None) or {}
-            x = self.w * slots[i] + last.get("dich_x", 0.0) * self.w
+            x = self.slot_x(i, n) + last.get("dich_x", 0.0) * self.w
             head_y = base_y - target_h + ratio * target_h - last.get("dich_y", 0.0) * self.h
             hp = getattr(anim, "head_pos", None)
             if hp:
@@ -525,7 +562,7 @@ class Stage:
         base_y = self.floor_y
 
         for i, ch in enumerate(chars):
-            cx = int(self.w * slots[i])
+            cx = int(self.slot_x(i, n))
             speaking = (ch.name == active)
             # --- CỬ ĐỘNG (Bước D): nếu nhân vật có rig animator thì render theo
             # khung xương (cử chỉ + thở + cử động tay khi nói), giữ đầu cứng
@@ -1012,6 +1049,22 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
         mix = min(1.0, (t - scene_since) / SCENE_FADE) if prev_scene is not None else 1.0
         vis = chars_in(cur_scene)
         stage.scene, stage.t = cur_scene, t
+
+        # sân khấu rộng (9:16): máy quay lia mượt sang người đang nói / phản ứng;
+        # sang cảnh mới thì đặt máy ngay chỗ người nói đầu tiên của cảnh
+        if stage.wide:
+            who = getattr(cur, "speaker", None) or getattr(cur, "actor", None)
+            if who is None and events:
+                who = getattr(events[0][2], "speaker", None) or getattr(events[0][2], "actor", None)
+            target = stage.pan_target(who, vis)
+            if target is None and vis:
+                target = stage.pan_target(vis[0].name, vis)
+            if target is not None:
+                if scene_since == t or fi == 0:
+                    stage.pan = target
+                else:
+                    k = 1.0 - math.exp(-(1.0 / fps) / (PAN_TIME / 3.0))
+                    stage.pan += (target - stage.pan) * k
 
         speaking = None
         mouth_open = False

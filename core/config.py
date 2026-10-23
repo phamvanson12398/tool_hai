@@ -136,7 +136,8 @@ DEFAULT_SETTINGS = {
     "char_style": "auto",
     "auto_camera": True,
     "auto_seat": True,
-    "three_quarter": True,      # nghiêng mặt 3/4 về phía người đang nói chuyện với mình          # bàn ghế theo bối cảnh, nhân vật ngồi sẵn ở văn phòng, lớp, quán...        # tự đổi góc máy (cận, qua vai, toàn cảnh) như phim
+    "three_quarter": True,
+    "wide_stage": True,         # khung dọc: sân khấu rộng, máy quay lia theo người nói      # nghiêng mặt 3/4 về phía người đang nói chuyện với mình          # bàn ghế theo bối cảnh, nhân vật ngồi sẵn ở văn phòng, lớp, quán...        # tự đổi góc máy (cận, qua vai, toàn cảnh) như phim
     "subtitle_position": "tren",  # tren (như video hoạt hình hài) | duoi
     # --- Xuất dự án CapCut (thử nghiệm) ---
     "capcut_drafts_root": "",   # rỗng = mặc định %LOCALAPPDATA%\\CapCut\\User Data\\Projects\\com.lveditor.draft

@@ -406,10 +406,26 @@ def render_episode(pdir: Path, script: Script, chars_cfg: list[dict],
         raise RuntimeError("Chưa có ảnh nhân vật nào để dựng hình.")
 
     stage = video.Stage(*config.frame_size(settings.get("video_format")))
+    if stage.h > stage.w and settings.get("wide_stage", True):
+        # khung dọc: sân khấu rộng, nhân vật đứng giãn ra, máy quay lia theo người nói
+        stage.set_world(video.WIDE_FACTOR)
     if bg_path and Path(bg_path).exists():
         stage.set_background(Path(bg_path))
     if scene_bgs:
         stage.set_scene_backgrounds(scene_bgs)
+    if stage.wide:
+        # bối cảnh AI vẽ: vẽ lại bản rộng (đồ đạc trải dài như khung ngang) thay
+        # vì phóng to ảnh khung dọc; ảnh chị tải lên thì phóng + cắt cho vừa
+        from . import scene_art
+        size, lay = (stage.world_w, stage.h), (stage.w, stage.h)
+        try:
+            if settings.get("bg_spec"):
+                stage.bg = scene_art.render_spec(settings["bg_spec"], size, lay)
+            for i, info in (scene_kinds or {}).items():
+                if info.get("spec"):
+                    stage.scene_bgs[i] = scene_art.render_spec(info["spec"], size, lay)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Không vẽ lại được bối cảnh rộng: %s", e)
     if settings.get("enable_rig") and settings.get("auto_seat", True):
         # văn phòng, lớp học, quán, phòng khách... có bàn ghế, nhân vật ngồi sẵn
         from . import furniture
