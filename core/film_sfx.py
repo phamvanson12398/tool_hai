@@ -18,9 +18,12 @@ LABELS = {
     "door": "Cửa kẽo kẹt", "knock": "Gõ cửa", "rooster": "Gà gáy", "thud": "Ngã phịch",
     "swoosh": "Vút (đưa đồ)", "bark": "Chó sủa", "meow": "Mèo kêu", "gasp": "Há hốc",
     "thunder": "Sấm", "birds": "Chim hót (nền)", "crickets": "Dế kêu (nền)",
-    "rain": "Mưa (nền)", "wind": "Gió (nền)",
+    "rain": "Mưa (nền)", "wind": "Gió (nền)", "sniff": "Sụt sịt (khóc)",
 }
 AMBIENT = {"birds", "crickets", "rain", "wind"}
+VERSION = 2              # đổi cách tạo / chuẩn âm lượng thì tăng để tạo lại file
+LOUD = 0.2               # độ to chuẩn (RMS phần có tiếng) của tiếng động
+LOUD_BG = 0.06           # độ to chuẩn của tiếng nền
 _CACHE: dict = {}
 
 
@@ -183,6 +186,15 @@ def synth(name: str) -> np.ndarray:
             i = int(r.uniform(0, n - 400))
             drops[i:i + 300] += _hp(r.normal(0, 1, 300).astype(np.float32), 0.3) * _decay(300, 300) * 0.15
         return x + drops
+    if name == "sniff":                           # sụt sịt: hai hơi hít ngắn qua mũi
+        out = []
+        for d in (0.16, 0.22):
+            n = int(SR * d)
+            t = np.arange(n) / SR
+            env = np.sin(np.pi * t / d) ** 2
+            out += [(_hp(r.normal(0, 1, n).astype(np.float32), 0.75) * env * 0.3).astype(np.float32),
+                    np.zeros(int(SR * 0.08), np.float32)]
+        return np.concatenate(out)
     if name == "wind":
         n = int(SR * 10)
         x = _filt(r.normal(0, 1, n).astype(np.float32), 0.995) * 3
@@ -191,13 +203,28 @@ def synth(name: str) -> np.ndarray:
     return np.zeros(int(SR * 0.1), np.float32)
 
 
+def level(a: np.ndarray, name: str) -> np.ndarray:
+    """Chuẩn độ to: mọi tiếng động (kể cả file chó sủa, mèo kêu có sẵn) to ngang nhau,
+    tiếng nền to vừa đủ nghe giữa các câu thoại."""
+    a = np.asarray(a, dtype=np.float32)
+    peak = float(np.max(np.abs(a))) if len(a) else 0.0
+    if peak <= 1e-6:
+        return a
+    loud = a[np.abs(a) > peak * 0.1]
+    rms = float(np.sqrt(np.mean(loud ** 2))) if len(loud) else peak
+    a = a * ((LOUD_BG if name in AMBIENT else LOUD) / max(rms, 1e-6))
+    m = float(np.max(np.abs(a)))
+    return (a / m * 0.95 if m > 0.95 else a).astype(np.float32)
+
+
 def get(name: str) -> np.ndarray | None:
     """Tiếng động (24 kHz mono float32), tạo lần đầu rồi lưu file."""
     if name in _CACHE:
         return _CACHE[name]
     import soundfile as sf
     a = None
-    for p in (DIR / f"{name}.wav", config.SFX_DIR / f"{name}.wav"):
+    made = DIR / f"{name}_v{VERSION}.wav"
+    for p in (made, config.SFX_DIR / f"{name}.wav"):
         if p.exists():
             a, sr = sf.read(str(p), dtype="float32")
             if a.ndim > 1:
@@ -205,16 +232,18 @@ def get(name: str) -> np.ndarray | None:
             if sr != SR:
                 a = np.interp(np.linspace(0, len(a), int(len(a) * SR / sr), endpoint=False),
                               np.arange(len(a)), a).astype(np.float32)
+            if p != made:
+                a = level(a, name)
+                if name == "bark" and len(a) < SR * 0.3:     # "gâu gâu" cho rõ, đừng chỉ một tiếng
+                    a = np.concatenate([a, np.zeros(int(SR * 0.12), np.float32), a * 0.9])
             break
     if a is None:
         if name not in LABELS or name in ("bark", "meow", "gasp"):
             return None
-        a = synth(name)
-        m = float(np.max(np.abs(a))) or 1.0
-        a = (a / m * 0.8).astype(np.float32) if name not in AMBIENT else a.astype(np.float32)
+        a = level(synth(name), name)
         try:
             DIR.mkdir(parents=True, exist_ok=True)
-            sf.write(str(DIR / f"{name}.wav"), a, SR)
+            sf.write(str(made), a, SR)
         except OSError:
             pass
     _CACHE[name] = a

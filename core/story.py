@@ -84,10 +84,12 @@ AUDIO_DIR = "story_audio"
 _NUM = re.compile(r"(\d+)")
 
 
+DEFAULT_NARRATOR = "male, elderly, low pitch"
+
 def default_story(title: str = "", author: str = "") -> dict:
     return {
         "title": title, "author": author, "source_text": "", "minutes": 25,
-        "style": "doodle", "visual": "tool", "narrator": {"voice": "", "instruct": "male, elderly, low pitch"},
+        "style": "doodle", "visual": "tool", "narrator": {"voice": "", "instruct": DEFAULT_NARRATOR},
         "subtitles": False, "era": "", "characters": [], "places": [], "chapters": [],
         "dialogue": "some", "mode": "story",
     }
@@ -285,7 +287,7 @@ def clean_film_scene(s: dict, known: set | None = None) -> dict:
                 nb["react"] = {_slug(k): film_act.norm(str(v)) for k, v in b["react"].items()}
         else:
             if b.get("prop"):
-                nb["prop"] = str(b["prop"])
+                nb["prop"] = "none" if str(b["prop"]).strip() == "none" else film.norm_prop(b["prop"])
             if b.get("text"):
                 nb["text"] = str(b["text"]).strip()
         beats.append(nb)

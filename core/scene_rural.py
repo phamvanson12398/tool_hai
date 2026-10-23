@@ -305,6 +305,26 @@ def draw(p, kind, wall, floor, accent, night, rng):
             p.hline(y, fill=rows, width=max(1, int(gap * 0.25)))
             y += gap
             gap *= 1.18
+        # khóm lúa theo hàng: xa nhỏ, gần to (ruộng có lúa thì gặt mới hợp)
+        rice = (96, 140, 52) if not night else (56, 82, 52)
+        rice2 = (206, 180, 78) if not night else (110, 100, 60)          # bông lúa chín
+        y, gap = far + p.L(4), p.L(7)
+        while y < p.h:
+            k = (y - far) / max(1, p.h - far)
+            hgt = p.L(8 + 34 * k)
+            step = p.L(10 + 28 * k)
+            xx = rng.uniform(0, step)
+            while xx < p.w:
+                lo = p.w * 0.55 + (p.w * 0.17) * k - hgt * 0.3
+                hi = p.w * 0.6 + (p.w * 0.35) * k + hgt * 0.3
+                if not lo < xx < hi:                       # chừa bờ ruộng
+                    wdt = max(2, int(p.lw * (0.5 + 0.9 * k)))
+                    for dx in (-0.35, -0.12, 0.1, 0.32):
+                        tip = (xx + dx * hgt + rng.uniform(-0.05, 0.05) * hgt, y - hgt * rng.uniform(0.8, 1.0))
+                        p.d.line([(xx, y), tip], fill=rice if dx < 0.2 else rice2, width=wdt)
+                xx += step * rng.uniform(0.85, 1.15)
+            y += gap
+            gap *= 1.22
         # bờ ruộng chéo
         p.d.polygon([(p.w * 0.55, far), (p.w * 0.6, far), (p.w * 0.95, p.h), (p.w * 0.72, p.h)],
                     fill=(170, 150, 104))

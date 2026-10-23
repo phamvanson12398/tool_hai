@@ -131,8 +131,8 @@ def prop_image(name: str, size: int) -> tuple[Image.Image, tuple[float, float]] 
         pen.line([(c, c - s * 0.4), (c, c + s * 1.9)], width=int(s * 0.12), fill=(132, 94, 64))
     elif name == "hoe":                                  # cuốc: cán dài, lưỡi sắt ở đầu
         pen.line([(c, c - s * 0.3), (c, c + s * 2.0)], width=int(s * 0.13), fill=(150, 112, 74))
-        pen.shape([(c - s * 0.06, c + s * 1.85), (c + s * 0.6, c + s * 1.75), (c + s * 0.7, c + s * 2.05),
-                   (c - s * 0.06, c + s * 2.1)], (150, 156, 164))
+        pen.shape([(c + s * 0.06, c + s * 1.85), (c - s * 0.6, c + s * 1.75), (c - s * 0.7, c + s * 2.05),
+                   (c + s * 0.06, c + s * 2.1)], (150, 156, 164))
     elif name == "broom":                                # chổi rơm
         pen.line([(c, c - s * 0.3), (c, c + s * 1.5)], width=int(s * 0.1), fill=(150, 112, 74))
         pen.shape([(c - s * 0.12, c + s * 1.45), (c + s * 0.12, c + s * 1.45), (c + s * 0.5, c + s * 2.1),
@@ -142,8 +142,8 @@ def prop_image(name: str, size: int) -> tuple[Image.Image, tuple[float, float]] 
                      width=max(1, int(s * 0.03)), fill=(170, 136, 70))
     elif name == "axe":                                  # rìu
         pen.line([(c, c - s * 0.2), (c, c + s * 1.4)], width=int(s * 0.12), fill=(150, 112, 74))
-        pen.shape([(c - s * 0.05, c + s * 1.1), (c + s * 0.5, c + s * 1.0), (c + s * 0.55, c + s * 1.55),
-                   (c - s * 0.05, c + s * 1.4)], (160, 166, 176))
+        pen.shape([(c + s * 0.05, c + s * 1.1), (c - s * 0.5, c + s * 1.0), (c - s * 0.55, c + s * 1.55),
+                   (c + s * 0.05, c + s * 1.4)], (160, 166, 176))
     elif name == "sickle":                               # liềm
         pen.line([(c, c - s * 0.2), (c, c + s * 0.5)], width=int(s * 0.12), fill=(150, 112, 74))
         pen.line(doodle._ellipse_pts(c + s * 0.35, c + s * 0.55, s * 0.4, s * 0.45, 180, 360, 12),
@@ -229,7 +229,7 @@ def marks(canvas, act, t, head, T, face):
                 rr = max(2, int(r * 0.07 * (1 - u * 0.4)))
                 cv2.circle(canvas, (x, y), rr, (150, 204, 240), -1, cv2.LINE_AA)
                 cv2.circle(canvas, (x, y), rr, (60, 90, 120), max(1, lw // 2), cv2.LINE_AA)
-    if act in ("scratch_head", "hands_up", "tremble", "facepalm"):
+    if act in ("hands_up", "tremble"):          # giọt mồ hôi chỉ khi hoảng sợ
         x, y = int(hx + r * 0.95), int(hy - r * 0.5 + 0.02 * T * math.sin(t * 3))
         pts = np.array([[x, y - int(r * 0.22)], [x - int(r * 0.1), y],
                         [x + int(r * 0.1), y]], np.int32)
@@ -447,6 +447,23 @@ class Rig:
             legs = [(a + 85 * sit, g - 85 * sit) for a, g in legs]
         arms = pose.get("arms") or [(8, 0), (8, 0)]
         Lm = _aff(G, _tr(0, drop))           # chân: không nghiêng theo thân, đứng trên đất
+        prop = pose.get("prop")
+        tool_ang = pose.get("tool_ang")
+        tool_behind = bool(prop and prop[0] in TOOLS and tool_ang is not None and tool_ang > 120)
+
+        def hand_of(i):
+            a, e = arms[i]
+            sx = (1 if i == 0 else -1) * d * self.shoulder[0]
+            t1, t2 = math.radians(a), math.radians(a + e)
+            x1 = sx + d * self.arm[0] * math.sin(t1)
+            y1 = self.shoulder[1] + self.arm[0] * math.cos(t1)
+            x2, y2 = x1 + d * self.arm[1] * math.sin(t2), y1 + self.arm[1] * math.cos(t2)
+            return _pt(Bl, x1, y1), _pt(Bl, x2, y2)
+
+        def draw_tool():
+            hi = prop[1] if prop[1] in (0, 1) else 0
+            elbow, hand = hand_of(hi)
+            self._prop(canvas, prop[0], hand, zoom, d, elbow, tool_ang)
 
         def draw_legs():
             for i, (a, g) in enumerate(legs):
@@ -455,26 +472,35 @@ class Rig:
                            self.legd[2], self.pants, zoom, foot=True)
         if sit <= 0.5:
             draw_legs()                      # đứng: chân sau thân
+        if tool_behind:                        # cuốc / rìu vác sau vai: sau lưng người
+            draw_tool()
         if spr["hairback"]:
             paste(canvas, spr["hairback"][0], _aff(Hm, spr["hairback"][1]), night)
         paste(canvas, spr["body"][0], _aff(Bl, spr["body"][1]), night)
         if sit > 0.5:
             draw_legs()                      # ngồi: đùi nằm trên lòng, thấy rõ
-        paste(canvas, spr["head"][0], _aff(Hm, spr["head"][1]), night)
-        # tay (trước thân, kể cả che mặt khi khóc)
+        # tay (trước thân, kể cả che mặt khi khóc); giơ dụng cụ quá vai thì tay ra sau đầu
         hands, elbows = [], []
-        for i, (a, e) in enumerate(arms):
-            sx = (1 if i == 0 else -1) * d * self.shoulder[0]
-            hands.append(self._limb(canvas, Bl, (sx, self.shoulder[1]), a, e, d,
-                                    self.arm[0], self.arm[1], self.arm[2], self.sleeve, zoom,
-                                    hand=True))
-            elbows.append(self._last_elbow)
-        prop = pose.get("prop")
-        if prop:
+
+        def draw_arms():
+            for i, (a, e) in enumerate(arms):
+                sx = (1 if i == 0 else -1) * d * self.shoulder[0]
+                hands.append(self._limb(canvas, Bl, (sx, self.shoulder[1]), a, e, d,
+                                        self.arm[0], self.arm[1], self.arm[2], self.sleeve, zoom,
+                                        hand=True))
+                elbows.append(self._last_elbow)
+        if tool_behind:
+            draw_arms()
+        paste(canvas, spr["head"][0], _aff(Hm, spr["head"][1]), night)
+        if not tool_behind:
+            draw_arms()
+        if prop and not tool_behind:
             name, hi = prop
             hi = hi if hi in (0, 1) else 0
             if name == "pole":
                 self._pole(canvas, Bl, zoom, d)
+            elif name in TOOLS and tool_ang is not None:
+                draw_tool()
             else:
                 self._prop(canvas, name, hands[hi], zoom, d, elbows[hi])
         head_c = _pt(Hm, 0, self.head_y)
@@ -539,7 +565,7 @@ class Rig:
             cv2.fillPoly(canvas, [pts], (196, 160, 98), cv2.LINE_AA, shift=2)
             cv2.polylines(canvas, [pts], True, OUT, lw, cv2.LINE_AA, shift=2)
 
-    def _prop(self, canvas, name, hand, zoom, d, elbow=None):
+    def _prop(self, canvas, name, hand, zoom, d, elbow=None, tool_ang=None):
         key = ("prop", name, round(zoom * 8) / 8, d)
         if key not in self._cache:
             k = 0.2 if name in TOOLS or name == "pipe" else 0.11      # dụng cụ dài hơn bàn tay nhiều
@@ -556,10 +582,14 @@ class Rig:
         if not got:
             return
         arr, hold, _d = got
-        if name in TOOLS and elbow is not None:
-            # cán dụng cụ nối dài cẳng tay (ảnh vẽ cán chĩa xuống)
-            vx, vy = hand[0] - elbow[0], hand[1] - elbow[1]
-            ang = math.degrees(math.atan2(-vx, vy))
+        if name in TOOLS and (tool_ang is not None or elbow is not None):
+            if tool_ang is not None:
+                # góc dụng cụ theo động tác (0 = chĩa xuống, + = về phía trước), lưỡi luôn
+                # cùng một phía nên không lật ngang lật dọc
+                ang = -tool_ang * d
+            else:                              # cán nối dài cẳng tay
+                vx, vy = hand[0] - elbow[0], hand[1] - elbow[1]
+                ang = math.degrees(math.atan2(-vx, vy))
             m = _aff(_tr(hand[0], hand[1]), _aff(_rot(ang), _tr(-hold[0], -hold[1])))
             paste(canvas, arr, m)
             return

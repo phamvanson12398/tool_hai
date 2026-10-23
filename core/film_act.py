@@ -46,7 +46,7 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "work": ("Làm việc chung chung", "neutral"),
     "dig": ("Cuốc đất (cầm cuốc)", "neutral"),
     "sweep": ("Quét sân (cầm chổi)", "neutral"),
-    "chop": ("Bổ củi (cầm rìu)", "angry"),
+    "chop": ("Bổ củi (cầm rìu)", "neutral"),
     "reap": ("Gặt lúa, cắt cỏ (cầm liềm)", "neutral"),
     "carry": ("Gánh hàng (đòn gánh)", "neutral"),
     "smoke": ("Hút điếu cày", "neutral"),
@@ -69,6 +69,13 @@ CONTINUOUS = {"work", "dig", "sweep", "chop", "reap", "carry", "smoke", "fan", "
 SFX = {"dig": ("dig", 1.2, 0.85), "sweep": ("sweep", 1.0, 0.45), "chop": ("chop", 1.3, 0.9),
        "reap": ("swish", 1.1, 0.5), "clap": ("clap", 0.4, 0.1), "eat": ("nom", 1.4, 0.5),
        "smoke": ("bubble", 4.0, 1.6), "cook": ("bubble", 2.5, 0.3), "work": ("dig", 1.2, 0.85)}
+
+# đồ cầm tay đi kèm việc: cầm từ lúc làm việc đó và giữ luôn (không biến mất giữa chừng)
+ACT_PROP = {"dig": "hoe", "work": "hoe", "sweep": "broom", "chop": "axe", "reap": "sickle",
+            "carry": "pole", "smoke": "pipe", "fan": "fan", "read": "book", "cook": "stick",
+            "feed": "bowl", "eat": "bowl", "drink": "cup"}
+# dụng cụ cầm cán (vẽ theo góc tool_ang của tư thế, không theo cẳng tay)
+TOOL_ACTS = {"dig", "work", "chop", "sweep", "reap", "cook"}
 
 # tên hành động cũ của chế độ Kể chuyện
 ALIASES = {"hop": "jump", "shocked": "hands_up", "worried": "scratch_head", "shake": "shake_head",
@@ -300,29 +307,33 @@ def pose(act: str, t: float, seed: int = 0, dur: float = 3.0, speaking: bool = F
         p["lean"] = 5
         p["sy"] = 0.985 + 0.006 * _s(w * t / 3.2)
     elif act in ("work", "dig"):
-        k = (t % 1.2) / 1.2                      # nhấc cuốc lên rồi bổ xuống
-        sw = math.sin(math.pi * min(1.0, k / 0.7)) if k < 0.7 else 1 - _ease((k - 0.7) / 0.3) * 1.0
-        sw = max(0.0, sw)
-        p["arms"] = [(30 + 120 * sw, 15 - 10 * sw), (25 + 70 * sw, 55 - 15 * sw)]
-        p["lean"] = 14 - 12 * sw
+        # nhấc cuốc lên trên vai (lưỡi ra sau lưng) rồi bổ xuống đất trước mặt
+        k = (t % 1.3) / 1.3
+        sw = _ease(k / 0.6) if k < 0.6 else 1 - _ease((k - 0.6) / 0.25) if k < 0.85 else 0.0
+        p["arms"] = [(40 + 105 * sw, 20 - 15 * sw), (35 + 80 * sw, 55 - 25 * sw)]
+        p["lean"] = 9 - 9 * sw
         p["legs"] = [(10, 5), (-8, 8)]
+        p["tool_ang"] = 55 + 140 * sw              # 55: lưỡi cắm đất trước mặt; 195: vác sau vai
         p["prop_default"] = ("hoe", 0)
     elif act == "sweep":
         k = _s(w * t / 1.0)
         p["arms"] = [(45 + 25 * k, 25), (35 + 25 * k, 30)]
-        p["lean"] = 14
+        p["tool_ang"] = 35 + 25 * k
+        p["lean"] = 8
         p["head"] = 6
         p["prop_default"] = ("broom", 0)
     elif act == "chop":
         k = (t % 1.3) / 1.3
         sw = math.sin(math.pi * min(1.0, k / 0.65)) if k < 0.65 else max(0.0, 1 - (k - 0.65) / 0.25)
-        p["arms"] = [(40 + 135 * sw, 10), (35 + 80 * sw, 50)]
-        p["lean"] = 10 - 14 * sw
+        p["arms"] = [(40 + 115 * sw, 10), (35 + 85 * sw, 50)]
+        p["tool_ang"] = 60 + 140 * sw
+        p["lean"] = 6 - 8 * sw
         p["prop_default"] = ("axe", 0)
     elif act == "reap":
         k = _s(w * t / 1.1)
         p["arms"] = [(40 + 30 * k, 40), (60, 50)]
-        p["lean"] = 22
+        p["tool_ang"] = 70 + 30 * k
+        p["lean"] = 12
         p["head"] = 8
         p["prop_default"] = ("sickle", 0)
     elif act == "carry":
@@ -345,23 +356,26 @@ def pose(act: str, t: float, seed: int = 0, dur: float = 3.0, speaking: bool = F
     elif act == "cook":
         k = _s(w * t / 1.2)
         p["arms"] = [(55 + 10 * k, 30 + 15 * k), (40, 40)]
-        p["lean"] = 12
+        p["tool_ang"] = 20 + 10 * k
+        p["lean"] = 8
         p["head"] = 8
         p["prop_default"] = ("stick", 0)
     elif act == "feed":
         k = (t % 1.6) / 1.6
         th = math.sin(math.pi * min(1.0, k / 0.4)) if k < 0.4 else 0.0
-        p["arms"] = [(35 + 70 * th, 30 - 20 * th), (45, 50)]
-        p["lean"] = 8
-        p["prop_default"] = ("bowl", 1)
+        p["arms"] = [(45, 50), (35 + 70 * th, 30 - 20 * th)]     # tay 0 cầm bát, tay kia rắc
+        p["lean"] = 6
+        p["prop_default"] = ("bowl", 0)
     elif act == "sleep":
         p["head"] = 12 + 2 * _s(w * t / 3.5)
         p["arms"] = [(30, 50), (30, 50)]
         p["sy"] = 1 + 0.02 * _s(w * t / 3.5)
     elif act == "lie":
         p["rot"] = -90.0
-        p["bob"] = 0.2                      # nhấc lên cho nằm trên mặt đất
+        p["bob"] = 0.13                     # nằm sát mặt giường / đất
         p["arms"] = [(5, 0), (5, 0)]
+        p["legs"] = [(0, 0), (0, 0)]        # chân duỗi thẳng
+        p["sit"] = 0.0
         p["sy"] = 1 + 0.01 * _s(w * t / 3.5)
     elif act == "sit":
         p = idle(t, seed)
@@ -374,6 +388,9 @@ def pose(act: str, t: float, seed: int = 0, dur: float = 3.0, speaking: bool = F
         if posture == "sit":
             p["sit"] = 1.0
     p["expr"] = ACTIONS[act][1]
+    # đừng nghiêng quá (trông như sắp ngã); đang ngồi thì càng ít
+    cap = 5.0 if p.get("sit", 0) > 0.5 else (26.0 if act == "bow" else 12.0)
+    p["lean"] = max(-cap, min(cap, p.get("lean", 0.0)))
     return p
 
 
@@ -386,12 +403,12 @@ def animal_pose(act: str, t: float, seed: int = 0, moving: bool = False) -> dict
         p["bob"] = 0.06 * abs(_s(w * t * 2.2))
         p["rot"] = 3 * _s(w * t * 2.2)
     elif act in ("jump", "happy", "wave", "clap", "laugh"):
-        p["bob"] = (0.25 if act == "jump" else 0.1) * abs(_s(w * t * 1.3))
+        p["bob"] = (0.12 if act == "jump" else 0.04) * abs(_s(w * t * 1.3)) if (t % 2.6) < 1.3 else 0.0
         p["expr"] = "happy"
     elif act in ("sad", "cry", "beg"):
-        p["sy"] = 0.95
-        p["rot"] = -3
-        p["expr"] = "cry" if act == "cry" else "sad"
+        p["sy"] = 0.96                          # chó buồn: cụp tai, mắt hiền (không cau có)
+        p["rot"] = -2
+        p["expr"] = "sad"
     elif act in ("lie", "sleep"):
         p["sy"] = 0.85 + 0.02 * _s(w * t / 3)
         p["expr"] = "sleep"

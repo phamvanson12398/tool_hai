@@ -35,6 +35,16 @@ Chương dài khoảng {{minutes}} phút ≈ {{beats}} nhịp (mỗi câu thoạ
 - Đồ đạc dùng được: {{furniture}}
 - Tiếng động dùng được: {{sfx}}
 
+### Cho hợp lý, không lỗi hình
+- Việc làm phải hợp VAI và NƠI CHỐN: chủ nhà mới quét nhà, nấu cơm, cho chó ăn trong nhà mình; khách / hàng xóm sang chơi thì ngồi, uống nước, hút thuốc, nói chuyện — không quét nhà hay nấu cơm nhà người khác.
+- Mỗi "line" là lời của ĐÚNG MỘT người ("who"); không gộp lời hai người vào một câu, không ghi tên người nói trong "text". Hai người nói qua lại thì mỗi lượt một "line" riêng.
+- Nhân vật đã bán, đã chết, đã đi xa thì KHÔNG xuất hiện lại ở cảnh sau (trừ hồi tưởng, phải có lời kể nói rõ "nhớ lại..."). Vd Lão Hạc bán cậu Vàng rồi thì các cảnh sau không còn cậu Vàng.
+- Cảnh nào cũng có người trong khung ngay từ đầu, không để khung trống; nếu ai cũng đến sau thì nhịp đầu là "enter".
+- Người đang ngủ / nằm thì không nói (lời kể là của người kể, giọng khác hẳn).
+- Cảnh ban đêm ghi "time":"dem" (tên chương có "đêm", "tối" thì các cảnh trong chương là đêm, trừ khi lời kể nói rõ sáng / trưa).
+- Đạo cụ giữ đúng tên trong danh sách suốt chương (bát là "bowl", chén là "cup"...), không đổi qua lại.
+- Một chõng ngồi tối đa 2 người, ghế 1 người; đông người thì kê thêm chõng / ghế. Bếp lửa, chum nước kê ở chỗ không ai ngồi.
+
 ### Hành động dùng được ("act")
 {{actions}}
 Hành động đặc biệt: walk / run (đi / chạy tới "to": id nhân vật hoặc chỗ đứng), enter (đi vào khung tới "to"), exit (đi ra khỏi khung), sit / stand / lie (ngồi xuống, đứng dậy, nằm — giữ nguyên tới khi đổi), give (đưa đồ đang cầm cho "to"; ghi "prop" nếu chưa cầm), hug / pat (tự đi tới "to" rồi ôm / xoa đầu).

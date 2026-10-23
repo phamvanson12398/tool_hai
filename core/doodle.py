@@ -832,9 +832,11 @@ def _animal(kit, T, expr, mouth_open, blink, facing, seed):
             pen.dot(ex, ey, rr)
             pen.dot(ex + rr * 0.35, ey - rr * 0.35, rr * 0.35, (255, 255, 255))
         if expr in ("sad", "worried", "cry"):
-            pen.line([(ex - r * 0.12, ey - r * 0.2 - (k * 2 - 1) * r * 0.05 * -1),
-                      (ex + r * 0.12, ey - r * 0.2 + (k * 2 - 1) * r * 0.05 * -1)],
-                     width=max(1, pen.lw // 2))
+            # lông mày buồn: đầu trong (phía mắt kia) nhếch LÊN, đầu ngoài thấp — không cau có
+            inner_right = k == 0
+            yl = ey - r * 0.2 + (r * 0.05 if inner_right else -r * 0.05)
+            yr = ey - r * 0.2 + (-r * 0.05 if inner_right else r * 0.05)
+            pen.line([(ex - r * 0.12, yl), (ex + r * 0.12, yr)], width=max(1, pen.lw // 2))
     if expr == "cry":
         pen.line([(hx - r * 0.2, hy - r * 0.08), (hx - r * 0.2, hy + r * 0.4)],
                  width=int(pen.lw * 1.4), fill=(140, 196, 236), wob=False)

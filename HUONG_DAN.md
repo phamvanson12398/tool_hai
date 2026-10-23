@@ -704,6 +704,44 @@ lúc giọng đọc tới câu đó.
 - Bối cảnh vẽ tay hoặc 3D, giọng từng nhân vật, phụ đề, nhạc nền dùng như Kể
   chuyện. Chỗ đứng: sát mép trái, bên trái, giữa, bên phải, sát mép phải, ngoài
   khung trái / phải (để đi vào sau).
+- **Cho hình hợp lý** (sửa theo danh sách lỗi phim Lão Hạc):
+  - Nằm: duỗi thẳng trên giường / chiếu, **đắp chăn**; đứng dậy thì **ngồi dậy
+    trước** rồi mới đứng, nằm xuống cũng ngồi rồi ngả lưng từ từ.
+  - Ngồi: mỗi chõng **2 chỗ**, ghế 1 chỗ, ai cũng ngồi đúng chỗ trên chõng (không
+    ngồi trên không, không ngồi đè lên nhau); hết chỗ thì ngồi ghế đẩu tre, cách
+    xa người khác. Đang ngồi / nằm mà phải đi thì đứng dậy trước.
+  - Bếp lửa, chum nước, bàn tự dời ra chỗ không ai đứng / ngồi, nằm trọn trong khung.
+  - Cuốc, rìu, chổi: lưỡi luôn đúng chiều, giơ cao thì ra sau đầu (không xuyên
+    mặt); đang làm thì **quay lưỡi về phía trống**, không bổ vào người hay con chó;
+    người khác đi tới thì đứng ngoài tầm cuốc. Cầm mà không làm thì chống xuống đất.
+  - Đạo cụ theo việc cầm từ lúc bắt đầu tới khi đổi việc (không lúc có lúc không),
+    tên đồ được chuẩn hoá (bát luôn là cùng một cái bát); nằm thì bỏ đồ xuống.
+  - Chó được cho ăn, vuốt ve thì vui (không cau mày); chó vẽ trước người nên bát,
+    điếu luôn ở trước chó; người đứng cách nhau theo bề ngang (chó dài hơn người).
+  - Máy quay không cắt ai làm đôi ở mép khung; người ngoài khung không lòi đồ cầm vào mép.
+  - Chuyển cảnh **mờ qua màn đen** (không còn "bóng ma" hai cảnh chồng nhau).
+  - Thẻ tên truyện và thẻ chương ở **phía trên** khung, nền nhạt, không che mặt,
+    nghỉ một nhịp giữa hai thẻ. Nhân vật lần đầu lên hình có **thẻ tên** nhỏ trên
+    đầu 2,5 giây.
+  - Tên chương có "đêm / tối" thì cảnh là ban đêm (trừ lời kể nói rõ sáng, trưa).
+  - Cảnh không bao giờ trống: ai cũng đến sau thì người đầu tiên đi vào ngay.
+  - Cánh đồng có lúa (gặt mới hợp).
+- **Âm thanh**:
+  - Mỗi nhân vật **một giọng khác hẳn**: tool đo cao độ giọng mẫu, đàn ông không
+    ra giọng cao như nữ / trẻ con, các giọng không trùng cao độ (thử giọng khác nếu
+    trùng). Hai nhân vật cùng kiểu (vd hai ông trung niên) tự đổi cao độ.
+  - **Người kể** chưa chọn giọng riêng thì dùng giọng nữ trầm ấm (truyện nhiều
+    nhân vật nam) để không lẫn với nhân vật. Muốn giọng khác: chọn ở mục 1.
+  - Mọi câu thoại, lời kể **to ngang nhau**; câu nói lúc khóc run run, nghẹn, có
+    tiếng sụt sịt.
+  - Hai người nói qua lại có **khoảng nghỉ** để biết ai nói câu nào; miệng nhép cả
+    lúc nói nhỏ.
+  - Tiếng động to ngang nhau (chó sủa "gâu gâu" rõ); lúc có người nói thì tiếng
+    cuốc, chổi nhỏ và thưa hẳn. **Tiếng nền** (chim, dế, mưa) liền mạch từ đầu tới
+    cuối video, to hơn trước, không còn chỗ im phăng phắc.
+- AI viết kịch bản theo thêm luật: khách / hàng xóm không làm việc nhà người khác,
+  mỗi câu thoại đúng một người nói, nhân vật đã bán / chết / đi xa không xuất hiện
+  lại (trừ hồi tưởng), người đang ngủ không nói.
 
 ### Thoại nhân vật xen giữa lời kể
 Kể suốt dễ chán, nên ô **Thoại nhân vật** (mục 1) cho AI chèn câu nói của nhân vật:
