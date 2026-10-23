@@ -28,7 +28,7 @@ from flask import (Flask, jsonify, request, send_file,  # noqa: E402
                    send_from_directory)
 
 from core import assets, character_kit, claude_cli, config, pipeline  # noqa: E402
-from core import capcut_export, photo_rig, rig as core_rig  # noqa: E402
+from core import capcut_export, photo_rig, rig as core_rig, scene_art  # noqa: E402
 from core.comedy_lib import (COMEDY_KINDS, MARKETS, VALID_EXPRESSIONS,  # noqa: E402
                              VALID_SFX)
 from core.gestures import breathe_angles  # noqa: E402
@@ -138,6 +138,7 @@ def _draw_scene_bg(data: dict, pdir: Path, desc: str, hint: str = "") -> tuple[d
         bg = {}
     if not bg:
         bg = {"name": desc or "boi_canh", "kind": "phong_khach", "time": "ngay"}
+    bg["art"] = _bg_style(data)
     size = config.frame_size(data.get("format"))
     slug = assets.config_slug(desc or "chung") or "chung"
     out = scene_art.save_scene(bg, pdir / "assets" / f"bg_{slug}_{uuid.uuid4().hex[:4]}.png",
@@ -151,22 +152,90 @@ def _draw_scene_bg(data: dict, pdir: Path, desc: str, hint: str = "") -> tuple[d
     return rec, warn
 
 
+def _bg_style(data: dict) -> str:
+    from core import scene_art
+    st = data.get("bg_style") or config.load_settings().get("bg_style") or "flat"
+    return st if st in scene_art.ART_STYLES else "flat"
+
+
+def _char_style(data: dict, language: str) -> str:
+    """Kiểu nhân vật của tập (chọn ở trang Tập mới), không có thì theo Cài đặt."""
+    style = data.get("char_style") or config.load_settings().get("char_style") or "auto"
+    if style not in character_kit.STYLES:      # "auto": theo ngôn ngữ của tập
+        style = "khand" if language == "ko" else "gray"   # Anh, Việt -> người xám TikTok
+    return style
+
+
+def _build_kit_char(pdir: Path, s, name: str, spec_d: dict, style: str,
+                    side: str) -> dict:
+    """Ghép một nhân vật bằng bộ ghép, trả về bản ghi nhân vật của tập."""
+    spec_d = dict(spec_d)
+    spec_d["name"] = name
+    spec_d["style"] = style
+    spec = character_kit.CharSpec.from_dict(spec_d)
+    exprs = sorted({b.expression for b in s.beats if b.speaker == name} | {"neutral"})
+    sheet = character_kit.build_sheet(
+        spec, pdir / "assets" / "kit" / assets.config_slug(name), exprs
+    )
+    first = sheet.get("neutral") or next(iter(sheet.values()))
+    return {
+        "name": name,
+        "side": side,
+        "mode": "kit",
+        "spec": spec.to_dict(),
+        "images": sheet,
+        "expressions": list(sheet),
+        "image": first.get("dong"),
+        "mouth_open": first.get("mo"),
+        "mouth_closed": first.get("dong"),
+    }
+
+
+def _project_language(data: dict, s) -> str:
+    # kịch bản có '# ngon_ngu:' thì theo kịch bản (chọn kiểu nhân vật Hàn/Mỹ)
+    return s.language if "ngon_ngu" in (data.get("script") or "") \
+        else data.get("language", "ko")
+
+
+def _restyle_kit_chars(data: dict, pdir: Path) -> list[str]:
+    """Đổi kiểu nhân vật của tập: ghép lại các nhân vật bộ ghép (giữ tóc, áo...)."""
+    s = parse_script(data.get("script", ""))
+    style = _char_style(data, _project_language(data, s))
+    done = []
+    chars = data["assets"].get("characters") or []
+    for i, c in enumerate(chars):
+        if c.get("mode") != "kit" or (c.get("spec") or {}).get("style") == style:
+            continue
+        rec = _build_kit_char(pdir, s, c["name"], c.get("spec") or {}, style,
+                              c.get("side") or "giua")
+        for k in ("ref_image", "ref_note"):
+            if c.get(k):
+                rec[k] = c[k]
+        chars[i] = rec
+        done.append(c["name"])
+    return done
+
+
 def _fit_scene_bgs(data: dict, pdir: Path) -> bool:
-    """Đổi khung (9:16 <-> 16:9...) thì vẽ lại các nền do tool vẽ cho đúng
-    khung mới (ảnh tải lên thì để nguyên, lúc dựng sẽ cắt cho vừa).
+    """Đổi khung (9:16 <-> 16:9...) hoặc phong cách vẽ thì vẽ lại các nền do
+    tool vẽ (ảnh tải lên thì để nguyên, lúc dựng sẽ cắt cho vừa).
     Trả về True nếu có nền được vẽ lại."""
     from core import scene_art
     size = list(config.frame_size(data.get("format")))
+    art = _bg_style(data)
     recs = [data["assets"].get("background")]
     recs += list((data["assets"].get("backgrounds") or {}).values())
     changed = False
     for rec in recs:
         if not rec or not rec.get("kind"):
             continue
-        if rec.get("size") == size and Path(rec.get("image") or "").exists():
-            continue
         spec = rec.get("spec") or {"kind": rec.get("kind"), "time": rec.get("time"),
                                    "name": rec.get("name", "")}
+        if rec.get("size") == size and Path(rec.get("image") or "").exists() \
+                and (spec.get("art") or "flat") == art:
+            continue
+        spec["art"] = art
+        rec["spec"] = spec
         slug = assets.config_slug(rec.get("scene") or rec.get("name") or "chung") or "chung"
         out = scene_art.save_scene(
             spec, pdir / "assets" / f"bg_{slug}_{size[0]}x{size[1]}_{uuid.uuid4().hex[:4]}.png",
@@ -281,6 +350,7 @@ def api_meta():
         "subtitle_styles": list(config.SUBTITLE_STYLES),
         "target_duration": list(config.TARGET_DURATION),
         "character_kit": character_kit.options(),
+        "bg_styles": [[k, v] for k, v in scene_art.ART_STYLES.items()],  # giữ thứ tự
         "tts_engines": tts_plugin.list_engines(),
     })
 
@@ -849,10 +919,22 @@ def api_project_meta(pid):
         data["format"] = _norm_format(body.get("format"))
     if "duration" in body:
         data["duration"] = _norm_duration(body.get("duration"))
-    redrawn = _fit_scene_bgs(data, config.project_dir(pid))
+    from core import scene_art
+    # "" = theo Cài đặt
+    for key, ok in (("bg_style", scene_art.ART_STYLES),
+                    ("char_style", list(character_kit.STYLES) + ["auto"])):
+        if key in body:
+            if body[key] in ok:
+                data[key] = body[key]
+            else:
+                data.pop(key, None)
+    pdir = config.project_dir(pid)
+    redrawn = _fit_scene_bgs(data, pdir)
+    restyled = _restyle_kit_chars(data, pdir) if "char_style" in body else []
     _save_project(pid, data)
     return jsonify({"ok": True, "format": data.get("format"),
-                    "duration": data.get("duration"), "redrawn": redrawn})
+                    "duration": data.get("duration"), "redrawn": redrawn,
+                    "restyled": restyled})
 
 
 @app.get("/api/project/<pid>")
@@ -1109,9 +1191,7 @@ def api_project_generate(pid):
 
     body = request.get_json(silent=True) or {}
     s = parse_script(data.get("script", ""))
-    # kịch bản có '# ngon_ngu:' thì theo kịch bản (chọn kiểu nhân vật Hàn/Mỹ)
-    has_lang = "ngon_ngu" in (data.get("script") or "")
-    language = s.language if has_lang else data.get("language", "ko")
+    language = _project_language(data, s)
     pdir = config.project_dir(pid)
     want_chars = body.get("characters")
     if want_chars is None:
@@ -1141,31 +1221,11 @@ def api_project_generate(pid):
         taken = [c.get("spec") or {} for c in data["assets"].get("characters", [])
                  if c.get("name") not in want_chars]
         specs = character_kit.make_distinct(specs, want_chars, taken)
-        style = config.load_settings().get("char_style") or "auto"
-        if style not in character_kit.STYLES:      # "auto": theo ngôn ngữ của tập
-            style = "khand" if language == "ko" else "gray"   # Anh, Việt -> người xám TikTok
+        style = _char_style(data, language)
         for i, name in enumerate(want_chars):
-            spec_d = specs.get(name) or {}
-            spec_d["name"] = name
-            spec_d["style"] = style
-            spec = character_kit.CharSpec.from_dict(spec_d)
-            exprs = sorted({b.expression for b in s.beats
-                            if b.speaker == name} | {"neutral"})
-            sheet = character_kit.build_sheet(
-                spec, pdir / "assets" / "kit" / assets.config_slug(name), exprs
-            )
-            first = sheet.get("neutral") or next(iter(sheet.values()))
-            made.append({
-                "name": name,
-                "side": s.sides.get(name, ["trai", "phai", "giua"][min(i, 2)]),
-                "mode": "kit",
-                "spec": spec.to_dict(),
-                "images": sheet,
-                "expressions": list(sheet),
-                "image": first.get("dong"),
-                "mouth_open": first.get("mo"),
-                "mouth_closed": first.get("dong"),
-            })
+            made.append(_build_kit_char(
+                pdir, s, name, specs.get(name) or {}, style,
+                s.sides.get(name, ["trai", "phai", "giua"][min(i, 2)])))
         existing = {c["name"]: c for c in data["assets"].get("characters", [])}
         for c in made:
             existing[c["name"]] = c
@@ -1209,6 +1269,66 @@ def api_project_generate(pid):
 
     _save_project(pid, data)
     return jsonify({"assets": data["assets"], "warnings": warnings})
+
+
+@app.post("/api/project/<pid>/character_photo")
+def api_project_character_photo(pid):
+    """Tạo nhân vật bộ ghép giống ảnh chị tải lên: Claude xem ảnh, chọn tóc,
+    màu da, áo, trang phục... rồi tool ghép theo kiểu nhân vật của tập."""
+    try:
+        data = _load_project(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    name = (request.form.get("name") or "").strip()
+    f = request.files.get("file")
+    if not name:
+        return _err("Chưa chọn nhân vật.")
+    if not f:
+        return _err("Chưa chọn ảnh.")
+    from PIL import Image
+    try:
+        img = Image.open(f.stream).convert("RGB")
+    except Exception:  # noqa: BLE001
+        return _err("Không đọc được ảnh (chị thử ảnh JPG hoặc PNG).")
+    pdir = config.project_dir(pid)
+    ref = pdir / "assets" / "ref" / f"{assets.config_slug(name) or 'nv'}.png"
+    ref.parent.mkdir(parents=True, exist_ok=True)
+    img.thumbnail((1600, 1600))
+    img.save(ref)
+    # bản nhỏ trong thư mục riêng của Claude cho đỡ tốn hạn mức khi xem ảnh
+    look = Path(claude_cli._claude_dir()) / f"anh_{uuid.uuid4().hex[:8]}.png"
+    small = img.copy()
+    small.thumbnail((768, 768))
+    small.save(look)
+    warnings: list[str] = []
+    try:
+        spec = claude_cli.spec_from_photo(look, name)
+    except Exception as e:  # noqa: BLE001
+        warnings.append(f"Claude chưa xem được ảnh ({_short_err(e)}); "
+                        "tool tự lấy màu áo, màu tóc từ ảnh.")
+        spec = {}
+    finally:
+        look.unlink(missing_ok=True)
+    if not spec:
+        spec = character_kit.spec_from_colors(ref)
+    note = spec.pop("note", "")
+    s = parse_script(data.get("script", ""))
+    chars = data["assets"].setdefault("characters", [])
+    old = next((c for c in chars if c.get("name") == name), None)
+    side = (old or {}).get("side") or s.sides.get(name) or \
+        ["trai", "phai", "giua"][min(len(chars), 2)]
+    rec = _build_kit_char(pdir, s, name, spec,
+                          _char_style(data, _project_language(data, s)), side)
+    rec["ref_image"] = str(ref)
+    if note:
+        rec["ref_note"] = note
+    if old:
+        chars[chars.index(old)] = rec
+    else:
+        chars.append(rec)
+    _save_project(pid, data)
+    return jsonify({"character": rec, "note": note, "warnings": warnings,
+                    "assets": data["assets"]})
 
 
 # ------------------------------------------------------------------- render

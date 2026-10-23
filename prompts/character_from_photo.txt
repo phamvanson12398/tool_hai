@@ -1,0 +1,17 @@
+Mở và xem ảnh ở đường dẫn sau bằng công cụ Read: {{image}}
+
+Đây là ảnh tham khảo cho nhân vật "{{char_name}}" trong video hoạt hình. Tool sẽ ghép nhân vật từ bộ phận có sẵn, nên hãy chọn các giá trị GIỐNG ẢNH NHẤT, dùng ĐÚNG các giá trị có trong danh mục:
+
+{{catalog}}
+
+Cách chọn:
+- "body": "child" nếu là trẻ em, còn lại "adult".
+- "skin": màu da gần nhất. "hair_style", "hair_color": kiểu tóc và màu tóc gần nhất (đầu trọc / tóc rất ngắn → "buzz").
+- "shirt": màu áo chính (áo ngoài nếu có), "pants": màu quần (không thấy quần thì chọn màu hợp với áo).
+- "outfit": loại trang phục gần nhất; mặc đồng phục nghề rõ ràng (shipper, bác sĩ, y tá, công an, đầu bếp, công nhân, bảo vệ) thì chọn đúng đồng phục đó.
+- "accessory": kính, kính râm, mũ lưỡi trai, băng đô, khẩu trang... nếu thấy rõ, không có thì "none".
+- Ảnh là tranh vẽ, thú cưng hay đồ vật thì vẫn chọn bộ người gần với màu sắc, tinh thần của ảnh nhất.
+- "note": một câu tiếng Việt ngắn tả ngoại hình bạn thấy.
+
+Output JSON đúng dạng này, không có gì khác:
+{"body":"adult","skin":"light","hair_style":"short","hair_color":"black","shirt":"blue","pants":"navy","outfit":"tshirt","accessory":"none","note":"..."}

@@ -42,6 +42,18 @@ KINDS: dict[str, dict] = {
 
 TIMES = ("ngay", "dem")
 
+# Phong cách vẽ bối cảnh (lọc ảnh sau khi vẽ, không cần model ảnh)
+ART_STYLES: dict[str, str] = {
+    "flat": "Hoạt hình phẳng (mặc định) — màu tươi, nét viền rõ",
+    "pastel": "Pastel dịu — màu nhạt, mềm, hợp chuyện gia đình, dễ thương",
+    "watercolor": "Màu nước — loang màu, có vân giấy",
+    "pencil": "Chì màu — nét chì, giấy vẽ tay",
+    "comic": "Truyện tranh — ít mảng màu, viền đen đậm",
+    "vintage": "Hoài cổ — ngả vàng nâu, hạt phim, tối góc",
+    "night_neon": "Tối neon — tông tối, ánh tím xanh như phim",
+    "blur": "Xoá phông — nền mờ nhẹ cho nhân vật nổi bật",
+}
+
 
 def kinds_catalog() -> str:
     """Danh mục mẫu cho prompt."""
@@ -531,7 +543,8 @@ def _draw_kind(p: _Pen, kind: str, wall, floor, accent, night: bool, rng):
 def render_scene(kind: str = "phong_khach", time: str = "ngay",
                  wall=None, floor=None, accent=None, seed: int = 0,
                  size: tuple[int, int] | None = None,
-                 layout_size: tuple[int, int] | None = None) -> Image.Image:
+                 layout_size: tuple[int, int] | None = None,
+                 art: str = "flat") -> Image.Image:
     """Vẽ một bối cảnh theo khung size (mặc định 9:16). Màu không truyền
     thì dùng màu mặc định của mẫu. layout_size: khung video thật khi size rộng
     hơn khung (sân khấu rộng, máy quay lia theo người nói)."""
@@ -553,7 +566,7 @@ def render_scene(kind: str = "phong_khach", time: str = "ngay",
     if night:
         # phủ tối nhẹ cho cảnh đêm, giữ đồ vật vẫn rõ
         img = Image.blend(img, Image.new("RGB", (w, h), (20, 24, 60)), 0.18)
-    return img
+    return stylize(img, art, layout_size)
 
 
 def render_spec(spec: dict, size: tuple[int, int],
@@ -562,7 +575,7 @@ def render_spec(spec: dict, size: tuple[int, int],
     return render_scene(spec.get("kind", "phong_khach"), spec.get("time", "ngay"),
                         spec.get("wall"), spec.get("floor"), spec.get("accent"),
                         seed=zlib.crc32(str(spec.get("name", "")).encode("utf-8")) % 1000,
-                        size=size, layout_size=layout_size)
+                        size=size, layout_size=layout_size, art=spec.get("art") or "flat")
 
 
 def save_scene(spec: dict, out_path: Path,
@@ -571,7 +584,91 @@ def save_scene(spec: dict, out_path: Path,
     img = render_scene(spec.get("kind", "phong_khach"), spec.get("time", "ngay"),
                        spec.get("wall"), spec.get("floor"), spec.get("accent"),
                        seed=zlib.crc32(str(spec.get("name", "")).encode("utf-8")) % 1000,
-                       size=size)
+                       size=size, art=spec.get("art") or "flat")
     out_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(out_path)
     return out_path
+
+
+# ------------------------------------------------------------ phong cách vẽ
+
+def _np(img: Image.Image):
+    import numpy as np
+    return np.asarray(img.convert("RGB")).astype("float32")
+
+
+def _vignette(a, layout_size, strength: float):
+    """Tối dần ra mép. Ảnh rộng hơn khung (máy quay lia) thì chỉ tối trên,
+    dưới để mép trái phải của khung không tối nhảy theo máy quay."""
+    import numpy as np
+    h, w = a.shape[:2]
+    y = np.linspace(-1, 1, h)[:, None]
+    wide = bool(layout_size and w > layout_size[0] * 1.05)
+    x = np.zeros((1, w)) if wide else np.linspace(-1, 1, w)[None, :]
+    d = np.clip(np.sqrt(x * x * 0.8 + y * y) - 0.55, 0, None)
+    return a * (1 - strength * np.clip(d, 0, 1))[..., None]
+
+
+def _paper(a, rng_seed: int, amount: float):
+    """Vân giấy: nhiễu mờ nhân vào ảnh."""
+    import cv2
+    import numpy as np
+    h, w = a.shape[:2]
+    n = np.random.default_rng(rng_seed).normal(0, 1, (h // 4 + 1, w // 4 + 1)).astype("float32")
+    n = cv2.resize(cv2.GaussianBlur(n, (0, 0), 1.2), (w, h), interpolation=cv2.INTER_CUBIC)
+    return a * (1 + amount * n)[..., None]
+
+
+def stylize(img: Image.Image, art: str | None, layout_size=None) -> Image.Image:
+    """Lọc ảnh bối cảnh theo phong cách. art lạ hoặc 'flat' thì để nguyên."""
+    if not art or art == "flat" or art not in ART_STYLES:
+        return img
+    import cv2
+    import numpy as np
+    a = _np(img)
+    if art == "pastel":
+        hsv = cv2.cvtColor(a.astype("uint8"), cv2.COLOR_RGB2HSV).astype("float32")
+        hsv[..., 1] *= 0.55
+        a = cv2.cvtColor(np.clip(hsv, 0, 255).astype("uint8"), cv2.COLOR_HSV2RGB).astype("float32")
+        a = a * 0.78 + 255 * 0.22
+        a = cv2.GaussianBlur(a, (0, 0), 1.2)
+    elif art == "watercolor":
+        u = cv2.stylization(a.astype("uint8"), sigma_s=60, sigma_r=0.45).astype("float32")
+        u = cv2.GaussianBlur(u, (0, 0), 1.5) * 0.85 + 255 * 0.15
+        a = _paper(u, 3, 0.05)
+    elif art == "pencil":
+        gray, _ = cv2.pencilSketch(a.astype("uint8"), sigma_s=40, sigma_r=0.07, shade_factor=0.03)
+        hsv = cv2.cvtColor(a.astype("uint8"), cv2.COLOR_RGB2HSV).astype("float32")
+        hsv[..., 1] *= 0.7
+        a = cv2.cvtColor(hsv.astype("uint8"), cv2.COLOR_HSV2RGB).astype("float32")
+        a = (a * 0.8 + 255 * 0.2) * (0.35 + 0.65 * gray.astype("float32") / 255.0)[..., None]
+        a = _paper(a, 5, 0.04)
+    elif art == "comic":
+        u = a.astype("uint8")
+        for _ in range(2):
+            u = cv2.bilateralFilter(u, 9, 60, 9)
+        q = np.minimum((u.astype("float32") // 40) * 40 + 20, 255)
+        g = cv2.cvtColor(u, cv2.COLOR_RGB2GRAY)
+        edges = cv2.adaptiveThreshold(cv2.medianBlur(g, 5), 255, cv2.ADAPTIVE_THRESH_MEAN_C,
+                                      cv2.THRESH_BINARY, 9, 4)
+        edges = cv2.erode(edges, np.ones((2, 2), np.uint8))
+        a = q * (edges.astype("float32") / 255.0)[..., None]
+        a = cv2.cvtColor(np.clip(a, 0, 255).astype("uint8"), cv2.COLOR_RGB2HSV).astype("float32")
+        a[..., 1] = np.clip(a[..., 1] * 1.2, 0, 255)
+        a = cv2.cvtColor(a.astype("uint8"), cv2.COLOR_HSV2RGB).astype("float32")
+    elif art == "vintage":
+        sep = np.array([[0.393, 0.769, 0.189], [0.349, 0.686, 0.168], [0.272, 0.534, 0.131]],
+                       dtype="float32")
+        a = a * 0.45 + (a @ sep.T) * 0.55
+        a = a * 0.92 + np.array([18, 10, 0], dtype="float32")
+        a += np.random.default_rng(11).normal(0, 7, a.shape[:2]).astype("float32")[..., None]
+        a = _vignette(a, layout_size, 0.55)
+    elif art == "night_neon":
+        a = a * 0.55 * np.array([0.9, 0.85, 1.05], dtype="float32") + np.array([10, 4, 26], dtype="float32")
+        glow = cv2.GaussianBlur(np.clip(a - 90, 0, None), (0, 0), 14)
+        a = a + glow * np.array([0.9, 0.5, 1.0], dtype="float32")
+        a = _vignette(a, layout_size, 0.45)
+    elif art == "blur":
+        a = cv2.GaussianBlur(a, (0, 0), max(2.0, a.shape[0] / 300))
+        a = a * 0.95 + 255 * 0.05
+    return Image.fromarray(np.clip(a, 0, 255).astype("uint8"))

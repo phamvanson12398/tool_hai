@@ -280,6 +280,24 @@ cử chỉ cả người thì toàn cảnh). Muốn chỉ định: `goc=toan`, `
 
 ---
 
+## 6a2. Phong cách bối cảnh AI vẽ
+
+Ở **Tập mới → mục 8 → Phong cách bối cảnh AI vẽ** (riêng cho từng tập):
+
+| Phong cách | Trông thế nào |
+|---|---|
+| **Hoạt hình phẳng** (mặc định) | Màu tươi, nét viền rõ |
+| **Pastel dịu** | Màu nhạt, mềm, hợp chuyện gia đình, dễ thương |
+| **Màu nước** | Màu loang, có vân giấy |
+| **Chì màu** | Nét chì, giấy vẽ tay |
+| **Truyện tranh** | Ít mảng màu, viền đen đậm |
+| **Hoài cổ** | Ngả vàng nâu, hạt phim, tối góc |
+| **Tối neon** | Tông tối, ánh tím xanh như phim |
+| **Xoá phông** | Nền mờ nhẹ cho nhân vật nổi bật |
+
+Đổi phong cách thì mọi nền do tool vẽ trong tập được vẽ lại ngay (không tốn lượt
+AI); ảnh nền chị tự tải lên giữ nguyên. Bàn ghế nhân vật ngồi vẫn vẽ kiểu phẳng.
+
 ## 6b. Nhiều bối cảnh trong một tập
 
 Truyện diễn ra ở nhiều nơi thì thêm dòng `## canh:` vào kịch bản, mỗi lần đổi
@@ -345,7 +363,10 @@ ghi tên sau dấu `|`:
 ## 7. Nhân vật
 
 ### Kiểu nhân vật AI vẽ
-Ở **Cài đặt → Cử động nhân vật → Kiểu nhân vật AI vẽ**:
+Chọn ngay ở **Tập mới → mục 8 → Kiểu nhân vật** (riêng cho từng tập). Để
+"Theo Cài đặt" thì dùng mặc định ở **Cài đặt → Cử động nhân vật → Kiểu nhân vật
+AI vẽ**. Đổi kiểu ở mục 8 thì các nhân vật bộ ghép đã có của tập được ghép lại
+ngay theo kiểu mới (giữ nguyên tóc, áo, trang phục), không tốn lượt AI.
 
 | Kiểu | Trông thế nào |
 |---|---|
@@ -378,7 +399,21 @@ văn phòng / sếp, ajumma, ajeossi, bà cụ, giới trẻ MZ, người yêu.
 Hai kiểu người xám và vẽ tay Hàn có **viền tự tạo quanh cả khối**, nên khuỷu
 tay, đầu gối liền mạch khi cử động, tay chân thon dần như nét vẽ tay.
 
-Đổi kiểu xong, bấm **Vẽ lại** ở nhân vật đã có để vẽ theo kiểu mới.
+Đổi kiểu ở Cài đặt thì chỉ áp dụng cho tập mới; tập đang làm thì đổi ở mục 8.
+
+### Tạo nhân vật giống ảnh
+Ở **Tập mới → mục 8 → Tạo nhân vật giống ảnh**: chọn nhân vật (hoặc "+ Tên
+khác…"), chọn một ảnh tham khảo (người thật, ảnh diễn viên, tranh vẽ...) rồi bấm
+nút. Claude xem ảnh, chọn kiểu tóc, màu tóc, màu da, màu áo, quần, trang phục,
+phụ kiện (kính, mũ, khẩu trang...) gần nhất trong bộ ghép, rồi tool ghép nhân
+vật theo **Kiểu nhân vật** đang chọn, đủ mọi biểu cảm. Dưới nút hiện câu Claude
+tả ảnh để chị biết nó thấy gì.
+
+- Nhân vật là "giống ảnh" theo kiểu hoạt hình (tóc, màu, trang phục), không vẽ
+  lại y hệt khuôn mặt.
+- Việc này cần xem ảnh nên luôn dùng Claude (1 lượt, ảnh được thu nhỏ cho đỡ tốn).
+  Claude lỗi thì tool tự lấy màu áo và màu tóc trong ảnh.
+- Ảnh gốc lưu ở `projects/<tập>/assets/ref/`.
 
 ### Chị tải lên
 Tên file = tên nhân vật trong kịch bản.

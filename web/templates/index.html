@@ -210,6 +210,50 @@
         <!-- 8. AI làm phần còn thiếu -->
         <section class="card" id="sec-generate">
           <h2 class="card-title"><span class="step">8</span> AI làm phần còn thiếu</h2>
+          <div class="field-row">
+            <div class="field">
+              <label for="p-char-style">Kiểu nhân vật</label>
+              <select id="p-char-style">
+                <option value="">Theo Cài đặt</option>
+                <option value="auto">Tự chọn theo ngôn ngữ</option>
+                <option value="gray">Người xám kiểu TikTok Mỹ</option>
+                <option value="khand">Vẽ tay kiểu Hàn</option>
+                <option value="kchibi">Webtoon Hàn (đầu to)</option>
+                <option value="box">Người que mặc áo</option>
+                <option value="stick">Người que nét đen</option>
+                <option value="flat">Hoạt hình phẳng</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="p-bg-style">Phong cách bối cảnh AI vẽ</label>
+              <select id="p-bg-style">
+                <option value="">Theo Cài đặt (phẳng)</option>
+              </select>
+            </div>
+          </div>
+          <p class="hint">Đổi kiểu nhân vật thì các nhân vật bộ ghép của tập được ghép lại ngay (giữ tóc, áo). Đổi phong cách bối cảnh thì các nền do tool vẽ được vẽ lại; ảnh nền chị tải lên giữ nguyên.</p>
+
+          <div class="photo-char">
+            <div class="field-row">
+              <div class="field">
+                <label for="photo-char-name">Tạo nhân vật giống ảnh</label>
+                <select id="photo-char-name"></select>
+              </div>
+              <div class="field">
+                <label for="in-char-photo">Ảnh tham khảo (người thật, tranh vẽ...)</label>
+                <input type="file" id="in-char-photo" accept="image/*">
+              </div>
+            </div>
+            <div class="row-actions">
+              <button class="btn" id="btn-char-photo" type="button">
+                <span class="btn-label">Tạo nhân vật giống ảnh</span>
+                <span class="spinner" hidden></span>
+              </button>
+              <span class="muted" id="photo-char-note"></span>
+            </div>
+            <p class="hint">Claude xem ảnh rồi chọn kiểu tóc, màu da, áo, trang phục, phụ kiện gần nhất và ghép theo kiểu nhân vật ở trên (không vẽ lại y hệt khuôn mặt). Nhân vật đã có thì được thay.</p>
+          </div>
+
           <div class="row-actions">
             <button class="btn" id="btn-generate" type="button">
               <span class="btn-label">Để AI tạo phần còn thiếu</span>

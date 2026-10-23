@@ -66,6 +66,7 @@ AI_TASKS = {
     "background": ("Chọn bối cảnh", "agy"),
     "voices": ("Mô tả giọng", "agy"),
     "story": ("Truyện kể: viết lời kể, chia cảnh", "claude"),
+    "photo": ("Tạo nhân vật giống ảnh (cần xem ảnh — chỉ Claude)", "claude"),
 }
 ENGINES = {"claude": "Claude", "agy": "Antigravity (Gemini)"}
 # cài đặt cũ ghi "gemini" (Gemini CLI, Google đã ngừng cho tài khoản cá nhân)
@@ -75,7 +76,7 @@ _LEGACY = {"gemini": "agy"}
 # Việc phải tìm trên web: Antigravity chạy ngầm không được phép dùng công cụ
 # (nó tự từ chối, không trả lời gì) và không có cách an toàn chỉ cho phép tìm
 # web, còn Claude CLI có WebSearch chỉ đọc — nên những việc này luôn dùng Claude.
-CLAUDE_ONLY = {"trends"}
+CLAUDE_ONLY = {"trends", "photo"}
 
 
 def engines_for_task(task: str) -> list[str]:
@@ -634,6 +635,34 @@ def pick_character_specs(names: list[str], script: str,
                 c[key] = val
         clean[name] = c
     return clean
+
+
+_SPEC_KEYS = ("body", "skin", "hair_style", "hair_color", "shirt", "accessory",
+              "outfit", "pants")
+
+
+def spec_from_photo(image: Path, name: str) -> dict:
+    """Claude xem ảnh (công cụ Read) rồi chọn bộ ghép giống ảnh nhất.
+    Trả về các giá trị hợp lệ + "note" (Claude tả ngoại hình)."""
+    from .character_kit import options
+
+    opt = options()
+    catalog = "\n".join(
+        f"- {k}: {', '.join(v)}" for k, v in opt.items() if k != "expressions"
+    )
+    prompt = _load_prompt("character_from_photo", image=str(image), char_name=name,
+                          catalog=catalog)
+    data = _run_json(prompt, task="photo", timeout=180, allowed_tools=["Read"])
+    if not isinstance(data, dict):
+        return {}
+    out = {}
+    for key in _SPEC_KEYS:
+        val = str(data.get(key, "")).strip().lower()
+        if val in opt.get(key, []):
+            out[key] = val
+    if data.get("note"):
+        out["note"] = str(data["note"])[:200]
+    return out
 
 
 def design_background(script: str, language: str, desc: str = "") -> dict:

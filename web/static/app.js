@@ -339,7 +339,90 @@
     if (!p) return;
     if ($("p-format")) $("p-format").value = p.format || "9:16";
     if ($("p-duration")) $("p-duration").value = p.duration ? String(p.duration) : "";
+    if ($("p-char-style")) $("p-char-style").value = p.char_style || "";
+    if ($("p-bg-style")) $("p-bg-style").value = p.bg_style || "";
+    fillPhotoNames();
     showTarget();
+  }
+
+  /* ---------------- Kiểu nhân vật, phong cách bối cảnh ------------- */
+
+  function populateBgStyles() {
+    var sel = $("p-bg-style");
+    if (!sel) return;
+    var cur = sel.value;
+    sel.innerHTML = "";
+    sel.appendChild(new Option("Theo Cài đặt (phẳng)", ""));
+    ((state.meta && state.meta.bg_styles) || []).forEach(function (kv) {
+      sel.appendChild(new Option(kv[1], kv[0]));
+    });
+    sel.value = (state.project && state.project.bg_style) || cur || "";
+  }
+
+  function saveStyle(key) {
+    var p = state.project || {};
+    if (!p.id) {
+      toast("warn", "Chưa có tập", "Bấm “Tạo tập” ở mục 1 trước.");
+      return Promise.resolve();
+    }
+    var body = {};
+    body[key] = $(key === "char_style" ? "p-char-style" : "p-bg-style").value;
+    var sel = $(key === "char_style" ? "p-char-style" : "p-bg-style");
+    sel.disabled = true;
+    return api("/api/project/" + encodeURIComponent(p.id) + "/meta", { method: "POST", body: body })
+      .then(function (r) {
+        state.assetVer = Date.now();
+        if (r && r.restyled && r.restyled.length) toast("ok", "Đã ghép lại nhân vật", r.restyled.join(", "));
+        if (r && r.redrawn) toast("ok", "Đã vẽ lại bối cảnh", "Theo phong cách mới");
+        return refreshProject();
+      })
+      .catch(function (e) { errToast("Lưu kiểu thất bại", e); })
+      .then(function () { sel.disabled = false; });
+  }
+
+  function fillPhotoNames() {
+    var sel = $("photo-char-name");
+    if (!sel) return;
+    var cur = sel.value;
+    var names = [];
+    var p = state.project || {};
+    ((p.parse && p.parse.cast) || []).forEach(function (n) { if (names.indexOf(n) < 0) names.push(n); });
+    ((p.assets && p.assets.characters) || []).forEach(function (c) {
+      if (c.name && names.indexOf(c.name) < 0) names.push(c.name);
+    });
+    if (!names.length && $("p-script") && $("p-script").value.trim()) names = scriptCharacterNames();
+    sel.innerHTML = "";
+    names.forEach(function (n) { sel.appendChild(new Option(n, n)); });
+    sel.appendChild(new Option("+ Tên khác…", "__new__"));
+    if (cur && names.indexOf(cur) >= 0) sel.value = cur;
+  }
+
+  function doCharFromPhoto() {
+    var p = state.project || {};
+    if (!p.id) { toast("warn", "Chưa có tập", "Bấm “Tạo tập” ở mục 1 trước."); return; }
+    var name = $("photo-char-name").value;
+    if (name === "__new__" || !name) {
+      name = (window.prompt("Tên nhân vật (đúng tên trong kịch bản):") || "").trim();
+      if (!name) return;
+    }
+    var file = $("in-char-photo").files && $("in-char-photo").files[0];
+    if (!file) { toast("warn", "Chưa chọn ảnh", "Chọn một ảnh tham khảo trước."); return; }
+    var fd = new FormData();
+    fd.append("name", name);
+    fd.append("file", file);
+    withBusy($("btn-char-photo"), function () {
+      return api("/api/project/" + encodeURIComponent(p.id) + "/character_photo", { method: "POST", body: fd })
+        .then(function (r) {
+          state.assetVer = Date.now();
+          (r && r.warnings || []).forEach(function (w) { toast("warn", "Lưu ý", w); });
+          $("photo-char-note").textContent = r && r.note ? ("Claude thấy: " + r.note) : "";
+          renderGeneratePreview({ characters: r && r.character ? [r.character] : [] });
+          toast("ok", "Đã tạo nhân vật giống ảnh", name);
+          $("in-char-photo").value = "";
+          return refreshProject();
+        })
+        .catch(function (e) { errToast("Tạo nhân vật từ ảnh thất bại", e); });
+    });
   }
 
   function saveMeta() {
@@ -930,6 +1013,7 @@
           : { characters: characters || scriptCharacterNames(),
               background: $("p-title").value + " / " + $("p-hints").value, voices: true }
       }).then(function (data) {
+        state.assetVer = Date.now();
         (data && data.warnings || []).forEach(function (w) { toast("warn", "Lưu ý", w); });
         renderGeneratePreview(data || {});
         toast("ok", "AI đã tạo phần còn thiếu");
@@ -1112,7 +1196,9 @@
     if (/^(https?:|data:|blob:)/.test(value)) return value;
     if (/^\/(api|static)\//.test(value)) return value;
     // đường dẫn file trên máy (C:\... hoặc /home/...) -> server trả ảnh
-    return "/api/library/image/" + encodeURIComponent(value);
+    // ảnh vẽ lại giữ nguyên tên file: thêm số phiên bản để trình duyệt không dùng ảnh cũ
+    return "/api/library/image/" + encodeURIComponent(value) +
+      (state.assetVer ? "?v=" + state.assetVer : "");
   }
 
   function updateStageFromProject() {
@@ -2139,6 +2225,9 @@
     $("p-hints").addEventListener("input", touchProject);
     $("p-format").addEventListener("change", saveMeta);
     $("p-duration").addEventListener("change", saveMeta);
+    $("p-char-style").addEventListener("change", function () { saveStyle("char_style"); });
+    $("p-bg-style").addEventListener("change", function () { saveStyle("bg_style"); });
+    $("btn-char-photo").addEventListener("click", doCharFromPhoto);
 
     $("btn-create").addEventListener("click", function () {
       withBusy($("btn-create"), function () {
@@ -2446,6 +2535,7 @@
       if (!state.meta.languages) state.meta.languages = [{ code: "ko", label: "Tiếng Hàn" }, { code: "en", label: "Tiếng Anh" }, { code: "vi", label: "Tiếng Việt" }];
       populateLanguages();
       populateSubtitleStyles();
+      populateBgStyles();
       var cc = $("claude-calls");
       if (cc && typeof state.meta.claude_calls === "number") cc.textContent = state.meta.claude_calls;
       if (state.meta.ai_calls) showAiCalls(state.meta.ai_calls);

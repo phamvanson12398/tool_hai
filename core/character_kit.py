@@ -699,3 +699,30 @@ def preview_cast(specs: list[CharSpec], out_path: Path) -> Path:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     sheet.convert("RGB").save(out_path)
     return out_path
+
+
+# --------------------------------------------- nhân vật giống ảnh (dự phòng)
+
+def _nearest(rgb, palette: dict) -> str:
+    return min(palette, key=lambda k: sum((a - b) ** 2 for a, b in zip(rgb, palette[k])))
+
+
+def spec_from_colors(path) -> dict:
+    """Không có AI xem ảnh: lấy màu áo (giữa ảnh, phía dưới) và màu tóc (trên
+    cùng, giữa) gần nhất trong bảng màu. Thô nhưng đỡ hơn mặc định."""
+    from PIL import Image as _Image
+    img = _Image.open(path).convert("RGB")
+    img.thumbnail((240, 240))
+    w, h = img.size
+
+    def avg(x0, y0, x1, y1):
+        crop = img.crop((int(w * x0), int(h * y0), int(w * x1), int(h * y1)))
+        q = crop.quantize(colors=4, method=_Image.Quantize.MEDIANCUT)
+        pal = q.getpalette()
+        idx = max(q.getcolors(), key=lambda c: c[0])[1]
+        return tuple(pal[idx * 3: idx * 3 + 3])
+
+    return {
+        "shirt": _nearest(avg(0.3, 0.6, 0.7, 0.85), SHIRT_COLORS),
+        "hair_color": _nearest(avg(0.35, 0.04, 0.65, 0.14), HAIR_COLORS),
+    }
