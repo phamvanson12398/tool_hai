@@ -1127,6 +1127,17 @@ def api_project_generate(pid):
         except Exception as e:  # noqa: BLE001
             warnings.append(f"AI chọn bộ ghép lỗi ({_short_err(e)}); dùng mặc định.")
             specs = {}
+        # nghề rõ trong kịch bản mà AI chưa cho mặc đồng phục -> tự mặc
+        jobs = character_kit.guess_jobs(list(s.cast or want_chars),
+                                        [(b.speaker, b.text) for b in s.beats if b.kind == "line"])
+        for n in want_chars:
+            sp = specs.setdefault(n, {})
+            if n in jobs and sp.get("outfit") not in character_kit.JOB_OUTFITS:
+                sp["outfit"] = jobs[n]
+        # mỗi người một màu áo, kiểu tóc (kể cả so với nhân vật đã có trong tập)
+        taken = [c.get("spec") or {} for c in data["assets"].get("characters", [])
+                 if c.get("name") not in want_chars]
+        specs = character_kit.make_distinct(specs, want_chars, taken)
         style = config.load_settings().get("char_style") or "auto"
         if style not in character_kit.STYLES:      # "auto": theo ngôn ngữ của tập
             style = "khand" if language == "ko" else "gray"   # Anh, Việt -> người xám TikTok

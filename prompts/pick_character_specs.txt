@@ -14,6 +14,13 @@ Yêu cầu:
 - Phù hợp vai trong truyện (ví dụ người lớn tuổi, trẻ con thì body="child").
 - Cùng một phong cách để ráp lại trông đồng bộ.
 - "outfit" là trang phục, "pants" là màu quần — chọn theo nghề/vai của nhân vật.
+- NHÂN VẬT CÓ NGHỀ RÕ TRONG KỊCH BẢN (theo tên, lời thoại, cách người khác gọi) BẮT BUỘC mặc đồng phục nghề, để khán giả nhìn là biết:
+  shipper / người giao hàng / 택배·배달 → outfit="shipper" (áo xanh phản quang, mũ bảo hiểm, thùng hàng);
+  bác sĩ / 의사 → "doctor"; y tá / 간호사 → "nurse"; công an, cảnh sát / 경찰 → "police";
+  đầu bếp / 요리사 → "chef"; công nhân, thợ xây / 인부 → "worker"; bảo vệ / 경비 → "security";
+  học sinh → "school_uniform"; nhân viên văn phòng, sếp → "suit"; người nấu ăn ở nhà, bán hàng → "apron".
+  Đồng phục nghề tự có mũ đi kèm — khi đó để accessory="none".
+- Hai nhân vật không bao giờ cùng màu áo ("shirt") hoặc cùng kiểu + màu tóc.
 {{market_hint}}
 
 Output JSON đúng dạng này, không có gì khác:

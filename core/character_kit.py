@@ -83,7 +83,83 @@ STYLES = ["gray", "khand", "stick", "box", "kchibi", "flat"]
 OUTFITS = [
     "tshirt", "hoodie", "school_uniform", "suit", "apron", "hiking",
     "padding", "cardigan", "dress", "hanbok",
+    # đồng phục nghề (có mũ / đồ nghề riêng, vẽ cho mọi kiểu nhân vật)
+    "shipper", "doctor", "nurse", "police", "chef", "worker", "security",
 ]
+
+# Nhận ra nghề từ tên nhân vật / cách người khác gọi (khi AI không chọn được)
+JOB_WORDS = {
+    "shipper": r"shipper|giao hàng|ship hàng|người giao|delivery|courier|택배|배달",
+    "doctor": r"bác sĩ|bác sỹ|doctor|dr\.|의사|선생님\(의사\)",
+    "nurse": r"y tá|điều dưỡng|nurse|간호사",
+    "police": r"công an|cảnh sát|police|officer|cop|경찰",
+    "chef": r"đầu bếp|bếp trưởng|chef|요리사|셰프",
+    "worker": r"công nhân|thợ xây|thợ hồ|construction|builder|인부|노동자",
+    "security": r"bảo vệ|security|guard|경비",
+}
+
+
+def guess_jobs(names: list[str], lines: list[tuple[str, str]]) -> dict[str, str]:
+    """Đoán nghề: theo tên ("Anh Shipper", "Bác sĩ Hùng"), hoặc — khi chỉ có
+    hai người — theo cách người kia gọi ("anh shipper ơi", "chú bảo vệ")."""
+    import re
+    out: dict[str, str] = {}
+    for n in names:
+        for job, pat in JOB_WORDS.items():
+            if re.search(pat, n, re.I):
+                out[n] = job
+                break
+    if len(names) == 2:
+        call = r"(?:anh|chị|em|chú|bác|cô|ông|bà|mr\.?|ms\.?|hey|này)\s+(?:{})|(?:{})\s+(?:ơi|à|ạ|님|씨)"
+        for speaker, text in lines:
+            if speaker not in names:
+                continue
+            other = names[1] if speaker == names[0] else names[0]
+            if other in out:
+                continue
+            for job, pat in JOB_WORDS.items():
+                if re.search(call.format(pat, pat), text, re.I):
+                    out[other] = job
+                    break
+    return out
+
+
+def make_distinct(specs: dict[str, dict], names: list[str],
+                  taken: list[dict] | None = None) -> dict[str, dict]:
+    """Các nhân vật phải khác nhau rõ: không trùng màu áo, không trùng cả kiểu
+    và màu tóc (kể cả với nhân vật đã có trong tập — `taken`)."""
+    used_shirt = {t.get("shirt") for t in (taken or []) if t.get("outfit") not in JOB_OUTFITS}
+    used_hair = {(t.get("hair_style"), t.get("hair_color")) for t in (taken or [])}
+    shirts = [c for c in ("blue", "red", "green", "yellow", "purple", "pink", "mint", "navy",
+                          "gray", "cream", "white", "black") if c in SHIRT_COLORS]
+    hairs = [h for h in ("short", "sidepart", "curly", "bowl", "buzz", "ponytail", "bob",
+                         "long", "wavy", "bun") if h in HAIR_STYLES]
+    out = {}
+    for n in names:
+        d = dict(specs.get(n) or {})
+        if d.get("outfit") not in JOB_OUTFITS:
+            if not d.get("shirt") or d["shirt"] in used_shirt:
+                d["shirt"] = next((c for c in shirts if c not in used_shirt), d.get("shirt") or "blue")
+            used_shirt.add(d["shirt"])
+        key = (d.get("hair_style") or "short", d.get("hair_color") or "black")
+        if key in used_hair:
+            d["hair_style"] = next((h for h in hairs if (h, key[1]) not in used_hair), key[0])
+            key = (d["hair_style"], key[1])
+        used_hair.add(key)
+        out[n] = d
+    return out
+
+
+# Đồng phục nghề: màu áo chính, màu tay áo, mũ đi kèm
+JOB_OUTFITS = {
+    "shipper":  {"body": (40, 160, 96), "sleeve": (40, 160, 96), "hat": "helmet"},
+    "doctor":   {"body": (250, 250, 252), "sleeve": (250, 250, 252), "hat": None},
+    "nurse":    {"body": (250, 250, 252), "sleeve": (250, 250, 252), "hat": "nurse_cap"},
+    "police":   {"body": (52, 66, 120), "sleeve": (52, 66, 120), "hat": "peaked_cap"},
+    "chef":     {"body": (250, 250, 252), "sleeve": (250, 250, 252), "hat": "chef_hat"},
+    "worker":   {"body": None, "sleeve": None, "hat": "hard_hat"},
+    "security": {"body": (176, 204, 232), "sleeve": (176, 204, 232), "hat": "guard_cap"},
+}
 
 PANTS_COLORS = {
     "navy": (52, 62, 100),
@@ -426,6 +502,60 @@ def _draw_mouth(d: ImageDraw.ImageDraw, g: dict, kind: str, open_mouth: bool) ->
         d.line([cx - 22, my + 4, cx + 22, my + 4], fill=OUTLINE, width=LW)
 
 
+def draw_job_hat(d: ImageDraw.ImageDraw, spec: CharSpec, g: dict) -> None:
+    """Mũ theo nghề (mũ bảo hiểm shipper, mũ kê-pi, mũ đầu bếp...). Vẽ theo
+    tâm đầu thật (skull_cx) để mũ không lệch khi mặt quay sang."""
+    job = JOB_OUTFITS.get(spec.outfit)
+    hat = job["hat"] if job else None
+    if not hat:
+        return
+    cx = g.get("skull_cx", g["head_cx"])
+    cy, rx, ry = g["head_cy"], g["head_rx"], g["head_ry"]
+    top = cy - ry
+    W = max(4, LW)
+    if hat == "helmet":                                   # mũ bảo hiểm nửa đầu
+        col = (40, 160, 96, 255)
+        d.chord([cx - rx * 1.08, top - ry * 0.12, cx + rx * 1.08, cy + ry * 0.35], 180, 360,
+                fill=col, outline=OUTLINE, width=W)
+        d.rounded_rectangle([cx - rx * 1.12, cy - ry * 0.47, cx + rx * 1.12, cy - ry * 0.33],
+                            radius=10, fill=(30, 120, 72, 255), outline=OUTLINE, width=W)
+        d.line([cx - rx * 0.5, top + ry * 0.05, cx + rx * 0.5, top + ry * 0.05],
+               fill=(250, 220, 80, 255), width=W + 4)
+    elif hat == "hard_hat":                               # mũ bảo hộ vàng
+        col = (250, 204, 40, 255)
+        d.chord([cx - rx * 1.02, top - ry * 0.1, cx + rx * 1.02, cy + ry * 0.2], 180, 360,
+                fill=col, outline=OUTLINE, width=W)
+        d.rounded_rectangle([cx - rx * 1.25, cy - ry * 0.48, cx + rx * 1.25, cy - ry * 0.36],
+                            radius=8, fill=col, outline=OUTLINE, width=W)
+        d.line([cx, top - ry * 0.08, cx, cy - ry * 0.5], fill=OUTLINE, width=W)
+    elif hat in ("peaked_cap", "guard_cap"):              # mũ kê-pi công an / bảo vệ
+        col = (52, 66, 120, 255) if hat == "peaked_cap" else (40, 52, 90, 255)
+        d.rounded_rectangle([cx - rx * 0.98, top - ry * 0.34, cx + rx * 0.98, cy - ry * 0.52],
+                            radius=18, fill=col, outline=OUTLINE, width=W)
+        d.rounded_rectangle([cx - rx * 0.92, cy - ry * 0.6, cx + rx * 0.92, cy - ry * 0.46],
+                            radius=6, fill=(30, 30, 40, 255), outline=OUTLINE, width=W)
+        d.chord([cx - rx * 0.9, cy - ry * 0.62, cx + rx * 0.9, cy - ry * 0.22], 0, 180,
+                fill=(30, 30, 40, 255), outline=OUTLINE, width=W)              # lưỡi trai
+        d.ellipse([cx - 16, top - ry * 0.1 - 16, cx + 16, top - ry * 0.1 + 16],
+                  fill=(236, 196, 70, 255), outline=OUTLINE, width=3)          # phù hiệu
+    elif hat == "chef_hat":                               # mũ đầu bếp cao
+        white = (252, 252, 252, 255)
+        d.rounded_rectangle([cx - rx * 0.7, cy - ry * 0.95, cx + rx * 0.7, cy - ry * 0.55],
+                            radius=10, fill=white, outline=OUTLINE, width=W)
+        for dx, r in ((-0.42, 0.42), (0.42, 0.42), (0.0, 0.5)):
+            d.ellipse([cx + (dx - r) * rx, top - ry * 0.95, cx + (dx + r) * rx, top + ry * 0.12],
+                      fill=white, outline=OUTLINE, width=W)
+        d.rectangle([cx - rx * 0.66, top - ry * 0.35, cx + rx * 0.66, cy - ry * 0.6], fill=white)
+    elif hat == "nurse_cap":                              # mũ y tá có chữ thập đỏ
+        white = (252, 252, 252, 255)
+        d.polygon([(cx - rx * 0.6, top + ry * 0.12), (cx + rx * 0.6, top + ry * 0.12),
+                   (cx + rx * 0.45, top - ry * 0.3), (cx - rx * 0.45, top - ry * 0.3)],
+                  fill=white, outline=OUTLINE)
+        red = (220, 50, 60, 255)
+        d.rectangle([cx - 8, top - ry * 0.22, cx + 8, top + ry * 0.04], fill=red)
+        d.rectangle([cx - 22, top - ry * 0.12, cx + 22, top - ry * 0.04], fill=red)
+
+
 def _draw_extras(d: ImageDraw.ImageDraw, spec: CharSpec, g: dict,
                  mood: dict) -> None:
     cx = g["head_cx"]
@@ -447,6 +577,8 @@ def _draw_extras(d: ImageDraw.ImageDraw, spec: CharSpec, g: dict,
             x = cx + sgn * g["eye_dx"]
             d.ellipse([x - 12, g["eye_y"] + 24, x + 12, g["eye_y"] + 72],
                       fill=(140, 200, 240, 230), outline=OUTLINE, width=3)
+
+    draw_job_hat(d, spec, g)
 
     # phụ kiện
     acc = spec.accessory

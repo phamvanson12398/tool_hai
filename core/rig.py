@@ -237,14 +237,19 @@ def draw_torso(spec: CharSpec, g: Geometry) -> Image.Image:
     """Thân + áo. Pivot ở hông (để xoay cả người quanh hông)."""
     img = _new_canvas()
     d = ImageDraw.Draw(img)
-    shirt = ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
+    jc = job_colors(spec)
+    shirt = jc[0] if jc else ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
     cx = g.head_cx
     bottom = int(g.hip[1]) + 40
+    if jc:
+        draw_job_back(d, spec, cx, g.shoulder_y, bottom, g.body_w / 2)
     d.rounded_rectangle(
         [_p((cx - g.body_w // 2, g.shoulder_y))[0], _p((0, g.shoulder_y))[1],
          _p((cx + g.body_w // 2, bottom))[0], _p((0, bottom))[1]],
         radius=60, fill=shirt, outline=OUTLINE, width=LW,
     )
+    if jc:
+        draw_job_garment(d, spec, cx, g.shoulder_y, bottom, g.body_w / 2, base_drawn=True)
     return img
 
 
@@ -385,7 +390,7 @@ def draw_upper_arm(spec: CharSpec, g: Geometry, side: str) -> Image.Image:
     """Cánh tay trên (vai → khuỷu). Pivot ở vai."""
     img = _new_canvas()
     d = ImageDraw.Draw(img)
-    shirt = ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
+    shirt = (job_colors(spec) or (None, ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)))[1]
     sx = g.head_cx + (g.shoulder_dx if side == "right" else -g.shoulder_dx)
     sy = g.shoulder_y
     x0, y0 = _p((sx - g.arm_w // 2, sy))
@@ -399,7 +404,7 @@ def draw_forearm(spec: CharSpec, g: Geometry, side: str) -> Image.Image:
     """Cẳng tay (khuỷu → cổ tay). Pivot ở khuỷu."""
     img = _new_canvas()
     d = ImageDraw.Draw(img)
-    shirt = ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
+    shirt = (job_colors(spec) or (None, ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)))[1]
     sx = g.head_cx + (g.shoulder_dx if side == "right" else -g.shoulder_dx)
     ey = g.shoulder_y + g.upper_len
     w = g.arm_w - 6
@@ -489,6 +494,7 @@ def _turn_fg(fg: dict) -> dict:
     if not _FACING:
         return fg
     out = dict(fg)
+    out["skull_cx"] = fg["head_cx"]          # mũ, tóc bám theo đầu, không theo mặt
     out["head_cx"] = int(fg["head_cx"] + _FACING * FACE_SHIFT * fg["head_rx"])
     out["eye_dx"] = int(fg["eye_dx"] * (1 - FACE_SQUEEZE * abs(_FACING)))
     return out
@@ -657,7 +663,8 @@ def _stick_torso(spec: CharSpec, g: Geometry) -> Image.Image:
     _stick_line(d, (cx, sy - 14), g.hip)
     for sgn in (-1, 1):                      # vai ngắn để tay mọc ra hai bên
         _stick_line(d, (cx, sy - 14), (cx + sgn * g.shoulder_dx, sy))
-    tie = ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
+    jc = job_colors(spec)
+    tie = jc[0] if jc else ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
     k = 0.8 if spec.body == "child" else 1.0
     pts = [(cx, sy + 4), (cx - 22 * k, sy + 34 * k), (cx, sy + 118 * k), (cx + 22 * k, sy + 34 * k)]
     d.polygon([_p(q) for q in pts], fill=tie, outline=STICK_INK)
@@ -712,8 +719,126 @@ OUTFIT_COLORS = {
 }
 
 
+def job_colors(spec: CharSpec) -> tuple | None:
+    """(màu áo, màu tay áo) RGBA nếu là đồng phục nghề, không thì None."""
+    job = ck.JOB_OUTFITS.get(spec.outfit)
+    if not job:
+        return None
+    main = ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"])
+    body = job["body"] or main
+    return body + (255,), (job["sleeve"] or main) + (255,)
+
+
+def draw_job_back(d: ImageDraw.ImageDraw, spec: CharSpec, cx: float, top: float,
+                  bot: float, hw: float, lw: int = LW) -> None:
+    """Đồ đeo sau lưng (thùng hàng shipper) — vẽ TRƯỚC thân để nằm phía sau."""
+    if spec.outfit != "shipper":
+        return
+    H = bot - top
+    box = (250, 150, 40, 255)
+
+    def R(x0, y0, x1, y1, fill, r=10, width=lw):
+        d.rounded_rectangle([*_p((x0, y0)), *_p((x1, y1))], radius=r, fill=fill,
+                            outline=OUTLINE, width=width)
+    R(cx - hw * 1.55, top - H * 0.08, cx + hw * 1.55, top + H * 0.72, box)
+    R(cx - hw * 1.55, top + H * 0.12, cx + hw * 1.55, top + H * 0.22, (252, 252, 252, 255), r=3, width=4)
+    d.line([_p((cx - hw * 1.55, top + H * 0.42)), _p((cx + hw * 1.55, top + H * 0.42))],
+           fill=_shade4(box, 0.75), width=5)
+
+
+def draw_job_garment(d: ImageDraw.ImageDraw, spec: CharSpec, cx: float, top: float,
+                     bot: float, hw: float, base_drawn: bool = False, lw: int = LW) -> None:
+    """Vẽ đồng phục nghề lên thân (toạ độ khung gốc). base_drawn: thân đã có màu
+    áo (kiểu vẽ tay Hàn) — chỉ thêm chi tiết; không thì vẽ cả thân áo."""
+    o = spec.outfit
+    if o not in ck.JOB_OUTFITS:
+        return
+    body, _sleeve = job_colors(spec)
+    H = bot - top
+
+    def R(x0, y0, x1, y1, fill, r=20, width=lw):
+        d.rounded_rectangle([*_p((x0, y0)), *_p((x1, y1))], radius=r, fill=fill,
+                            outline=OUTLINE, width=width)
+
+    def L(pts, fill=OUTLINE, width=lw):
+        d.line([_p(q) for q in pts], fill=fill, width=width)
+
+    def dot(x, y, r, fill):
+        d.ellipse([*_p((x - r, y - r)), *_p((x + r, y + r))], fill=fill, outline=OUTLINE, width=3)
+
+    gold = (236, 196, 70, 255)
+    if not base_drawn:
+        draw_job_back(d, spec, cx, top, bot, hw, lw)
+        R(cx - hw, top, cx + hw, bot, body, r=24)
+    if o == "shipper":
+        R(cx - hw, top + H * 0.56, cx + hw, top + H * 0.66, (250, 220, 80, 255), r=4, width=3)
+        L([(cx, top + 6), (cx, bot - 4)], width=5)                                    # khoá kéo
+        R(cx - hw * 0.55, top - 14, cx + hw * 0.55, top + 20, _shade4(body, 0.85), r=10)
+    elif o in ("doctor", "nurse"):
+        inner = (150, 196, 236, 255) if o == "doctor" else (250, 250, 252, 255)
+        if o == "doctor":
+            d.polygon([_p((cx - hw * 0.4, top + 2)), _p((cx + hw * 0.4, top + 2)),
+                       _p((cx, top + H * 0.6))], fill=inner, outline=OUTLINE)
+            R(cx - hw - 4, top, cx - hw * 0.08, bot + 50, body, r=14)               # vạt áo blouse
+            R(cx + hw * 0.08, top, cx + hw + 4, bot + 50, body, r=14)
+            L([(cx - hw * 0.4, top + 2), (cx - hw * 0.08, top + H * 0.5)], width=5)
+            L([(cx + hw * 0.4, top + 2), (cx + hw * 0.08, top + H * 0.5)], width=5)
+            R(cx + hw * 0.4, top + H * 0.3, cx + hw * 0.85, top + H * 0.45, body, r=4, width=4)
+            L([(cx + hw * 0.55, top + H * 0.22), (cx + hw * 0.55, top + H * 0.36)],
+              fill=(60, 90, 200, 255), width=6)                                      # bút
+            # ống nghe quàng cổ
+            d.arc([*_p((cx - hw * 0.62, top - H * 0.12)), *_p((cx + hw * 0.62, top + H * 0.42))],
+                  20, 160, fill=(70, 74, 84, 255), width=8)
+            dot(cx - hw * 0.5, top + H * 0.36, 13, (180, 184, 196, 255))
+        else:
+            red = (220, 50, 60, 255)
+            x, y = cx - hw * 0.5, top + H * 0.3
+            d.rectangle([*_p((x - 6, y - 18)), *_p((x + 6, y + 18))], fill=red)
+            d.rectangle([*_p((x - 18, y - 6)), *_p((x + 18, y + 6))], fill=red)
+            L([(cx - hw * 0.35, top + 2), (cx, top + 26), (cx + hw * 0.35, top + 2)], width=5)
+    elif o == "police":
+        L([(cx, top + 10), (cx, bot - 4)], width=4)
+        for k in (0.25, 0.45, 0.65):
+            dot(cx, top + H * k, 7, gold)
+        R(cx - hw, top + H * 0.8, cx + hw, top + H * 0.9, (40, 40, 48, 255), r=4, width=3)  # thắt lưng
+        R(cx - 12, top + H * 0.79, cx + 12, top + H * 0.91, gold, r=3, width=3)
+        for sgn in (-1, 1):                                                           # cầu vai
+            R(cx + sgn * hw * 0.55 - 22, top - 4, cx + sgn * hw * 0.55 + 22, top + 12,
+              _shade4(body, 0.75), r=4, width=3)
+        d.polygon([_p((cx - hw * 0.55, top + H * 0.2)), _p((cx - hw * 0.35, top + H * 0.2)),
+                   _p((cx - hw * 0.45, top + H * 0.36))], fill=gold, outline=OUTLINE)  # phù hiệu
+        R(cx - hw * 0.4, top - 10, cx + hw * 0.4, top + 16, _shade4(body, 0.85), r=8, width=4)
+    elif o == "chef":
+        for sgn in (-1, 1):
+            for k in (0.25, 0.45, 0.65):
+                dot(cx + sgn * hw * 0.28, top + H * k, 7, (230, 230, 236, 255))
+        L([(cx - hw * 0.45, top + 4), (cx + hw * 0.1, top + H * 0.75)], width=4)
+        R(cx - hw * 0.38, top - 10, cx + hw * 0.38, top + 16, (220, 60, 60, 255), r=8, width=4)  # khăn cổ
+    elif o == "worker":                       # áo phản quang cam có sọc bạc
+        vest = (250, 128, 30, 255)
+        for x0, x1 in ((cx - hw - 2, cx - hw * 0.12), (cx + hw * 0.12, cx + hw + 2)):
+            R(x0, top + 6, x1, bot + 6, vest, r=10, width=4)
+            for k in (0.45, 0.7):
+                R(x0 + 4, top + H * k, x1 - 4, top + H * k + 14, (226, 230, 236, 255), r=3, width=3)
+    elif o == "security":
+        for sgn in (-1, 1):
+            R(cx + sgn * hw * 0.55 - 22, top - 4, cx + sgn * hw * 0.55 + 22, top + 12,
+              (40, 52, 90, 255), r=4, width=3)
+            R(cx + sgn * hw * 0.5 - 22, top + H * 0.22, cx + sgn * hw * 0.5 + 22, top + H * 0.36,
+              _shade4(body, 0.92), r=4, width=3)                                     # túi ngực
+        d.polygon([_p((cx - hw * 0.62, top + H * 0.1)), _p((cx - hw * 0.38, top + H * 0.1)),
+                   _p((cx - hw * 0.38, top + H * 0.2)), _p((cx - hw * 0.5, top + H * 0.26)),
+                   _p((cx - hw * 0.62, top + H * 0.2))], fill=(40, 52, 90, 255), outline=OUTLINE)
+        L([(cx, top + 10), (cx, bot - 4)], width=4)
+        R(cx - hw, top + H * 0.82, cx + hw, top + H * 0.92, (40, 40, 48, 255), r=4, width=3)
+        L([(cx - hw * 0.35, top + 2), (cx, top + 26), (cx + hw * 0.35, top + 2)], width=5)
+
+
 def _sleeve_color(spec: CharSpec) -> tuple:
     """Màu tay áo theo trang phục."""
+    jc = job_colors(spec)
+    if jc:
+        return jc[1]
     main = ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
     if spec.outfit == "school_uniform":
         return OUTFIT_COLORS["school_uniform"]["jacket"] + (255,)
@@ -723,7 +848,7 @@ def _sleeve_color(spec: CharSpec) -> tuple:
 
 
 def _short_sleeve(spec: CharSpec) -> bool:
-    return spec.outfit in ("tshirt", "dress")
+    return spec.outfit in ("tshirt", "dress", "nurse")
 
 
 def _legs_bare(spec: CharSpec) -> bool:
@@ -767,6 +892,10 @@ def _box_torso(spec: CharSpec, g: Geometry) -> Image.Image:
         R(cx - hw, top, cx + hw, top + (bot - top) * 0.42, (250, 246, 236, 255))   # áo jeogori
         poly([(cx - 8, top + 30), (cx + 40, top + 60), (cx + 10, top + 64)], (210, 60, 90, 255))  # dải nơ
         L([(cx - hw * 0.5, top + 2), (cx + 6, top + 56)], width=6)
+        return img
+
+    if o in ck.JOB_OUTFITS:
+        draw_job_garment(d, spec, cx, top, bot, hw, lw=lw)
         return img
 
     jacket_like = o in ("school_uniform", "suit", "cardigan", "hiking", "padding")
@@ -1459,7 +1588,7 @@ def _soft_head(spec: CharSpec, g: Geometry, mouth_open: bool,
         d.chord([cx - rx * 1.04, cy - ry * 1.1, cx + rx * 1.04, cy - ry * 0.02], 180, 360, fill=GRAY_DARK)
         d.rounded_rectangle([cx - rx * 1.45, cy - ry * 0.6, cx - rx * 0.5, cy - ry * 0.4],
                             radius=10, fill=GRAY_DARK)
-    elif spec.accessory != "none":
+    elif spec.accessory != "none" or (ck.JOB_OUTFITS.get(spec.outfit) or {}).get("hat"):
         ck._draw_extras(d, spec, fg, {})
     img.alpha_composite(layer, (PAD_X, PAD_Y))
     return img
@@ -1476,15 +1605,21 @@ def _soft_torso(spec: CharSpec, g: Geometry) -> Image.Image:
     if spec.style == "gray":
         # thân xám mảnh hơi thon eo; nữ mặc váy xoè
         _taper(d, (cx, top + hw), (cx, hip), g.body_w, g.body_w * 0.9, GRAY_SKIN)
+        if spec.outfit in ck.JOB_OUTFITS:            # đồng phục nghề mặc ngoài thân xám
+            draw_job_garment(d, spec, cx, top + 6, hip + 14, hw * 1.12, lw=6)
+            return img
         if spec.outfit == "dress" or spec.hair_style in ("long", "ponytail", "twintails", "bun", "bob", "wavy"):
             d.polygon([_p((cx - hw * 0.9, hip - 70)), _p((cx + hw * 0.9, hip - 70)),
                        _p((cx + hw * 1.9, hip + 46)), _p((cx - hw * 1.9, hip + 46))], fill=GRAY_SKIN)
         return img
     # vẽ tay Hàn: bụng tròn trong áo cổ chữ V
-    shirt = ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
+    jc = job_colors(spec)
+    shirt = jc[0] if jc else ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
     skin = _soft_skin(spec)
     pants = ck.PANTS_COLORS.get(spec.pants, ck.PANTS_COLORS["navy"]) + (255,)
     belly = hw * 1.18
+    if jc:
+        draw_job_back(d, spec, cx, top, hip - belly * 0.2, hw * 1.1, lw=6)
     d.ellipse([*_p((cx - belly, hip - belly * 1.5)), *_p((cx + belly, hip + belly * 0.35))], fill=shirt)
     d.rounded_rectangle([*_p((cx - hw, top)), *_p((cx + hw, hip - belly * 0.4))], radius=int(hw * 0.7), fill=shirt)
     # quần đùi
@@ -1497,6 +1632,8 @@ def _soft_torso(spec: CharSpec, g: Geometry) -> Image.Image:
     # nếp bụng
     d.arc([*_p((cx - belly * 0.45, hip - belly * 0.55)), *_p((cx + belly * 0.45, hip - belly * 0.05))],
           30, 150, fill=INK, width=5)
+    if jc:
+        draw_job_garment(d, spec, cx, top, hip - belly * 0.2, hw * 1.1, base_drawn=True, lw=6)
     return img
 
 
@@ -1529,7 +1666,11 @@ def _soft_parts(spec: CharSpec, g: Geometry) -> dict:
         x, y0 = sx(gg, side), gg.shoulder_y
         y1 = y0 + gg.upper_len
         _taper(d, (x, y0), (x, y1), aw, aw * 0.88, skin)
-        if not gray:                                  # tay áo ngắn
+        jc = job_colors(sp)
+        if jc:                                        # đồng phục: tay áo màu đồng phục
+            _taper(d, (x, y0), (x, y0 + gg.upper_len * (0.6 if gray else 0.5)),
+                   aw * 1.3, aw * 1.15, jc[1])
+        elif not gray:                                # tay áo ngắn
             _taper(d, (x, y0), (x, y0 + gg.upper_len * 0.45), aw * 1.25, aw * 1.15, shirt)
         return img
 

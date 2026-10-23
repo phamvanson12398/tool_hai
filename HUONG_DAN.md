@@ -353,6 +353,16 @@ học sinh (교복), vest công sở (직장인), tạp dề ajumma (앞치마),
 ajeossi (등산복), áo phao dài (롱패딩), cardigan, váy, hanbok. Thêm phụ kiện
 **lô cuốn tóc** và **mũ lưỡi trai nửa đầu** (선캡), kiểu tóc **bát úp**.
 
+**Đồng phục nghề** (mọi kiểu nhân vật): shipper (áo xanh sọc phản quang, mũ bảo
+hiểm, thùng hàng sau lưng), bác sĩ (áo blouse trắng, ống nghe), y tá (áo trắng chữ
+thập đỏ, mũ y tá), công an (đồng phục, phù hiệu, mũ kê-pi), đầu bếp (áo trắng hai
+hàng cúc, mũ đầu bếp), công nhân (áo phản quang cam, mũ bảo hộ vàng), bảo vệ (áo
+xanh nhạt, phù hiệu, mũ). Nhân vật có nghề rõ trong kịch bản thì AI bắt buộc cho
+mặc đồng phục; nếu AI lỗi, tool tự đoán nghề theo tên (vd "Anh Shipper", "Bác sĩ
+Hùng") hoặc theo cách người kia gọi khi chỉ có hai người ("anh shipper ơi",
+"chú bảo vệ"). Các nhân vật luôn khác màu áo và kiểu tóc. Tập đã làm xong: bấm
+**Vẽ lại** ở nhân vật đó để mặc đồng phục.
+
 Với tập tiếng Hàn, Claude phối đồ theo các vai quen thuộc: học sinh, nhân viên
 văn phòng / sếp, ajumma, ajeossi, bà cụ, giới trẻ MZ, người yêu.
 
