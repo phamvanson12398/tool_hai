@@ -20,6 +20,44 @@ log = logging.getLogger(__name__)
 # UUID placeholder cố định CapCut dùng cho local files
 CAPCUT_PLACEHOLDER_UUID = "0E685133-18CE-45ED-8CB8-2904A212EC80"
 
+# Khung mặc định khi dự án mẫu thiếu loại vật liệu / đoạn tương ứng
+DEFAULT_SEGMENT = {
+    "id": "", "material_id": "", "source_timerange": None, "target_timerange": None,
+    "speed": 1.0, "volume": 1.0, "last_nonzero_volume": 1.0, "visible": True,
+    "reverse": False, "cartoon": False, "is_placeholder": False, "is_tone_modify": False,
+    "intensifies_audio": False, "enable_adjust": True, "enable_color_curves": True,
+    "enable_color_wheels": True, "enable_lut": True, "render_index": 0,
+    "track_render_index": 0, "track_attribute": 0, "extra_material_refs": [],
+    "keyframe_refs": [], "common_keyframes": [],
+    "uniform_scale": {"on": True, "value": 1.0},
+    "hdr_settings": {"intensity": 1.0, "mode": 1, "nits": 1000},
+    "clip": {"alpha": 1.0, "flip": {"horizontal": False, "vertical": False},
+             "rotation": 0.0, "scale": {"x": 1.0, "y": 1.0},
+             "transform": {"x": 0.0, "y": 0.0}},
+}
+DEFAULT_MATERIALS = {
+    "videos": {
+        "id": "", "type": "video", "path": "", "material_name": "", "duration": 0,
+        "width": 1080, "height": 1920, "has_audio": False, "category_name": "local",
+        "crop": {"lower_left_x": 0.0, "lower_left_y": 1.0, "lower_right_x": 1.0,
+                 "lower_right_y": 1.0, "upper_left_x": 0.0, "upper_left_y": 0.0,
+                 "upper_right_x": 1.0, "upper_right_y": 0.0},
+        "crop_ratio": "free", "crop_scale": 1.0, "extra_type_option": 0,
+        "local_material_id": "", "source": 0, "source_platform": 0,
+    },
+    "audios": {
+        "id": "", "type": "extract_music", "path": "", "name": "", "duration": 0,
+        "category_name": "local", "app_id": 0, "local_material_id": "",
+        "check_flag": 1, "source_platform": 0, "wave_points": [],
+    },
+    "texts": {
+        "id": "", "type": "text", "content": "", "font_path": "", "font_size": 11.0,
+        "text_color": "#FFFFFF", "alignment": 1, "line_spacing": 0.02, "typesetting": 0,
+        "check_flag": 7, "text_alpha": 1.0, "global_alpha": 1.0,
+        "fixed_width": -1.0, "fixed_height": -1.0,
+    },
+}
+
 
 def _uuid() -> str:
     """UUID viết hoa theo chuẩn CapCut."""
@@ -603,7 +641,7 @@ class CapCutExporter:
                 dur = _microseconds(ln["duration"])
 
                 mat_id = _uuid()
-                mat = self._clone_material(template["materials"]["audios"][0])
+                mat = self._clone_material(self._tmpl_material(template, "audios"))
                 mat["id"] = mat_id
                 mat["type"] = "extract_music"
                 mat["path"] = (
@@ -714,7 +752,7 @@ class CapCutExporter:
                 dur = _microseconds(ev["duration"])
 
                 mat_id = _uuid()
-                mat = self._clone_material(template["materials"]["audios"][0])
+                mat = self._clone_material(self._tmpl_material(template, "audios"))
                 mat["id"] = mat_id
                 mat["type"] = "extract_music"
                 mat["path"] = (
@@ -781,10 +819,8 @@ class CapCutExporter:
         if not entries:
             return [], [], {"animations": []}
 
-        text_template = template["materials"]["texts"][0]
-        text_seg_template = next(
-            s for t in template["tracks"] if t["type"] == "text" for s in t["segments"]
-        )
+        text_template = self._tmpl_material(template, "texts")
+        text_seg_template = self._tmpl_segment(template, "text")
         font_path = text_template.get("font_path", "")
 
         segments = []
@@ -889,7 +925,8 @@ class CapCutExporter:
 
         # === 1. Video track ===
         video_id = _uuid()
-        video_mat = self._clone_material(template["materials"]["videos"][0])
+        video_mat = self._clone_material(self._tmpl_material(template, "videos"))
+        video_mat["type"] = "video"
         video_mat["id"] = video_id
         video_mat["path"] = str(video_path).replace("\\", "/")
         video_mat["material_name"] = video_path.name
@@ -897,7 +934,7 @@ class CapCutExporter:
         video_mat["has_audio"] = False
 
         video_extra_refs = self._build_extra_refs_for_video(template)
-        video_seg = self._clone_segment(template["tracks"][0]["segments"][0])
+        video_seg = self._clone_segment(self._tmpl_segment(template, "video"))
         video_seg["id"] = _uuid()
         video_seg["material_id"] = video_id
         video_seg["source_timerange"] = {"start": 0, "duration": total_duration}
@@ -915,9 +952,7 @@ class CapCutExporter:
         }
 
         # === 2. Audio tracks (giọng theo nhân vật) ===
-        audio_template_seg = next(
-            s for t in template["tracks"] if t["type"] == "audio" for s in t["segments"]
-        )
+        audio_template_seg = self._tmpl_segment(template, "audio")
         audio_tracks, audio_mats, audio_extras = self._build_audio_tracks(
             timeline, audio_files, audio_template_seg, template
         )
@@ -963,8 +998,8 @@ class CapCutExporter:
         # Tạo draft_content
         content = {
             "id": draft_id,
-            "version": template["version"],
-            "new_version": template["new_version"],
+            "version": template.get("version", 360000),
+            "new_version": template.get("new_version", "110.0.0"),
             "name": draft_name,
             "duration": total_duration,
             "create_time": _now_microseconds(),
@@ -972,7 +1007,7 @@ class CapCutExporter:
             "fps": 30.0,
             "is_drop_frame_timecode": False,
             "color_space": 0,
-            "config": template["config"],
+            "config": template.get("config", {}),
             "canvas_config": {"ratio": "original", "width": 1080, "height": 1920, "background": None},
             "tracks": all_tracks,
             "group_container": template.get("group_container", {}),
@@ -1035,8 +1070,8 @@ class CapCutExporter:
             },
             "keyframes": template.get("keyframes", {}),
             "keyframe_graph_list": [],
-            "platform": template["platform"],
-            "last_modified_platform": template["last_modified_platform"],
+            "platform": template.get("platform", {}),
+            "last_modified_platform": template.get("last_modified_platform", {}),
             "mutable_config": template.get("mutable_config", {}),
             "cover": "",
             "retouch_cover": "",
@@ -1195,6 +1230,31 @@ class CapCutExporter:
             json.dumps({"manual_cancle_precombine_segs": None, "need_auto_precombine_segs": None}),
             encoding="utf-8",
         )
+
+    # ---- lấy mẫu từ dự án mẫu, thiếu thì dùng khung mặc định ----
+    # Dự án mẫu của mỗi người khác nhau (có khi dùng ảnh thay video, thiếu
+    # chữ/âm thanh, track chữ đứng đầu...). Trước đây code lấy thẳng [0] nên
+    # thiếu một thứ là lỗi "list index out of range".
+
+    def _tmpl_material(self, template: dict, kind: str) -> dict:
+        mats = (template.get("materials") or {}).get(kind) or []
+        if kind == "videos":
+            vids = [m for m in mats if m.get("type") == "video"]
+            mats = vids or mats
+        if mats:
+            return mats[0]
+        return dict(DEFAULT_MATERIALS[kind])
+
+    def _tmpl_segment(self, template: dict, track_type: str) -> dict:
+        for t in template.get("tracks") or []:
+            if t.get("type") == track_type and t.get("segments"):
+                return t["segments"][0]
+        seg = dict(DEFAULT_SEGMENT)
+        if track_type == "text":
+            seg["clip"] = {**DEFAULT_SEGMENT["clip"], "transform": {"x": 0.0, "y": -0.72}}
+        if track_type == "audio":
+            seg.pop("clip", None)
+        return seg
 
     def _clone_material(self, src: dict) -> dict:
         """Deep copy material, đặt ID mới."""

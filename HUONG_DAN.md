@@ -269,8 +269,8 @@ không thay gì cả.
    `%LOCALAPPDATA%\CapCut\User Data\Projects\com.lveditor.draft`.
    Chỉ chỉnh khi CapCut của chị lưu ở chỗ khác.
 2. **Chọn dự án CapCut mẫu** — đây là bước quan trọng:
-   - Mở CapCut, tự tạo một dự án trống có sẵn **1 video, 1 audio, 1 text**,
-     lưu lại.
+   - Mở CapCut, tự tạo một dự án (nên có **1 video, 1 audio, 1 text** để tool
+     học đúng định dạng; thiếu phần nào tool tự dùng khung mặc định), lưu lại.
    - Quay lại tool, chọn dự án đó trong ô này, bấm **Lưu cài đặt**.
    - Tool đọc dự án mẫu để khớp đúng **phiên bản CapCut** của máy chị.
 

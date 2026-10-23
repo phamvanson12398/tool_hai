@@ -1241,7 +1241,8 @@ def api_project_capcut_export(pid):
         return _err(str(e))
     except Exception as e:  # noqa: BLE001
         msg = f"Xuất dự án CapCut lỗi: {e}"
-        _log_capcut_error(pid, msg)
+        # ghi kèm vị trí lỗi vào log để dễ sửa
+        _log_capcut_error(pid, msg + "\n" + traceback.format_exc(limit=6))
         traceback.print_exc()
         return _err(msg, 500)
 
