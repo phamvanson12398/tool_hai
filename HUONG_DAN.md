@@ -638,6 +638,20 @@ hình có hai cách (ô **Cách làm hình**):
   ngang.
 - Muốn một cảnh đặc biệt đẹp hơn: tải tranh lên đúng số cảnh (scene_012.png),
   tranh đó thay cảnh tool vẽ.
+- **Vẽ thêm bằng AI** (mục 2, khung dưới cùng): truyện cần thứ tool chưa có — mũ
+  miện vua, mũ cánh chuồn, áo long bào, áo giáp, con trâu, con hổ, cung điện, ngôi
+  chùa, khu rừng... — chọn loại (đồ đội đầu / hoa văn trên áo / con vật / bối
+  cảnh), gõ tên (thêm mô tả nếu muốn) rồi bấm **AI vẽ thêm**. AI trên máy chị
+  (Claude, hoặc Antigravity nếu chọn trong Cài đặt → Trợ lý AI → "Vẽ thêm nhân
+  vật, con vật, bối cảnh") vẽ bằng các khối hình, tool vẽ lại theo đúng nét vẽ tay
+  và lưu vào thư viện (`data/library/doodle_parts.json`), truyện sau dùng lại.
+  Thứ vẽ thêm có dấu ★ trong các ô chọn: đồ đội đầu ở ô **Mũ nón** hoặc **Thêm**,
+  hoa văn áo ở ô **Thêm**, con vật ở ô **Loài**, bối cảnh ở ô mẫu bối cảnh của địa
+  điểm. Chưa ưng thì bấm **Vẽ lại** (có thể thêm mô tả), không dùng thì **Xoá**.
+- Khi bấm **AI viết lời kể**, AI tự khai báo những thứ truyện cần mà chưa có (tối
+  đa 8) và tool vẽ thêm luôn trước khi viết lời kể — không cần nhờ ai.
+- Con vật vẽ thêm vẫn có biểu cảm (chớp mắt, vui, buồn, khóc, giật mình, há miệng)
+  và cử động như chó mèo có sẵn.
 - Truyện làm từ trước khi có tính năng này: tool tự đoán bộ ghép nhân vật và bối
   cảnh từ mô tả tiếng Anh; bấm **AI viết lời kể** lại để AI chọn hành động từng cảnh.
 

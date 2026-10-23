@@ -400,6 +400,27 @@
           <p class="hint st-tool-only">Tool vẽ nhân vật theo các lựa chọn (tóc, áo, râu, kính...) và vẽ bối cảnh theo mẫu. Đổi lựa chọn là ảnh xem trước vẽ lại ngay; nhân vật giống nhau ở mọi cảnh.</p>
           <p class="hint st-img-only">Mô tả ngoại hình cố định (tiếng Anh) được ghép vào mọi câu lệnh vẽ để nhân vật giống nhau ở mọi tranh. Sửa được.</p>
           <div id="st-bible" class="card-list"></div>
+          <div class="st-parts st-tool-only">
+            <h3 class="st-sub">Vẽ thêm bằng AI (thứ tool chưa có)</h3>
+            <p class="hint">Truyện cần mũ miện vua, áo long bào, con trâu, cung điện, khu rừng...: AI trên máy chị
+              vẽ thêm theo đúng nét vẽ tay rồi lưu vào thư viện, truyện sau dùng lại được. Khi bấm “AI viết lời kể”,
+              AI cũng tự vẽ thêm những thứ truyện cần. Thứ vẽ thêm có dấu ★ trong các ô chọn.</p>
+            <div class="field-row">
+              <div class="field"><label for="st-part-kind">Loại</label>
+                <select id="st-part-kind">
+                  <option value="head">Đồ đội / đeo trên đầu (mũ, khăn, mặt nạ...)</option>
+                  <option value="body">Hoa văn, đồ khoác trên áo (long bào, giáp...)</option>
+                  <option value="animal">Con vật</option>
+                  <option value="scene">Bối cảnh</option>
+                </select></div>
+              <div class="field"><label for="st-part-name">Tên</label>
+                <input type="text" id="st-part-name" placeholder="Vd: con trâu"></div>
+            </div>
+            <div class="field"><label for="st-part-desc">Mô tả thêm (không bắt buộc)</label>
+              <input type="text" id="st-part-desc" placeholder="Vd: trâu đen, sừng cong to, đang đứng"></div>
+            <div class="row-actions"><button class="btn" id="st-part-make" type="button">AI vẽ thêm</button></div>
+            <div id="st-parts-list" class="st-parts-list"></div>
+          </div>
         </section>
 
         <section class="card">

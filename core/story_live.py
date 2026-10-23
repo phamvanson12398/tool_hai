@@ -69,7 +69,7 @@ _PLACE_WORDS = [
 
 def place_kind(place: dict | None) -> str:
     p = place or {}
-    if p.get("kind") in scene_art.KINDS:
+    if scene_art.valid_kind(p.get("kind")):
         return p["kind"]
     t = f"{p.get('look', '')} {p.get('name', '')}".lower()
     for pat, kind in _PLACE_WORDS:
@@ -524,4 +524,7 @@ def kinds_text() -> str:
     rural = ", ".join(f"{k} ({v['label']})" for k, v in scene_rural.KINDS.items())
     other = ", ".join(f"{k} ({v['label']})" for k, v in scene_art.KINDS.items()
                       if k not in scene_rural.KINDS)
-    return f"{rural}; hiện đại: {other}"
+    from . import doodle_parts
+    extra = ", ".join(f"{k} ({v['name']})" for k, v in doodle_parts.load().items()
+                      if v.get("kind") == "scene")
+    return f"{rural}; hiện đại: {other}" + (f"; đã vẽ thêm: {extra}" if extra else "")

@@ -148,6 +148,8 @@ def write_story(st: dict, progress=None) -> dict:
         raise RuntimeError("AI không lập được dàn chương.")
     chapters = plan["chapters"][:16]
     st["era"] = str(plan.get("era") or "")
+    if tool:
+        _make_parts(plan.get("new_parts"), say)
     st["characters"] = [_clean_char(c) for c in plan.get("characters") or [] if isinstance(c, dict)]
     st["places"] = [_clean_place(p) for p in plan.get("places") or [] if isinstance(p, dict)]
     parts = _split_source(src, len(chapters)) if src else [""] * len(chapters)
@@ -202,7 +204,14 @@ def _tool_blocks() -> tuple[str, str]:
         "   Ví dụ: {\"id\":\"lao_hac\",\"name\":\"Lão Hạc\",\"look\":\"...\",\"kit\":{\"species\":\"human\","
         "\"age\":\"old\",\"sex\":\"male\",\"hair\":\"messy\",\"hair_color\":\"gray\",\"facial\":\"goatee\","
         "\"top\":\"ao_nau\",\"top_color\":\"brown\",\"bottom_color\":\"black\",\"patched\":true}}; "
-        "{\"id\":\"nha\",\"name\":\"Nhà Lão Hạc\",\"look\":\"...\",\"kind\":\"nha_tranh\",\"time\":\"ngay\"}\n")
+        "{\"id\":\"nha\",\"name\":\"Nhà Lão Hạc\",\"look\":\"...\",\"kind\":\"nha_tranh\",\"time\":\"ngay\"}\n"
+        "5. Truyện cần thứ CHƯA CÓ trong danh mục (vd mũ miện vua, mũ cánh chuồn, áo long bào, "
+        "con trâu, con hổ, cung điện, ngôi chùa, khu rừng...) thì khai báo thêm "
+        "\"new_parts\": [{\"id\":\"vuong_mien\",\"kind\":\"head\",\"name\":\"Mũ miện vua\","
+        "\"desc\":\"mô tả hình dáng, màu sắc\"}] rồi dùng đúng id đó: kind head (đội/đeo trên "
+        "đầu) -> kit.hat; body (hoa văn, đồ khoác trên áo) -> kit.extra; animal (con vật) -> "
+        "kit.species; scene (bối cảnh) -> kind của địa điểm. Tool sẽ tự vẽ các bộ phận này. "
+        "Chỉ khai báo khi thật cần, tối đa 8; thứ gần giống có sẵn thì dùng cái có sẵn.\n")
     acts = ", ".join(f"{k} ({v[0]})" for k, v in story_live.ACTS.items())
     scene = (
         "### Tool tự vẽ và cho nhân vật cử động — mỗi cảnh thêm:\n"
@@ -220,6 +229,26 @@ def _tool_blocks() -> tuple[str, str]:
     return plan, scene
 
 
+def _make_parts(new_parts, say) -> list[str]:
+    """Vẽ các bộ phận AI khai báo là còn thiếu (chưa có trong thư viện)."""
+    from . import doodle_parts
+    made = []
+    todo = [p for p in (new_parts or []) if isinstance(p, dict)
+            and p.get("kind") in doodle_parts.KINDS and (p.get("name") or p.get("id"))][:8]
+    for k, p in enumerate(todo):
+        pid = doodle_parts.slug(p.get("id") or p.get("name"))
+        if doodle_parts.get(pid):
+            continue
+        say(0.04 + 0.03 * k / max(1, len(todo)), f"AI vẽ thêm: {p.get('name') or pid}")
+        try:
+            doodle_parts.design(p["kind"], str(p.get("name") or pid), str(p.get("desc") or ""),
+                                pid=pid)
+            made.append(pid)
+        except Exception as e:  # noqa: BLE001
+            logger.warning("Không vẽ được bộ phận %s: %s", pid, e)
+    return made
+
+
 def _clean_char(c: dict) -> dict:
     from . import doodle
     out = {"id": _slug(c.get("id") or c.get("name")), "name": str(c.get("name") or ""),
@@ -233,7 +262,7 @@ def _clean_place(p: dict) -> dict:
     from . import scene_art, story_live
     out = {"id": _slug(p.get("id") or p.get("name")), "name": str(p.get("name") or ""),
            "look": str(p.get("look") or "")}
-    out["kind"] = p.get("kind") if p.get("kind") in scene_art.KINDS else story_live.place_kind(out)
+    out["kind"] = p.get("kind") if scene_art.valid_kind(p.get("kind")) else story_live.place_kind(out)
     out["time"] = p.get("time") if p.get("time") in scene_art.TIMES else "ngay"
     return out
 

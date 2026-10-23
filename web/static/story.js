@@ -64,7 +64,7 @@
 
   var KIT_LABEL = { species: "Loài", age: "Tuổi", sex: "Giới", skin: "Da", hair: "Tóc",
     hair_color: "Màu tóc", hat: "Mũ nón", glasses: "Kính", facial: "Râu", top: "Áo",
-    top_color: "Màu áo", bottom_color: "Màu quần/váy", fur: "Màu lông" };
+    top_color: "Màu áo", bottom_color: "Màu quần/váy", fur: "Màu lông", extra: "Thêm" };
   var OPT_VI = {
     human: "người", dog: "chó", cat: "mèo", child: "trẻ con", young: "thanh niên", adult: "trung niên",
     old: "già", male: "nam", female: "nữ", light: "trắng", fair: "sáng", tan: "rám nắng", dark: "ngăm",
@@ -80,7 +80,14 @@
     olive: "ô liu", yellow: "vàng", purple: "tím", orange: "cam", salt: "muối tiêu", spotted: "đốm"
   };
   var HUMAN_KEYS = ["age", "sex", "skin", "hair", "hair_color", "hat", "glasses", "facial", "top",
-                    "top_color", "bottom_color"];
+                    "top_color", "bottom_color", "extra"];
+  var PART_KIND_VI = { head: "Đồ đội / đeo trên đầu", body: "Hoa văn, đồ khoác trên áo",
+                       animal: "Con vật", scene: "Bối cảnh" };
+
+  function optName(o) {
+    var pn = (st.data && st.data.part_names) || {};
+    return pn[o] ? "★ " + pn[o] : (OPT_VI[o] || o);
+  }
 
   function isTool() { return $("st-visual").value !== "images"; }
 
@@ -90,7 +97,7 @@
     var sel = document.createElement("select");
     sel.setAttribute("data-k", key);
     sel.title = KIT_LABEL[key] || key;
-    opts.forEach(function (o) { sel.appendChild(new Option((KIT_LABEL[key] || key) + ": " + (OPT_VI[o] || o), o)); });
+    opts.forEach(function (o) { sel.appendChild(new Option((KIT_LABEL[key] || key) + ": " + optName(o), o)); });
     sel.value = val;
     return sel;
   }
@@ -217,6 +224,7 @@
     $("st-voice").value = nar.voice || "";
     $("st-instruct").value = nar.instruct || "";
     renderBible(s);
+    renderParts(d);
     renderScenes(d);
     var n = d.scene_count || 0;
     st.stamp = Date.now();
@@ -270,7 +278,8 @@
           var kit = r[1].kit || {};
           row._kit = kit;
           kits.appendChild(kitSelect("species", opt.species || ["human"], kit.species || "human"));
-          var keys = (kit.species && kit.species !== "human") ? ["fur"] : HUMAN_KEYS;
+          var sp = kit.species || "human";
+          var keys = (sp === "dog" || sp === "cat") ? ["fur"] : (sp === "human" ? HUMAN_KEYS : []);
           keys.forEach(function (k) { kits.appendChild(kitSelect(k, opt[k] || [], kit[k] || (opt[k] || [""])[0])); });
           if (!kit.species || kit.species === "human") {
             var lab = el("label", "st-patch");
@@ -305,6 +314,68 @@
       row.appendChild(right);
       box.appendChild(row);
     });
+  }
+
+  function renderParts(d) {
+    var box = $("st-parts-list");
+    if (!box) return;
+    box.innerHTML = "";
+    var parts = d.parts || [];
+    if (!parts.length) {
+      box.appendChild(el("p", "hint", "Chưa có bộ phận nào vẽ thêm."));
+      return;
+    }
+    parts.forEach(function (p) {
+      var card = el("div", "st-part");
+      var img = document.createElement("img");
+      img.loading = "lazy";
+      img.src = "/api/doodle/part/" + encodeURIComponent(p.id) + ".png?v=" + stamp();
+      card.appendChild(img);
+      card.appendChild(el("div", "st-part-name", p.name));
+      card.appendChild(el("div", "muted", PART_KIND_VI[p.kind] || p.kind));
+      var row = el("div", "row-actions");
+      var re = el("button", "btn btn-sm", "Vẽ lại");
+      re.type = "button";
+      re.addEventListener("click", function () {
+        var desc = window.prompt("Mô tả thêm cho AI (để trống: giữ mô tả cũ):", p.desc || "");
+        if (desc === null) return;
+        re.disabled = true;
+        re.textContent = "AI đang vẽ…";
+        api("/api/doodle/parts/" + encodeURIComponent(p.id) + "/redraw", { body: { desc: desc } })
+          .then(function () { toast("ok", "Đã vẽ lại", p.name); return open(st.id); })
+          .catch(fail("Vẽ lại thất bại"))
+          .then(function () { re.disabled = false; re.textContent = "Vẽ lại"; });
+      });
+      var del = el("button", "btn btn-sm", "Xoá");
+      del.type = "button";
+      del.addEventListener("click", function () {
+        if (!confirm("Xoá “" + p.name + "” khỏi thư viện? Nhân vật đang dùng sẽ quay về kiểu có sẵn.")) return;
+        api("/api/doodle/parts/" + encodeURIComponent(p.id), { method: "DELETE" })
+          .then(function () { return open(st.id); }).catch(fail("Xoá thất bại"));
+      });
+      row.appendChild(re);
+      row.appendChild(del);
+      card.appendChild(row);
+      box.appendChild(card);
+    });
+  }
+
+  function newPart() {
+    var name = $("st-part-name").value.trim();
+    if (!name) { toast("warn", "Nhập tên thứ cần vẽ", "Vd: mũ miện vua, con trâu, cung điện"); return; }
+    var btn = $("st-part-make");
+    btn.disabled = true;
+    btn.textContent = "AI đang vẽ… (30–90 giây)";
+    api("/api/doodle/parts", { body: { kind: $("st-part-kind").value, name: name,
+                                       desc: $("st-part-desc").value.trim() } })
+      .then(function (r) {
+        toast("ok", "Đã vẽ thêm “" + r.part.name + "”", "Chọn nó trong các ô ngoại hình / bối cảnh ở trên.");
+        $("st-part-name").value = "";
+        $("st-part-desc").value = "";
+        return st.id ? open(st.id) : null;
+      })
+      .catch(fail("AI chưa vẽ được"))
+      .then(function () { btn.disabled = false; btn.textContent = "AI vẽ thêm"; });
   }
 
   function renderScenes(d) {
@@ -462,6 +533,7 @@
         .catch(fail("Không tạo được truyện"));
     });
     $("st-pick").addEventListener("change", function () { open(this.value); });
+    $("st-part-make").addEventListener("click", newPart);
     $("st-visual").addEventListener("change", function () {
       applyVisual();
       if (st.id) save(true); else if (st.data) render(st.data);

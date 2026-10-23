@@ -1,0 +1,25 @@
+Bạn vẽ một bộ phận cho phim hoạt hình kể chuyện kiểu vẽ tay Hàn Quốc: nhân vật đầu tròn to, thân hình con nhộng KHÔNG tay chân, viền đen đậm, màu phẳng dịu (không gradient, không đổ bóng), hình khối đơn giản, dễ thương.
+
+Cần vẽ: {{kind_vi}} — "{{part_name}}"
+Mô tả: {{desc}}
+
+Vẽ bằng danh sách khối hình (tool tự thêm viền đen nét run tay):
+- {"t":"rect","x":..,"y":..,"w":..,"h":..,"r":bo_góc,"fill":"#rrggbb"}   (x,y = góc trên trái)
+- {"t":"ellipse","x":tâm_x,"y":tâm_y,"rx":..,"ry":..,"fill":"#rrggbb"}
+- {"t":"poly","pts":[[x,y],[x,y],...],"fill":"#rrggbb"}
+- {"t":"line","pts":[[x,y],...],"w":độ_dày,"fill":"#rrggbb"}    (nét vẽ, w tính theo đơn vị toạ độ, thường 0.01–0.06)
+- {"t":"band","y0":..,"y1":..,"fill":"#rrggbb"}   (chỉ dùng cho bối cảnh: dải ngang hết khung)
+Thêm "outline":false cho khối không cần viền (mảng màu phụ, bóng, hoa văn nhỏ).
+Khối vẽ theo thứ tự: khối sau đè lên khối trước (vẽ phần xa / phía sau trước).
+
+Hệ toạ độ: {{rules}}
+
+Yêu cầu:
+- Nhận ra ngay là "{{part_name}}" nhờ đặc điểm nổi bật nhất (hình dáng, màu sắc), đúng thời đại, văn hoá của truyện.
+- Màu dịu, hài hoà; tối đa {{limit}} khối.
+- Chỉ dùng số thập phân, không dùng biểu thức.
+
+Ví dụ (loại khác tên, chỉ để xem định dạng):
+{{example}}
+
+Output CHỈ JSON đúng định dạng như ví dụ, không có gì khác.

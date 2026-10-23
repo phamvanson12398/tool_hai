@@ -1760,12 +1760,18 @@ def _story_view(pid: str, data: dict) -> dict:
         if not c.get("kit"):
             c["kit"] = doodle.kit_from_look(c.get("name", ""), c.get("look", ""))
     for p in st.get("places") or []:
-        if p.get("kind") not in scene_art.KINDS:
+        if not scene_art.valid_kind(p.get("kind")):
             p["kind"] = story_live.place_kind(p)
         p.setdefault("time", "ngay")
     out["visual"] = st.get("visual", "tool")
     out["kit_options"] = doodle.options()
-    out["kinds"] = [[k, v["label"]] for k, v in scene_art.KINDS.items()]
+    from core import doodle_parts
+    lib = doodle_parts.load()
+    out["kinds"] = [[k, v["label"]] for k, v in scene_art.KINDS.items()] + \
+        [[k, "★ " + v["name"]] for k, v in lib.items() if v.get("kind") == "scene"]
+    out["part_names"] = {k: v["name"] for k, v in lib.items()}
+    out["parts"] = [{"id": k, "kind": v["kind"], "name": v["name"], "desc": v.get("desc", "")}
+                    for k, v in lib.items()]
     out["acts"] = [[k, v[0]] for k, v in story_live.ACTS.items()]
     out["styles"] = [[k, v[0]] for k, v in story_mod.STYLES.items()]   # giữ thứ tự
     out["style_ref"] = (story_mod.image_dir(pdir) / story_mod.STYLE_REF).exists()
@@ -2019,6 +2025,65 @@ def api_story_preview_png(pid, sid):
     k = 480 / max(W, H)
     img = story_live.preview(st, sc, (int(W * k), int(H * k)), 3.2)
     return _png(img)
+
+
+# ----------------------------------------------- bộ phận AI vẽ thêm (Truyện kể)
+
+def _part_view(p: dict) -> dict:
+    return {"id": p["id"], "kind": p["kind"], "name": p.get("name", ""), "desc": p.get("desc", "")}
+
+
+@app.get("/api/doodle/parts")
+def api_doodle_parts():
+    from core import doodle_parts
+    return jsonify({"parts": [_part_view(p) for p in doodle_parts.load().values()],
+                    "kinds": doodle_parts.KINDS})
+
+
+@app.post("/api/doodle/parts")
+def api_doodle_part_new():
+    """AI vẽ một bộ phận mới (mũ, hoa văn áo, con vật, bối cảnh) và lưu vào thư viện."""
+    from core import doodle_parts
+    body = request.get_json(silent=True) or {}
+    kind, name = body.get("kind"), str(body.get("name") or "").strip()
+    if kind not in doodle_parts.KINDS or not name:
+        return _err("Chọn loại và nhập tên thứ cần vẽ.")
+    try:
+        part = doodle_parts.design(kind, name, str(body.get("desc") or "").strip(),
+                                   pid=body.get("id") or None)
+    except Exception as e:  # noqa: BLE001
+        return _err(f"AI chưa vẽ được: {_short_err(e)}")
+    return jsonify({"part": _part_view(part)})
+
+
+@app.post("/api/doodle/parts/<part_id>/redraw")
+def api_doodle_part_redraw(part_id):
+    from core import doodle_parts
+    old = doodle_parts.get(part_id)
+    if not old:
+        return _err("Không có bộ phận này.", 404)
+    body = request.get_json(silent=True) or {}
+    desc = str(body.get("desc") or old.get("desc") or "")
+    try:
+        part = doodle_parts.design(old["kind"], old.get("name") or part_id, desc, pid=part_id)
+    except Exception as e:  # noqa: BLE001
+        return _err(f"AI chưa vẽ được: {_short_err(e)}")
+    return jsonify({"part": _part_view(part)})
+
+
+@app.delete("/api/doodle/parts/<part_id>")
+def api_doodle_part_delete(part_id):
+    from core import doodle_parts
+    return jsonify({"ok": doodle_parts.delete_part(part_id)})
+
+
+@app.get("/api/doodle/part/<part_id>.png")
+def api_doodle_part_png(part_id):
+    from core import doodle_parts
+    p = doodle_parts.get(part_id)
+    if not p:
+        return _err("Không có bộ phận này.", 404)
+    return _png(doodle_parts.preview(p))
 
 
 @app.get("/api/story/<pid>/image/<sid>")

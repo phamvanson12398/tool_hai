@@ -551,6 +551,13 @@ def render_scene(kind: str = "phong_khach", time: str = "ngay",
     """Vẽ một bối cảnh theo khung size (mặc định 9:16). Màu không truyền
     thì dùng màu mặc định của mẫu. layout_size: khung video thật khi size rộng
     hơn khung (sân khấu rộng, máy quay lia theo người nói)."""
+    from . import doodle_parts
+    custom = doodle_parts.get(kind) if kind not in KINDS else None
+    if custom and custom.get("kind") == "scene":
+        # bối cảnh AI vẽ thêm (Truyện kể)
+        w, h = size or (config.WIDTH, config.HEIGHT)
+        img = doodle_parts.render_scene(custom, (w, h), night=time == "dem")
+        return stylize(img, art, layout_size)
     spec = KINDS.get(kind) or KINDS["phong_khach"]
     kind = kind if kind in KINDS else "phong_khach"
     night = time == "dem"
@@ -720,3 +727,12 @@ def _scratches(p: _Pen, wall, rng) -> None:
 from . import scene_rural as _rural  # noqa: E402  (vẽ bằng _Pen ở trên)
 
 KINDS.update(_rural.KINDS)
+
+
+def valid_kind(kind) -> bool:
+    """Mẫu có sẵn hoặc bối cảnh AI vẽ thêm."""
+    if kind in KINDS:
+        return True
+    from . import doodle_parts
+    p = doodle_parts.get(kind)
+    return bool(p and p.get("kind") == "scene")

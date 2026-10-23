@@ -66,6 +66,7 @@ AI_TASKS = {
     "background": ("Chọn bối cảnh", "agy"),
     "voices": ("Mô tả giọng", "agy"),
     "story": ("Truyện kể: viết lời kể, chia cảnh", "claude"),
+    "parts": ("Vẽ thêm nhân vật, con vật, bối cảnh cho Truyện kể", "claude"),
     "photo": ("Tạo nhân vật giống ảnh (cần xem ảnh — chỉ Claude)", "claude"),
 }
 ENGINES = {"claude": "Claude", "agy": "Antigravity (Gemini)"}

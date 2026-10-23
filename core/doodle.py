@@ -54,15 +54,23 @@ def default_kit() -> dict:
     return {"species": "human", "age": "adult", "sex": "male", "skin": "light",
             "hair": "short", "hair_color": "black", "hat": "none", "glasses": "none",
             "facial": "none", "top": "ao_nau", "top_color": "brown", "bottom_color": "black",
-            "patched": False, "fur": "yellow"}
+            "patched": False, "fur": "yellow", "extra": "none"}
+
+
+def _custom(kind: str) -> list[str]:
+    from . import doodle_parts
+    return doodle_parts.ids(kind)
 
 
 def clean_kit(k: dict | None) -> dict:
-    """Giữ giá trị hợp lệ, thiếu thì lấy mặc định."""
+    """Giữ giá trị hợp lệ (kể cả bộ phận AI vẽ thêm), thiếu thì lấy mặc định."""
     out = default_kit()
     k = k or {}
-    for key, ok in (("species", SPECIES), ("age", AGES), ("sex", SEXES), ("skin", SKINS),
-                    ("hair", HAIRS), ("hair_color", HAIR_COLORS), ("hat", HATS),
+    for key, ok in (("species", list(SPECIES) + _custom("animal")), ("age", AGES),
+                    ("sex", SEXES), ("skin", SKINS),
+                    ("hair", HAIRS), ("hair_color", HAIR_COLORS),
+                    ("hat", list(HATS) + _custom("head")),
+                    ("extra", ["none"] + _custom("head") + _custom("body")),
                     ("glasses", GLASSES), ("facial", FACIAL), ("top", TOPS),
                     ("top_color", CLOTH), ("bottom_color", CLOTH), ("fur", FUR)):
         v = str(k.get(key, "")).strip().lower()
@@ -73,9 +81,11 @@ def clean_kit(k: dict | None) -> dict:
 
 
 def options() -> dict:
-    return {"species": list(SPECIES), "age": list(AGES), "sex": list(SEXES),
-            "skin": list(SKINS), "hair": list(HAIRS), "hair_color": list(HAIR_COLORS),
-            "hat": list(HATS), "glasses": list(GLASSES), "facial": list(FACIAL),
+    return {"species": list(SPECIES) + _custom("animal"), "age": list(AGES),
+            "sex": list(SEXES), "skin": list(SKINS), "hair": list(HAIRS),
+            "hair_color": list(HAIR_COLORS), "hat": list(HATS) + _custom("head"),
+            "extra": ["none"] + _custom("head") + _custom("body"),
+            "glasses": list(GLASSES), "facial": list(FACIAL),
             "top": list(TOPS), "top_color": list(CLOTH), "bottom_color": list(CLOTH),
             "fur": list(FUR), "expressions": list(EXPRESSIONS)}
 
@@ -397,8 +407,34 @@ def _draw_body(img, pen: _Pen, kit, cx, top, bottom, R, seed):
                        (px - 0.02 * R, py + s * 0.9)], _shade(top_c, 1.18), width=thin)
             d.line([(px + s * 0.2, py + s * 0.3), (px + s * 0.8, py + s * 0.3)],
                    fill=_shade(top_c, 0.7), width=max(1, thin // 2))
+    body_part = _part(kit.get("extra"), "body")
+    if body_part:
+        from . import doodle_parts
+        lay = Image.new("RGBA", img.size, (0, 0, 0, 0))
+        lp = _Pen(lay, pen.T, seed + 31)
+        doodle_parts.draw_shapes(lp, body_part["shapes"],
+                                 lambda x, y: (cx + x * wb, top + y * h), wb)
+        img.paste(lay, (0, 0), Image.composite(lay.getchannel("A"),
+                                               Image.new("L", img.size, 0), mask))
     pen.shape(pts, None, outline=True)
     return wt
+
+
+def _part(pid, kind):
+    if not pid or pid == "none":
+        return None
+    from . import doodle_parts
+    p = doodle_parts.get(pid)
+    return p if p and p.get("kind") == kind else None
+
+
+def _draw_head_parts(pen: _Pen, kit, cx, hy, R, layer):
+    from . import doodle_parts
+    for pid in (kit.get("hat"), kit.get("extra")):
+        p = _part(pid, "head")
+        if p:
+            doodle_parts.draw_shapes(pen, p["shapes"], lambda x, y: (cx + x * R, hy + y * R),
+                                     R, layer=layer)
 
 
 def _hair_cap(cx, hy, R, side_deg, fringe_y, teeth=0, asym=0.0, rad=1.07):
@@ -645,6 +681,7 @@ def _human(kit, T, expr, mouth_open, blink, facing, seed):
     cx, bottom = W / 2, H - T * 0.02
     hy = bottom - T + R
     face_dir = 1 if facing > 0.15 else (-1 if facing < -0.15 else 0)
+    _draw_head_parts(pen, kit, cx, hy, R, "back")
     _draw_hair_back(pen, kit, cx, hy, R, face_dir or 1)
     _draw_body(img, pen, kit, cx, hy + 0.78 * R, bottom, R, seed)
     skin = SKINS[kit["skin"]]
@@ -652,7 +689,54 @@ def _human(kit, T, expr, mouth_open, blink, facing, seed):
     _draw_face(pen, kit, cx, hy, R, facing, expr, mouth_open, blink)
     _draw_hair_front(pen, kit, cx, hy, R, face_dir or 1)
     _draw_hat(pen, kit, cx, hy, R)
+    _draw_head_parts(pen, kit, cx, hy, R, "front")
     return img, (cx, bottom), (cx + facing * 0.18 * R, hy + 0.08 * R, R)
+
+
+def _custom_animal(kit, part, T, expr, mouth_open, blink, facing, seed):
+    """Con vật AI vẽ thêm: thân từ các khối, mắt + miệng tool vẽ để có biểu cảm."""
+    from . import doodle_parts
+    W, H = int(T * 2.3), int(T * 1.3)
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    pen = _Pen(img, T * 1.6, seed)
+    bottom = H - T * 0.03
+    cx = W / 2
+
+    def tf(x, y):
+        return cx + x * T, bottom - (1 - y) * T
+    doodle_parts.draw_shapes(pen, part["shapes"], tf, T)
+    er = part.get("eye_r", 0.045) * T
+    for ex, ey in part.get("eyes") or []:
+        x, y = tf(ex, ey)
+        if blink or expr in ("sleep", "happy", "cry"):
+            if expr == "happy":
+                pen.line([(x - er * 1.3, y + er * 0.4), (x, y - er * 0.9), (x + er * 1.3, y + er * 0.4)])
+            else:
+                pen.line(_ellipse_pts(x, y, er * 1.2, er * 0.7, 10, 170, 8))
+        else:
+            rr = er * (1.4 if expr == "shocked" else 1.0)
+            pen.dot(x, y, rr)
+            pen.dot(x + rr * 0.35, y - rr * 0.35, rr * 0.35, (255, 255, 255))
+        if expr in ("sad", "worried", "cry", "angry"):
+            k = 1 if expr == "angry" else -1
+            pen.line([(x - er * 1.4, y - er * 2.2 - k * er * 0.5), (x + er * 1.4, y - er * 2.2 + k * er * 0.5)],
+                     width=max(1, pen.lw // 2))
+        if expr == "cry":
+            pen.line([(x, y + er), (x, y + er * 6)], width=int(pen.lw * 1.4),
+                     fill=(140, 196, 236), wob=False)
+    mx, my = tf(*part.get("mouth", (0.8, 0.5)))
+    if mouth_open or expr in ("happy", "shocked"):
+        pen.ell(mx, my + er * 0.5, er * 1.6, er * (1.4 if mouth_open or expr == "shocked" else 0.9),
+                (170, 70, 76), width=max(1, pen.lw // 2))
+    else:
+        pen.line([(mx - er * 1.4, my), (mx, my + er * 0.6), (mx + er * 1.2, my)],
+                 width=max(1, pen.lw // 2))
+    eyes = part.get("eyes") or [(0.6, 0.3)]
+    hx, hy = tf(*eyes[0])
+    if facing < -0.15:
+        img = img.transpose(Image.FLIP_LEFT_RIGHT)
+        hx = W - hx
+    return img, (cx, bottom), (hx, hy, T * 0.22)
 
 
 # ------------------------------------------------------------ chó, mèo
@@ -756,6 +840,9 @@ def _animal(kit, T, expr, mouth_open, blink, facing, seed):
 def char_height(kit: dict, T: float) -> float:
     """Chiều cao vẽ của nhân vật so với người lớn cao T."""
     sp = kit.get("species")
+    p = _part(sp, "animal")
+    if p:
+        return T * p.get("size", 0.45)
     if sp == "dog":
         return T * 0.42
     if sp == "cat":
@@ -775,6 +862,9 @@ def render(kit: dict, expr: str = "neutral", mouth_open: bool = False, blink: bo
     T = char_height(kit, height) * SS
     if kit["species"] == "human":
         img, foot, eye = _human(kit, T, expr, mouth_open, blink, facing, seed)
+    elif _part(kit["species"], "animal"):
+        img, foot, eye = _custom_animal(kit, _part(kit["species"], "animal"), T, expr,
+                                        mouth_open, blink, facing, seed)
     else:
         img, foot, eye = _animal(kit, T, expr, mouth_open, blink, facing, seed)
     w, h = img.size
