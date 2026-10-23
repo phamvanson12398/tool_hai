@@ -618,6 +618,22 @@ hình có hai cách (ô **Cách làm hình**):
 - **Tranh tự vẽ ở công cụ khác**: chị vẽ tranh (Midjourney, Gemini, ChatGPT...) từ
   **bộ câu lệnh vẽ** tool xuất ra rồi tải lên.
 
+### Thoại nhân vật xen giữa lời kể
+Kể suốt dễ chán, nên ô **Thoại nhân vật** (mục 1) cho AI chèn câu nói của nhân vật:
+**Thỉnh thoảng** (mặc định, khoảng 1/4 số cảnh, lúc cảm xúc cao), **Nhiều** (đối
+đáp, khoảng nửa số cảnh) hoặc **Không**. Có nguyên văn thì AI lấy đúng câu thoại
+trong truyện.
+
+- Câu thoại đọc bằng **giọng riêng của nhân vật** (khác giọng người kể), ngay sau
+  lời kể của cảnh; lời kể dẫn vào ("lão bảo...") rồi để nhân vật tự nói.
+- Giọng mỗi nhân vật chọn ở mục 2: giọng trong Thư viện, hoặc mô tả giọng (tool
+  tự đặt theo tuổi, giới: vd lão Hạc "male, elderly, low pitch"). Một nhân vật
+  giữ một giọng suốt truyện.
+- Mỗi cảnh ở mục 3 có danh sách câu thoại: đổi người nói, sửa câu, **+ Câu thoại**
+  để thêm, ✕ để bỏ. Người nói chưa có trong cảnh thì tự được đưa vào cảnh.
+- Lúc nhân vật nói: nhân vật đó nhép miệng theo giọng, phụ đề hiện "Tên: câu nói".
+- Con vật không có thoại.
+
 ### Tool tự vẽ & nhân vật cử động
 - **Nhân vật** kiểu vẽ tay kể chuyện Hàn: đầu tròn to, thân con nhộng không tay
   chân, viền đen nét bút, màu dịu. Có người (trẻ con, thanh niên, trung niên, già),

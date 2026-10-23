@@ -1774,6 +1774,11 @@ def _story_view(pid: str, data: dict) -> dict:
     out["visual"] = st.get("visual", "tool")
     from core import bg3d
     out["bg_mode"] = st.get("bg_mode", "draw")
+    from core import story as story_m
+    out["dialogues"] = [[k, v[0]] for k, v in story_m.DIALOGUE.items()]
+    for c in st.get("characters") or []:
+        if not isinstance(c.get("voice"), dict):
+            c["voice"] = {"voice": "", "instruct": story_m.default_voice(c.get("kit"))}
     out["bg3d_installed"] = bg3d.installed()
     d3 = pdir / bg3d.DIR
     out["bg3d"] = sorted(p.stem for p in d3.glob("*.png")) if d3.exists() else []
@@ -1852,6 +1857,8 @@ def api_story_save(pid):
         st["visual"] = body["visual"]
     if body.get("bg_mode") in ("draw", "ai3d"):
         st["bg_mode"] = body["bg_mode"]
+    if body.get("dialogue") in story_mod.DIALOGUE:
+        st["dialogue"] = body["dialogue"]
     if "minutes" in body:
         try:
             st["minutes"] = max(3, min(40, int(float(body["minutes"]))))
@@ -2201,9 +2208,12 @@ def api_story_render(pid):
                     bg3d.unload()                    # trả bộ nhớ card cho OmniVoice
             audio = story_mod.narrate(st, pdir, lang, progress=lambda f, m: _set_status(
                 pid, progress=round(0.4 * float(f), 3), message=str(m)))
+            lines = story_mod.narrate_lines(st, pdir, lang, progress=lambda f, m: _set_status(
+                pid, progress=round(0.4 + 0.05 * float(f), 3), message=str(m)))
             mp4 = story_render.render(st, pdir, data.get("format") or "16:9", settings, audio,
                                       progress=lambda f, m: _set_status(
-                                          pid, progress=round(0.4 + 0.6 * float(f), 3), message=str(m)))
+                                          pid, progress=round(0.45 + 0.55 * float(f), 3), message=str(m)),
+                                      lines=lines)
             d2, _ = _load_story(pid)
             d2["result"] = {"video": str(mp4)}
             _save_project(pid, d2)

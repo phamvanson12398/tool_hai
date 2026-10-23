@@ -221,7 +221,7 @@ class LiveShot:
 
     def __init__(self, st: dict, sc: dict, size, camera: str, dur: float,
                  audio=None, audio_at: float = 0.0, audio_dur: float = 0.0,
-                 over: float = 1.15, fps: int = 24, pdir=None):
+                 over: float = 1.15, fps: int = 24, pdir=None, speech=None):
         import cv2
         self.cv2 = cv2
         self.W, self.H = size
@@ -258,6 +258,14 @@ class LiveShot:
         self.env = envelope(audio, fps) if (audio and talk) else None
         self.talk_win = [(audio_at + a, audio_at + b) for a, b in
                          talk_windows(sc.get("text") or "", audio_dur)] if talk else []
+        # thoại nhân vật: [{"who", "at" (giây từ đầu cảnh), "dur", "path"}]
+        self.speech = []
+        for sp in speech or []:
+            if sp.get("who") in looks and looks[sp["who"]] not in chars and len(chars) < 5:
+                c = looks[sp["who"]]
+                c.setdefault("kit", doodle.kit_from_look(c.get("name", ""), c.get("look", "")))
+                chars.append(c)
+            self.speech.append(dict(sp, env=envelope(sp.get("path"), fps)))
         self._layout(chars, acts, talk, kind)
         self._cache: dict = {}
         self._shadows: dict = {}
@@ -384,6 +392,13 @@ class LiveShot:
         return a["x"] + (off - a["x"]) * u
 
     def _mouth(self, a, t):
+        for sp in self.speech:                  # đang nói câu thoại của mình
+            if sp["who"] == a["c"]["id"] and sp["at"] <= t <= sp["at"] + sp["dur"]:
+                env = sp.get("env")
+                if env is not None:
+                    i = int((t - sp["at"]) * self.fps)
+                    return 0 <= i < len(env) and bool(env[i] > 0.3) and (i // 2) % 3 != 2
+                return int(t * 8) % 2 == 0
         if not a["talk"] or not any(x0 <= t <= x1 for x0, x1 in self.talk_win):
             return False
         if self.env is not None:

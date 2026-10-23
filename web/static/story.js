@@ -107,8 +107,10 @@
       var sel = $("st-voice");
       sel.innerHTML = "";
       sel.appendChild(new Option("— Dùng mô tả giọng bên cạnh —", ""));
+      st.voices = [];
       (d.voices || []).forEach(function (v) {
         if (v && v.name) sel.appendChild(new Option(v.name, v.name));
+        if (v && v.name) st.voices = (st.voices || []).concat([v.name]);
       });
     }).catch(function () {});
   }
@@ -133,6 +135,7 @@
       style: $("st-style").value,
       visual: $("st-visual").value,
       bg_mode: $("st-bgmode").value,
+      dialogue: $("st-dialogue").value,
       subtitles: $("st-subs").value === "1",
       source_text: $("st-source").value,
       narrator: { voice: $("st-voice").value, instruct: $("st-instruct").value.trim() }
@@ -151,6 +154,8 @@
       if (pt) kit.patched = pt.checked;
       if (row.getAttribute("data-kind") === "characters") {
         if (Object.keys(kit).length) item.kit = Object.assign({}, row._kit || {}, kit);
+        var vs = row.querySelector("select.st-cvoice"), vi = row.querySelector("input.st-cinstruct");
+        if (vs || vi) item.voice = { voice: vs ? vs.value : "", instruct: vi ? vi.value.trim() : "" };
       } else {
         if (kit.kind) item.kind = kit.kind;
         if (kit.time) item.time = kit.time;
@@ -178,6 +183,12 @@
             if (any) out.acts = acts;
             var tk = box.querySelector("select.st-talk");
             if (tk) out.talk = tk.value;
+            var lines = [];
+            box.querySelectorAll(".st-line").forEach(function (lr) {
+              var t = lr.querySelector("input").value.trim();
+              if (t) lines.push({ who: lr.querySelector("select").value, text: t });
+            });
+            if (lines.length) out.lines = lines; else delete out.lines;
             return out;
           })
         };
@@ -222,6 +233,11 @@
     showStyleRef(d);
     $("st-subs").value = s.subtitles ? "1" : "0";
     $("st-source").value = s.source_text || "";
+    $("st-dialogue").innerHTML = "";
+    (d.dialogues || [["none", "Không"], ["some", "Thỉnh thoảng"], ["many", "Nhiều"]]).forEach(function (kv) {
+      $("st-dialogue").appendChild(new Option(kv[1], kv[0]));
+    });
+    $("st-dialogue").value = s.dialogue || "some";
     var nar = s.narrator || {};
     $("st-voice").value = nar.voice || "";
     $("st-instruct").value = nar.instruct || "";
@@ -325,6 +341,24 @@
         look.rows = 1;
         look.title = "Mô tả tiếng Anh (dùng khi xuất câu lệnh vẽ)";
       }
+      if (r[0] === "characters" && (!(r[1].kit || {}).species || r[1].kit.species === "human")) {
+        // giọng riêng của nhân vật cho các câu thoại
+        var vrow = el("div", "st-kit");
+        var vsel = document.createElement("select");
+        vsel.className = "st-cvoice";
+        vsel.appendChild(new Option("Giọng: tạo theo mô tả →", ""));
+        (st.voices || []).forEach(function (n) { vsel.appendChild(new Option("Giọng: " + n, n)); });
+        vsel.value = (r[1].voice || {}).voice || "";
+        var vin = document.createElement("input");
+        vin.type = "text";
+        vin.className = "st-cinstruct";
+        vin.placeholder = "male, elderly, low pitch";
+        vin.title = "Mô tả giọng (tiếng Anh, theo OmniVoice): male/female, child/teenager/young adult/middle-aged/elderly, low/moderate/high pitch";
+        vin.value = (r[1].voice || {}).instruct || "";
+        vrow.appendChild(vsel);
+        vrow.appendChild(vin);
+        right.appendChild(vrow);
+      }
       right.appendChild(look);
       row.appendChild(left);
       row.appendChild(right);
@@ -408,6 +442,39 @@
       .then(function () { btn.disabled = false; btn.textContent = "AI vẽ thêm"; });
   }
 
+  /** Các câu thoại nhân vật của cảnh (đọc bằng giọng nhân vật sau lời kể). */
+  function linesEditor(sc, s) {
+    var wrap = el("div", "st-lines");
+    var humans = (s.characters || []).filter(function (c) {
+      return !(c.kit && c.kit.species && c.kit.species !== "human");
+    });
+    function addRow(ln) {
+      var row = el("div", "st-line");
+      var who = document.createElement("select");
+      humans.forEach(function (c) { who.appendChild(new Option(c.name, c.id)); });
+      who.value = ln.who || ((sc.chars || [])[0] || (humans[0] || {}).id || "");
+      var txt = document.createElement("input");
+      txt.type = "text";
+      txt.placeholder = "Câu nhân vật nói (đọc bằng giọng nhân vật)";
+      txt.value = ln.text || "";
+      var rm = el("button", "btn btn-sm", "✕");
+      rm.type = "button";
+      rm.title = "Bỏ câu thoại";
+      rm.addEventListener("click", function () { row.remove(); });
+      row.appendChild(who);
+      row.appendChild(txt);
+      row.appendChild(rm);
+      wrap.insertBefore(row, add);
+    }
+    var add = el("button", "btn btn-sm st-line-add", "+ Câu thoại");
+    add.type = "button";
+    add.addEventListener("click", function () { addRow({}); });
+    wrap.appendChild(add);
+    if (!humans.length) add.hidden = true;
+    (sc.lines || []).forEach(addRow);
+    return wrap;
+  }
+
   function renderScenes(d) {
     var box = $("st-scenes");
     box.innerHTML = "";
@@ -463,6 +530,7 @@
         prompt.value = sc.prompt || "";
         right.appendChild(meta);
         right.appendChild(text);
+        right.appendChild(linesEditor(sc, s));
         if (tool) {
           prompt.hidden = true;
           var names = {};

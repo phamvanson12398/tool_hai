@@ -89,6 +89,7 @@ def default_story(title: str = "", author: str = "") -> dict:
         "title": title, "author": author, "source_text": "", "minutes": 25,
         "style": "doodle", "visual": "tool", "narrator": {"voice": "", "instruct": "male, elderly, low pitch"},
         "subtitles": False, "era": "", "characters": [], "places": [], "chapters": [],
+        "dialogue": "some",
     }
 
 
@@ -166,7 +167,9 @@ def write_story(st: dict, progress=None) -> dict:
             outline=outline, characters=chars_txt, places=places_txt, index=str(i + 1),
             chapter_title=str(c.get("title") or ""), chapter_summary=str(c.get("summary") or ""),
             source_block=block, syllables=str(int(per_min * SYLLABLES_PER_MIN)),
-            minutes=f"{per_min:.1f}", scene_block=scene_block), task="story", timeout=600)
+            minutes=f"{per_min:.1f}", scene_block=scene_block,
+            dialogue_block=DIALOGUE.get(st.get("dialogue", "some"), DIALOGUE["some"])[1]),
+            task="story", timeout=600)
         scenes = data.get("scenes") if isinstance(data, dict) else None
         if not scenes:
             raise RuntimeError(f"AI không viết được chương {i + 1}.")
@@ -229,6 +232,35 @@ def _tool_blocks() -> tuple[str, str]:
     return plan, scene
 
 
+# Thoại nhân vật xen giữa lời kể: (nhãn, phần thêm vào câu lệnh viết chương)
+_DIALOGUE_RULE = (
+    "- \"lines\": câu THOẠI của nhân vật có mặt trong cảnh, đọc bằng giọng riêng của nhân vật "
+    "ngay sau lời kể của cảnh: [{{\"who\":\"id\",\"text\":\"câu nói ngắn, tự nhiên, đúng tính "
+    "cách và cách xưng hô thời đó\"}}]. Có nguyên văn thì lấy đúng câu thoại trong truyện. Lời "
+    "kể KHÔNG nhắc lại câu thoại đó (dẫn vào bằng \"lão bảo\", \"ông giáo hỏi\"... rồi để nhân "
+    "vật tự nói). Mỗi câu thoại dưới 30 chữ, mỗi cảnh tối đa 3 câu. {freq}\n")
+DIALOGUE = {
+    "none": ("Không có thoại (chỉ người kể)", "- Không viết thoại nhân vật; mọi lời nói kể lại "
+             "bằng lời người kể.\n"),
+    "some": ("Thỉnh thoảng xen thoại", _DIALOGUE_RULE.format(
+        freq="Chỉ thêm ở khoảng 1/4 số cảnh, ưu tiên lúc cảm xúc cao, đối đáp quan trọng; các "
+             "cảnh khác không có \"lines\".")),
+    "many": ("Nhiều thoại (đối đáp)", _DIALOGUE_RULE.format(
+        freq="Thêm ở khoảng một nửa số cảnh, nhất là các đoạn hai người nói chuyện với nhau.")),
+}
+
+
+def default_voice(kit: dict | None) -> str:
+    """Mô tả giọng OmniVoice theo tuổi, giới của nhân vật."""
+    k = kit or {}
+    female = k.get("sex") == "female"
+    age = {"child": "child", "young": "young adult", "adult": "middle-aged",
+           "old": "elderly"}.get(k.get("age"), "middle-aged")
+    pitch = ("high pitch" if age in ("child", "young adult") else "moderate pitch") if female \
+        else ("moderate pitch" if age in ("child", "young adult") else "low pitch")
+    return f"{'female' if female else 'male'}, {age}, {pitch}"
+
+
 def _make_parts(new_parts, say) -> list[str]:
     """Vẽ các bộ phận AI khai báo là còn thiếu (chưa có trong thư viện)."""
     from . import doodle_parts
@@ -255,6 +287,9 @@ def _clean_char(c: dict) -> dict:
            "look": str(c.get("look") or "")}
     out["kit"] = doodle.clean_kit(c["kit"]) if isinstance(c.get("kit"), dict) and c["kit"] \
         else doodle.kit_from_look(out["name"], out["look"])
+    v = c.get("voice") if isinstance(c.get("voice"), dict) else {}
+    out["voice"] = {"voice": str(v.get("voice") or ""),
+                    "instruct": str(v.get("instruct") or "") or default_voice(out["kit"])}
     return out
 
 
@@ -281,6 +316,14 @@ def _clean_scene(s: dict) -> dict:
         out["talk"] = _slug(s["talk"]) if s.get("talk") else ""
     if s.get("time") in ("ngay", "dem"):
         out["time"] = s["time"]
+    lines = [{"who": _slug(x.get("who")), "text": str(x.get("text") or "").strip()}
+             for x in (s.get("lines") or []) if isinstance(x, dict) and x.get("who")]
+    lines = [x for x in lines if x["text"]][:3]
+    if lines:
+        out["lines"] = lines
+        for x in lines:                     # người nói phải có mặt trong cảnh
+            if x["who"] not in out["chars"] and len(out["chars"]) < 4:
+                out["chars"].append(x["who"])
     return out
 
 
@@ -404,6 +447,57 @@ def _sentences(text: str, limit: int = 200) -> list[str]:
             p = p[cut + 1:].strip()
         if p:
             out.append(p)
+    return out
+
+
+def _voice_ref(pdir: Path, key: str, language: str, cfg: dict) -> dict:
+    """Giọng mẫu: giọng trong Thư viện nếu chọn, không thì tạo từ mô tả (cố định)."""
+    from . import assets, pipeline
+    if cfg.get("voice"):
+        lib = assets.voice_path(cfg["voice"], language)
+        if lib:
+            return {"ref": str(lib), "ref_text": assets.voice_text(cfg["voice"], language)}
+    return pipeline.voice_anchor(pdir, key, language, cfg.get("instruct") or None) or {}
+
+
+def narrate_lines(st: dict, pdir: Path, language: str = "vi",
+                  progress=None) -> dict[str, list[dict]]:
+    """Đọc các câu thoại nhân vật (mỗi nhân vật một giọng cố định).
+    Trả về {id cảnh: [{"who", "text", "path"}]}. Câu không đổi thì dùng lại."""
+    import soundfile as sf
+    from . import voice
+    chars = {c["id"]: c for c in st.get("characters") or []}
+    todo = [(sc, i, ln) for _ci, sc in all_scenes(st)
+            for i, ln in enumerate(sc.get("lines") or []) if ln.get("text") and ln.get("who") in chars]
+    out: dict[str, list[dict]] = {}
+    if not todo:
+        return out
+    adir = pdir / AUDIO_DIR
+    adir.mkdir(parents=True, exist_ok=True)
+    refs: dict[str, dict] = {}
+    for k, (sc, i, ln) in enumerate(todo):
+        c = chars[ln["who"]]
+        cfg = c.get("voice") or {"instruct": default_voice(c.get("kit"))}
+        if ln["who"] not in refs:
+            refs[ln["who"]] = _voice_ref(pdir, f"nv_{ln['who']}", language, cfg)
+        ref = refs[ln["who"]]
+        key = hashlib.md5(json.dumps([ln["text"], ref.get("ref"), cfg.get("instruct")],
+                                     ensure_ascii=False).encode("utf-8")).hexdigest()[:12]
+        path = adir / f"line_{sc['id']}_{i}_{key}.wav"
+        if not path.exists():
+            if progress:
+                progress(k / len(todo), f"đọc thoại {k + 1}/{len(todo)}: {c.get('name')}")
+            wav, sr = voice.synthesize(ln["text"], language,
+                                       ref_wav=Path(ref["ref"]) if ref.get("ref") else None,
+                                       ref_text=ref.get("ref_text"),
+                                       instruct=None if ref.get("ref") else cfg.get("instruct"),
+                                       seed=int(key[:6], 16))
+            wav = voice.trim_silence(np.asarray(wav, dtype=np.float32), sr)
+            for old in adir.glob(f"line_{sc['id']}_{i}_*.wav"):
+                old.unlink(missing_ok=True)
+            sf.write(str(path), wav, sr)
+        out.setdefault(sc["id"], []).append({"who": ln["who"], "text": ln["text"],
+                                             "name": c.get("name") or ln["who"], "path": path})
     return out
 
 

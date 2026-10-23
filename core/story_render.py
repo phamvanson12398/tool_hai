@@ -194,24 +194,39 @@ def _dim(a: np.ndarray, k: float) -> np.ndarray:
     return cv2.convertScaleAbs(a, alpha=k)
 
 
-def plan_timeline(st: dict, audio: dict[str, Path]) -> list[dict]:
-    """Mốc thời gian từng cảnh: start, dur, audio_at, thẻ chương."""
+LINE_GAP = 0.35        # lặng trước mỗi câu thoại nhân vật
+
+
+def plan_timeline(st: dict, audio: dict[str, Path], lines: dict | None = None) -> list[dict]:
+    """Mốc thời gian từng cảnh: start, dur, audio_at, thẻ chương; câu thoại
+    nhân vật (nếu có) đọc ngay sau lời kể của cảnh."""
     import soundfile as sf
     out, t = [], INTRO
+    lines = lines or {}
     for ci, ch in enumerate(st.get("chapters") or []):
         for k, sc in enumerate(ch.get("scenes") or []):
             card = CHAPTER_CARD if k == 0 else 0.0
             p = audio.get(sc["id"])
             ad = sf.info(str(p)).duration if p and Path(p).exists() else 0.0
-            dur = max(3.5, card + LEAD + ad + TAIL)
+            at = t + card + LEAD
+            cur = at + ad
+            says = []
+            for ln in lines.get(sc["id"]) or []:
+                if not Path(ln["path"]).exists():
+                    continue
+                ld = sf.info(str(ln["path"])).duration
+                cur += LINE_GAP
+                says.append(dict(ln, at=cur, dur=ld))
+                cur += ld
+            dur = max(3.5, cur - t + TAIL)
             out.append({"sc": sc, "chapter": ci, "card": card, "start": t, "dur": dur,
-                        "audio": p, "audio_at": t + card + LEAD, "audio_dur": ad})
+                        "audio": p, "audio_at": at, "audio_dur": ad, "lines": says})
             t += dur
     return out
 
 
 def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict[str, Path],
-           progress=None) -> Path:
+           progress=None, lines: dict | None = None) -> Path:
     import soundfile as sf
 
     def say(f, m):
@@ -220,7 +235,7 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict[str, Path
 
     size = config.frame_size(fmt)
     W, H = size
-    tl = plan_timeline(st, audio)
+    tl = plan_timeline(st, audio, lines)
     if not tl:
         raise RuntimeError("Chưa có cảnh nào để dựng.")
     total = tl[-1]["start"] + tl[-1]["dur"] + OUTRO
@@ -233,16 +248,21 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict[str, Path
     say(0.02, "ghép lời kể")
     sr = config.SAMPLE_RATE
     track = np.zeros(int(total * sr) + sr, dtype=np.float32)
+    def put(path, at):
+        a, asr = sf.read(str(path), dtype="float32")
+        if a.ndim > 1:
+            a = a.mean(axis=1)
+        if asr != sr:
+            a = np.interp(np.linspace(0, len(a), int(len(a) * sr / asr), endpoint=False),
+                          np.arange(len(a)), a).astype(np.float32)
+        i0 = int(at * sr)
+        track[i0:i0 + len(a)] += a[: max(0, len(track) - i0)]
+
     for row in tl:
         if row["audio"] and Path(row["audio"]).exists():
-            a, asr = sf.read(str(row["audio"]), dtype="float32")
-            if a.ndim > 1:
-                a = a.mean(axis=1)
-            if asr != sr:
-                a = np.interp(np.linspace(0, len(a), int(len(a) * sr / asr), endpoint=False),
-                              np.arange(len(a)), a).astype(np.float32)
-            i0 = int(row["audio_at"] * sr)
-            track[i0:i0 + len(a)] += a[: max(0, len(track) - i0)]
+            put(row["audio"], row["audio_at"])
+        for ln in row["lines"]:                 # thoại nhân vật, giọng riêng
+            put(ln["path"], ln["at"])
     narr = tmp / "story_narration.wav"
     sf.write(str(narr), np.clip(track, -1, 1), sr)
 
@@ -267,9 +287,12 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict[str, Path
             if not p and tool:
                 # tool tự vẽ cảnh và cho nhân vật cử động theo lời kể
                 from .story_live import LiveShot
+                speech = [{"who": ln["who"], "at": ln["at"] - row["start"], "dur": ln["dur"],
+                           "path": ln["path"]} for ln in row["lines"]]
                 shots[i] = LiveShot(st, sc, size, sc.get("camera") or "zoom_in", row["dur"],
                                     audio=row["audio"], audio_at=row["card"] + LEAD,
-                                    audio_dur=row["audio_dur"], over=OVER, fps=FPS, pdir=pdir)
+                                    audio_dur=row["audio_dur"], over=OVER, fps=FPS, pdir=pdir,
+                                    speech=speech)
                 return shots[i]
             try:
                 im = Image.open(p) if p else _placeholder(size, sc["id"], sc.get("text") or "")
@@ -322,6 +345,16 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict[str, Path
                                 if len(subs) > 8:
                                     subs.clear()
                                 subs[key] = _subtitle(size, s)
+                            frame = _over(frame, subs[key])
+                            break
+                if sub_on:                          # phụ đề câu thoại: "Tên: câu nói"
+                    for j, ln in enumerate(row["lines"]):
+                        if ln["at"] <= t < ln["at"] + ln["dur"] + 0.2:
+                            key = (row["sc"]["id"], "line", j)
+                            if key not in subs:
+                                if len(subs) > 8:
+                                    subs.clear()
+                                subs[key] = _subtitle(size, f"{ln['name']}: {ln['text']}")
                             frame = _over(frame, subs[key])
                             break
                 # tối dần ở cuối video

@@ -28,5 +28,7 @@ Bạn là người viết lời kể cho kênh YouTube kể chuyện văn học 
 - "camera": một trong zoom_in, zoom_out, pan_left, pan_right, pan_up, pan_down, still — chọn theo cảm xúc (zoom_in cho khoảnh khắc xúc động, pan cho cảnh rộng).
 
 {{scene_block}}
+### Thoại nhân vật
+{{dialogue_block}}
 Output JSON đúng dạng này, không có gì khác:
 {"scenes":[{"text":"...","prompt":"...","chars":["lao_hac"],"place":"nha_lao_hac","camera":"zoom_in"}]}
