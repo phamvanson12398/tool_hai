@@ -19,8 +19,6 @@ from .story_render import FPS, _dim, _over, _subtitle
 logger = logging.getLogger(__name__)
 
 INTRO = 3.5
-CHAPTER_CARD = 3.2
-CARD_GAP = 0.8           # nghỉ giữa thẻ tên truyện và thẻ chương (đừng nối nhau quá nhanh)
 FADE = 0.35              # mờ ra đen rồi hiện cảnh mới (không hoà hình hai cảnh: hết "bóng ma")
 OUTRO = 1.2
 TAG_DUR = 2.5            # thẻ tên trên đầu khi nhân vật mới xuất hiện
@@ -270,8 +268,6 @@ def name_tags(rows: list[dict]) -> dict:
                 continue
             sp = [s[0] for s in tr.speak if s[0] >= t0 - 0.01]
             t0 = min(sp) if sp and min(sp) - t0 < 6 else t0
-            if row.get("card"):                  # đừng hiện cùng lúc thẻ chương (thẻ chương ở trên)
-                t0 = max(t0, (CARD_GAP if ri == 0 else 0.3) + CHAPTER_CARD)
             seen.add(cid)
             out.setdefault(ri, {})[cid] = (t0, t0 + TAG_DUR)
     return out
@@ -333,12 +329,11 @@ def plan_all(st: dict, size, audio: dict) -> list[dict]:
                     durs[i] = sf.info(str(p)).duration
                     b["path"] = str(p)
                 beats.append(b)
-            card = CHAPTER_CARD + CARD_GAP if k == 0 else 0.0
             scn = dict(sc, beats=beats)
             scn["time"] = scene_time(ch, sc)
             amb, indoor = ambience(st, scn)
             plan = film.simulate(scn, chars, W, T, durs, lead=film.LEAD_IN, indoor=indoor)   # thẻ chương ở trên, diễn luôn
-            rows.append({"sc": scn, "chapter": ci, "card": card, "start": t, "dur": plan["dur"],
+            rows.append({"sc": scn, "chapter": ci, "start": t, "dur": plan["dur"],
                          "plan": plan, "ambience": amb})
             t += plan["dur"]
     return rows
@@ -436,7 +431,6 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict, progress
         return shots[i]
 
     intro = top_card(size, st.get("title") or "", st.get("author") or "")
-    cards: dict = {}
     sub_cache: dict = {}
     sub_on = bool(st.get("subtitles"))
     n_frames = int(total * FPS)
@@ -460,13 +454,6 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict, progress
                     frame = _dim(frame, max(0.0, (nxt - t) / FADE))
                 elif i > 0 and lt < FADE:                            # ... rồi hiện cảnh mới
                     frame = _dim(frame, max(0.0, lt / FADE))
-                c0 = CARD_GAP if i == 0 else 0.3
-                if row["card"] and c0 < lt < c0 + CHAPTER_CARD:
-                    ci = row["chapter"]
-                    if ci not in cards:
-                        cards[ci] = top_card(size, st["chapters"][ci]["title"], f"Chương {ci + 1}")
-                    u = lt - c0
-                    frame = _over(frame, cards[ci], min(1.0, u / 0.4, (CHAPTER_CARD - u) / 0.4))
                 if sub_on:
                     while si < len(subs_plan) - 1 and subs_plan[si][1] < t:
                         si += 1

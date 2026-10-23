@@ -276,12 +276,15 @@ def pose(act: str, t: float, seed: int = 0, dur: float = 3.0, speaking: bool = F
     elif act == "eat":
         k = (t % 1.4) / 1.4
         lift = math.sin(math.pi * k)
-        p["arms"] = [(40, 40), (60 + 75 * lift, 40 + 30 * lift)]
+        p["arms"] = [(40, 40), (40, 40)]
+        p["to_mouth"] = (1, lift)               # tay kia và lên miệng
         p["prop_default"] = ("bowl", 0)
     elif act == "drink":
-        lift = _ease(min(1.0, t / 0.6)) * (1.0 if (t % 3.0) < 2.0 else 0.4)
-        p["arms"] = [(60 + 70 * lift, 40 + 30 * lift), (10, 6)]
+        k = t % 3.0                             # nâng chén, nhấp, hạ xuống, nghỉ
+        lift = _ease(min(1.0, k / 0.5)) if k < 2.0 else _ease(max(0.0, (2.5 - k) / 0.5))
+        p["arms"] = [(45, 50), (10, 6)]
         p["head"] = -6 * lift
+        p["to_mouth"] = (0, lift)               # chén kề đúng miệng
         p["prop_default"] = ("cup", 0)
     elif act == "pat":
         p["arms"] = [(70, 35 + 10 * _s(w * t * 2)), (10, 6)]
@@ -342,9 +345,11 @@ def pose(act: str, t: float, seed: int = 0, dur: float = 3.0, speaking: bool = F
         p["prop_default"] = ("pole", 0)
     elif act == "smoke":
         k = (t % 4.0)
-        up = 1.0 if 0.8 < k < 2.6 else 0.0
-        p["arms"] = [(45 + 30 * up, 60 + 30 * up), (10, 6)]
+        up = _ease(min(1.0, (k - 0.8) / 0.4)) if k < 2.2 else _ease(max(0.0, (2.6 - k) / 0.4))
+        up = up if k > 0.8 else 0.0
+        p["arms"] = [(45, 60), (10, 6)]
         p["head"] = -4 * up
+        p["to_mouth"] = (0, up)                 # rít điếu: miệng kề đúng đầu ống điếu
         p["prop_default"] = ("pipe", 0)
     elif act == "fan":
         p["arms"] = [(110 + 12 * _s(w * t * 1.8), 50 + 15 * _s(w * t * 1.8)), (10, 6)]

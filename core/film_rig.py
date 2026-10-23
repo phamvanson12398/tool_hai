@@ -448,6 +448,15 @@ class Rig:
         arms = pose.get("arms") or [(8, 0), (8, 0)]
         Lm = _aff(G, _tr(0, drop))           # chân: không nghiêng theo thân, đứng trên đất
         prop = pose.get("prop")
+        tm = pose.get("to_mouth")
+        if tm and tm[1] > 0.01:                 # đưa chén / điếu / tay lên đúng miệng
+            arms = list(arms)
+            hi = tm[0] if tm[0] in (0, 1) else 0
+            held = prop[0] if prop and (prop[1] if prop[1] in (0, 1) else 0) == hi else None
+            a1, e1 = self._mouth_arm(hi, d, pose, held)
+            a0, e0 = arms[hi]
+            u = min(1.0, tm[1])
+            arms[hi] = (a0 + (a1 - a0) * u, e0 + (e1 - e0) * u)
         tool_ang = pose.get("tool_ang")
         tool_behind = bool(prop and prop[0] in TOOLS and tool_ang is not None and tool_ang > 120)
 
@@ -505,6 +514,27 @@ class Rig:
                 self._prop(canvas, name, hands[hi], zoom, d, elbows[hi])
         head_c = _pt(Hm, 0, self.head_y)
         return {"head": head_c, "r": self.R * zoom, "hands": hands}
+
+    # điểm cầm -> miệng: (ra trước theo R, xuống dưới miệng theo T) cho từng đồ
+    MOUTH_HOLD = {"cup": (0.2, 0.026), "pipe": (0.06, 0.28), "bowl": (0.25, 0.06), None: (0.16, 0.03)}
+
+    def _mouth_arm(self, i, d, pose, held):
+        """Góc (vai, khuỷu) để tay đưa đồ đang cầm chạm đúng miệng (IK hai đoạn)."""
+        R = self.R
+        H = _aff(_tr(0, self.body_top), _aff(_rot(pose.get("head", 0.0) * d), _tr(0, -self.body_top)))
+        mx, my = _pt(H, pose.get("look", 0.3 * d) * 0.18 * R, self.head_y + 0.53 * R)
+        fwd, down = self.MOUTH_HOLD.get(held, self.MOUTH_HOLD[None])
+        tx, ty = mx + d * fwd * R, my + down * self.T
+        sx, sy = (1 if i == 0 else -1) * d * self.shoulder[0], self.shoulder[1]
+        l1, l2 = self.arm[0], self.arm[1]
+        X, Y = (tx - sx) * d, ty - sy              # quy về hướng nhìn sang phải
+        D = min(max(math.hypot(X, Y), abs(l1 - l2) + 1e-3), l1 + l2 - 1e-3)
+        th = math.atan2(X, Y)
+        al = math.acos(max(-1.0, min(1.0, (l1 * l1 + D * D - l2 * l2) / (2 * l1 * D))))
+        t1 = th - al                               # khuỷu chĩa xuống
+        ex, ey = l1 * math.sin(t1), l1 * math.cos(t1)
+        t2 = math.atan2(X - ex, Y - ey)
+        return math.degrees(t1), math.degrees(t2 - t1)
 
     def _limb(self, canvas, M, root, a, e, d, l1, l2, w, color, zoom, hand=False, foot=False):
         import cv2

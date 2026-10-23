@@ -720,9 +720,11 @@ lúc giọng đọc tới câu đó.
     điếu luôn ở trước chó; người đứng cách nhau theo bề ngang (chó dài hơn người).
   - Máy quay không cắt ai làm đôi ở mép khung; người ngoài khung không lòi đồ cầm vào mép.
   - Chuyển cảnh **mờ qua màn đen** (không còn "bóng ma" hai cảnh chồng nhau).
-  - Thẻ tên truyện và thẻ chương ở **phía trên** khung, nền nhạt, không che mặt,
-    nghỉ một nhịp giữa hai thẻ. Nhân vật lần đầu lên hình có **thẻ tên** nhỏ trên
-    đầu 2,5 giây.
+  - Chỉ **giới thiệu tên truyện một lần** ở đầu video (phía trên khung, nền nhạt,
+    không che mặt); các chương nối liền mạch, không hiện thẻ chương. Nhân vật lần
+    đầu lên hình có **thẻ tên** nhỏ trên đầu 2,5 giây.
+  - Uống trà: chén đưa kề đúng miệng; hút điếu cày: miệng kề đúng đầu ống điếu;
+    ăn: tay và lên tận miệng.
   - Tên chương có "đêm / tối" thì cảnh là ban đêm (trừ lời kể nói rõ sáng, trưa).
   - Cảnh không bao giờ trống: ai cũng đến sau thì người đầu tiên đi vào ngay.
   - Cánh đồng có lúa (gặt mới hợp).
