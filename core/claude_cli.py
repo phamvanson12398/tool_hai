@@ -95,15 +95,18 @@ def engine_for(task: str) -> str:
 
 def _run(prompt: str, *, task: str = "write",
          allowed_tools: list[str] | None = None,
-         append_system: str | None = None, timeout: int = TIMEOUT) -> str:
+         append_system: str | None = None, timeout: int = TIMEOUT,
+         other_first: bool = False) -> str:
     """Chạy AI đã chọn cho việc `task`; lỗi (chưa cài, hết hạn mức...) thì
     tự chuyển sang AI còn lại nếu Cài đặt cho phép."""
     from . import agy_cli
 
     first = engine_for(task)
     order = [first]
-    if config.load_settings().get("ai_fallback", True):
+    if config.load_settings().get("ai_fallback", True) and task not in CLAUDE_ONLY:
         order += [e for e in ENGINES if e != first]
+        if other_first:            # lần trước AI này trả sai định dạng: hỏi AI kia trước
+            order.reverse()
     errors = []
     for eng in order:
         if not (eng == "agy" and agy_cli._AUTH_ERROR):     # bỏ qua thì không đếm
@@ -286,7 +289,7 @@ def _run_json(prompt: str, *, task: str, timeout: int = TIMEOUT,
     for attempt in range(2):
         try:
             out = _run(prompt, task=task, timeout=timeout,
-                       allowed_tools=allowed_tools)
+                       allowed_tools=allowed_tools, other_first=attempt > 0)
         except RuntimeError as e:
             last_error = str(e)
             if attempt == 0:

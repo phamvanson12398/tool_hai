@@ -116,6 +116,12 @@ def _scene_kinds(data: dict, s) -> dict[int, dict]:
     return out
 
 
+def _short_err(e: Exception, n: int = 220) -> str:
+    """Lỗi AI rút gọn cho thông báo (AI có thể trả cả đoạn văn dài)."""
+    t = " ".join(str(e).split())
+    return t if len(t) <= n else t[:n] + "…"
+
+
 def _draw_scene_bg(data: dict, pdir: Path, desc: str, hint: str = "") -> tuple[dict, str | None]:
     """Claude chọn mẫu + màu cho cảnh, tool vẽ và lưu. Trả về (bản ghi, cảnh báo)."""
     from core import scene_art
@@ -125,7 +131,7 @@ def _draw_scene_bg(data: dict, pdir: Path, desc: str, hint: str = "") -> tuple[d
                                           data.get("language", "ko"),
                                           desc or hint)
     except Exception as e:  # noqa: BLE001
-        warn = f"Claude chọn bối cảnh '{desc or 'chung'}' lỗi ({e}); dùng mẫu mặc định."
+        warn = f"AI chọn bối cảnh '{desc or 'chung'}' lỗi ({_short_err(e)}); dùng mẫu mặc định."
         bg = {}
     if not bg:
         bg = {"name": desc or "boi_canh", "kind": "phong_khach", "time": "ngay"}
@@ -1119,7 +1125,7 @@ def api_project_generate(pid):
                 want_chars, data.get("script", ""), language
             )
         except Exception as e:  # noqa: BLE001
-            warnings.append(f"Claude chọn bộ ghép lỗi ({e}); dùng mặc định.")
+            warnings.append(f"AI chọn bộ ghép lỗi ({_short_err(e)}); dùng mặc định.")
             specs = {}
         style = config.load_settings().get("char_style") or "auto"
         if style not in character_kit.STYLES:      # "auto": theo ngôn ngữ của tập
@@ -1175,7 +1181,7 @@ def api_project_generate(pid):
             try:
                 vdesc = claude_cli.describe_voices(need, data.get("script", ""), language)
             except Exception as e:  # noqa: BLE001
-                warnings.append(f"Claude mô tả giọng lỗi ({e}).")
+                warnings.append(f"AI mô tả giọng lỗi ({_short_err(e)}).")
                 vdesc = {}
             from core import voice as voice_mod
             for name in need:

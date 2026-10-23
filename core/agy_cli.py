@@ -4,9 +4,12 @@ mức Claude.
 
 Google đã ngừng cho Gemini CLI đăng nhập bằng tài khoản Google cá nhân
 (IneligibleTierError) và chuyển sang Antigravity; `agy -p` chạy một câu lệnh
-rồi thoát, câu trả lời ra stdout, lỗi và thông báo ra stderr. Prompt gửi qua
-stdin (agy ghép nội dung stdin với -p) để không vướng giới hạn độ dài dòng
-lệnh trên Windows và giữ nguyên xuống dòng.
+rồi thoát, câu trả lời ra stdout, lỗi và thông báo ra stderr.
+
+Câu lệnh gửi thẳng trong --print: agy KHÔNG đọc stdin khi -p đã có chữ (gửi
+qua stdin thì agy chỉ thấy câu dặn cuối và trả lời "chưa có yêu cầu nào").
+Câu lệnh của các việc phụ ngắn (< 3.000 ký tự) nên không vướng giới hạn độ
+dài dòng lệnh của Windows (32.767 ký tự).
 
 Cài (PowerShell): irm https://antigravity.google/cli/install.ps1 | iex
 rồi chạy `agy` một lần trong cửa sổ lệnh để đăng nhập Google.
@@ -74,13 +77,16 @@ def run(prompt: str, *, timeout: int = 300) -> str:
     global _AUTH_ERROR
     if _AUTH_ERROR:
         raise RuntimeError(_AUTH_ERROR)
-    cmd = [cli_path(), "-p", TAIL]
+    full = f"{prompt.strip()}\n\n---\n{TAIL}"
+    if len(full) > 30000:
+        raise RuntimeError("Câu lệnh quá dài để gửi cho Antigravity (giới hạn dòng lệnh Windows).")
+    cmd = [cli_path(), f"--print={full}"]
     model = (config.load_settings().get("agy_model") or "").strip()
     if model:
         cmd.append(f"--model={model}")
     try:
         proc = subprocess.run(
-            cmd, input=prompt, capture_output=True, text=True,
+            cmd, stdin=subprocess.DEVNULL, capture_output=True, text=True,
             encoding="utf-8", errors="replace", timeout=timeout, cwd=_workdir(),
         )
     except FileNotFoundError:
