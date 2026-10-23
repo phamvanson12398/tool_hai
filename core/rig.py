@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import json
 import math
+import random
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -100,6 +101,34 @@ def geometry(body: str = "adult", style: str = "flat") -> Geometry:
 
     style="stick": người que đầu to — tay, chân mọc từ một đường thân.
     """
+    if style == "gray":
+        # kiểu TikTok Mỹ: đầu tròn xám to, thân mảnh dài, tay chân thon
+        if body == "child":
+            cy, rx, ry, sy, bh, bw = 270, 135, 128, 420, 210, 62
+            up, fo, th, sh = 110.0, 100.0, 135.0, 125.0
+        else:
+            cy, rx, ry, sy, bh, bw = 205, 122, 116, 345, 290, 64
+            up, fo, th, sh = 135.0, 125.0, 165.0, 150.0
+        return Geometry(
+            head_cx=300, head_cy=cy, head_rx=rx, head_ry=ry,
+            shoulder_y=sy, body_w=bw, body_h=bh, shoulder_dx=bw * 0.32,
+            arm_w=20, upper_len=up, fore_len=fo, hand_r=12,
+            hip_dx=bw * 0.24, thigh_w=24, thigh_len=th, shin_len=sh, foot_w=26,
+        )
+    if style == "khand":
+        # vẽ tay kiểu meme Hàn: đầu to có tai, bụng tròn, tay chân mũm mĩm
+        if body == "child":
+            cy, rx, ry, sy, bh, bw = 280, 160, 152, 455, 190, 190
+            up, fo, th, sh = 92.0, 84.0, 95.0, 90.0
+        else:
+            cy, rx, ry, sy, bh, bw = 250, 150, 142, 420, 260, 220
+            up, fo, th, sh = 115.0, 105.0, 112.0, 102.0
+        return Geometry(
+            head_cx=300, head_cy=cy, head_rx=rx, head_ry=ry,
+            shoulder_y=sy, body_w=bw, body_h=bh, shoulder_dx=bw / 2 - 16,
+            arm_w=46, upper_len=up, fore_len=fo, hand_r=27,
+            hip_dx=bw * 0.24, thigh_w=60, thigh_len=th, shin_len=sh, foot_w=84,
+        )
     if style == "kchibi":
         # webtoon Hàn: đầu rất to (gần nửa người), thân ngắn mũm mĩm
         if body == "child":
@@ -459,7 +488,7 @@ def _face_geom(g: Geometry, spec: CharSpec) -> dict:
             "eye_r": int(rx * 0.09), "mouth_y": int(cy + ry * 0.45),
             "brow_y": int(cy - ry * 0.12),
         }
-    if spec.style in ("stick", "box"):
+    if spec.style in ("stick", "box", "gray", "khand"):
         r = g.head_rx
         return {
             "head_cx": g.head_cx, "head_cy": g.head_cy,
@@ -999,8 +1028,505 @@ def _kchibi_head(spec: CharSpec, g: Geometry, mouth_open: bool,
     return img
 
 
+# ============================================================ nét mềm (gray, khand)
+# Bộ phận chỉ vẽ phần màu; viền đen do RigRenderer tự tạo quanh từng nhóm
+# bộ phận cùng lớp (xem _outline_img) nên khuỷu tay, đầu gối, cổ tay liền
+# một khối như nét vẽ tay, không lộ đường nối.
+
+SOFT_STYLES = ("gray", "khand")
+SOFT_OUTLINE = 8                       # độ dày viền tự tạo (px, khung 600x1000)
+GRAY_SKIN = (198, 198, 202, 255)
+GRAY_DARK = (150, 150, 156, 255)
+INK = (24, 22, 28, 255)
+
+
+def _outline_img(img: Image.Image, k: int = SOFT_OUTLINE) -> Image.Image:
+    """Bóng viền đen quanh hình (nở rộng k px), lề thêm k px mỗi bên."""
+    import numpy as np
+    import cv2
+    a = np.array(img.getchannel("A"))
+    a = np.pad(a, k)
+    kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (2 * k + 1, 2 * k + 1))
+    m = cv2.dilate((a > 40).astype(np.uint8) * 255, kernel)
+    m = cv2.GaussianBlur(m, (3, 3), 0)                 # mép viền mượt
+    out = np.zeros((*m.shape, 4), dtype=np.uint8)
+    out[..., :3] = INK[:3]
+    out[..., 3] = m
+    return Image.fromarray(out, "RGBA")
+
+
+def _taper(d: ImageDraw.ImageDraw, a, b, w0: float, w1: float, fill) -> None:
+    """Khối thon từ a (rộng w0) tới b (rộng w1), hai đầu tròn — toạ độ khung gốc."""
+    (ax, ay), (bx, by) = _p(a), _p(b)
+    r0, r1 = w0 / 2, w1 / 2
+    d.ellipse([ax - r0, ay - r0, ax + r0, ay + r0], fill=fill)
+    d.ellipse([bx - r1, by - r1, bx + r1, by + r1], fill=fill)
+    d.polygon([(ax - r0, ay), (ax + r0, ay), (bx + r1, by), (bx - r1, by)], fill=fill)
+
+
+def _soft_line(d, pts, width=6, fill=INK) -> None:
+    """Nét đen đầu tròn, đi qua nhiều điểm (khung gốc)."""
+    q = [_p(x) for x in pts]
+    d.line(q, fill=fill, width=width, joint="curve")
+    for x, y in (q[0], q[-1]):
+        d.ellipse([x - width / 2, y - width / 2, x + width / 2, y + width / 2], fill=fill)
+
+
+def _soft_skin(spec: CharSpec):
+    if spec.style == "gray":
+        return GRAY_SKIN
+    return ck.SKIN_TONES.get(spec.skin, ck.SKIN_TONES["light"]) + (255,)
+
+
+def _soft_hair_col(spec: CharSpec):
+    if spec.style == "gray":
+        return INK                        # kiểu TikTok Mỹ: tóc luôn đen khối
+    return ck.HAIR_COLORS.get(spec.hair_color, ck.HAIR_COLORS["black"]) + (255,)
+
+
+# ---------------------------------------------------------------- mặt
+
+# biểu cảm -> (cỡ mắt, hướng nhìn x/y, mày, miệng)
+GRAY_FACE = {
+    "neutral": (1.0, (0.0, 0.0), "flat", "line"),
+    "happy": (1.0, (0.0, 0.0), "up", "smile"),
+    "laughing": (0.0, (0, 0), "up", "laugh"),
+    "proud": (0.9, (0.3, 0.0), "up", "smirk"),
+    "smug": (0.8, (0.45, 0.0), "slant", "smirk"),
+    "sad": (1.0, (0.0, 0.35), "worry", "frown"),
+    "crying": (1.0, (0.0, 0.3), "worry", "cry"),
+    "angry": (0.85, (0.0, 0.0), "angry", "teeth"),
+    "annoyed": (0.75, (0.5, 0.0), "angry", "line"),
+    "shocked": (1.35, (0.0, 0.0), "up", "o"),
+    "surprised": (1.25, (0.0, -0.1), "up", "o"),
+    "scared": (1.3, (-0.4, 0.0), "worry", "teeth"),
+    "worried": (1.0, (-0.3, 0.1), "worry", "wavy"),
+    "confused": (1.0, (0.35, -0.35), "slant", "wavy"),
+    "thinking": (1.0, (0.35, -0.45), "flat", "line"),
+    "suspicious": (0.65, (0.55, 0.0), "slant", "line"),
+    "disgusted": (0.7, (0.4, 0.1), "angry", "wavy"),
+    "embarrassed": (0.9, (-0.45, 0.2), "worry", "wavy"),
+    "shy": (0.9, (-0.4, 0.35), "worry", "small"),
+    "love": (1.1, (0.0, 0.0), "up", "smile"),
+    "determined": (0.85, (0.0, 0.0), "angry", "line"),
+    "tired": (0.6, (0.0, 0.3), "down", "line"),
+    "bored": (0.6, (0.5, 0.15), "flat", "line"),
+}
+
+
+def _face_mouth(d, cx, my, kind: str, mouth_open: bool, scale: float, lips=None) -> None:
+    """Miệng chung: nét đen (gray) hoặc môi dày hồng (khand)."""
+    s = scale
+    dark = (70, 30, 36, 255)
+    if mouth_open or kind in ("o", "laugh", "cry", "teeth"):
+        w = (34 if kind in ("o",) else 46) * s
+        h = (40 if kind in ("o", "laugh", "cry") else 26) * s
+        if not mouth_open and kind == "teeth":
+            h = 20 * s
+        if lips:
+            d.ellipse([cx - w - 14 * s, my - h / 2 - 12 * s, cx + w + 14 * s, my + h / 2 + 12 * s],
+                      fill=lips, outline=INK, width=6)
+        d.ellipse([cx - w, my - h / 2, cx + w, my + h / 2], fill=dark, outline=INK, width=5)
+        if kind == "teeth":
+            d.rectangle([cx - w * 0.7, my - h / 2 + 2, cx + w * 0.7, my - h / 2 + h * 0.35],
+                        fill=(250, 250, 250, 255))
+        if kind in ("laugh", "cry") or mouth_open:
+            d.chord([cx - w * 0.6, my, cx + w * 0.6, my + h / 2 - 2], 0, 180, fill=(220, 100, 110, 255))
+        return
+    if lips:                                      # môi dày (khand)
+        top = my - 18 * s
+        bot = my + 20 * s if kind in ("smile", "smirk") else my + 16 * s
+        d.ellipse([cx - 44 * s, top, cx + 44 * s, bot], fill=lips, outline=INK, width=6)
+        if kind in ("smile", "smirk"):
+            d.arc([cx - 30 * s, my - 14 * s, cx + 30 * s, my + 8 * s], 15, 165, fill=INK, width=5)
+        elif kind in ("frown", "wavy"):
+            d.arc([cx - 30 * s, my - 2 * s, cx + 30 * s, my + 18 * s], 195, 345, fill=INK, width=5)
+        else:
+            d.line([cx - 30 * s, my, cx + 30 * s, my], fill=INK, width=5)
+        return
+    if kind == "smile":
+        d.arc([cx - 30 * s, my - 22 * s, cx + 30 * s, my + 14 * s], 20, 160, fill=INK, width=6)
+    elif kind == "smirk":
+        d.arc([cx - 6 * s, my - 22 * s, cx + 34 * s, my + 10 * s], 20, 140, fill=INK, width=6)
+    elif kind == "frown":
+        d.arc([cx - 26 * s, my - 2 * s, cx + 26 * s, my + 24 * s], 200, 340, fill=INK, width=6)
+    elif kind == "wavy":
+        pts = [(cx - 26 * s + i * 13 * s, my + (5 if i % 2 else -4) * s) for i in range(5)]
+        d.line(pts, fill=INK, width=5, joint="curve")
+    elif kind == "small":
+        d.line([cx - 10 * s, my, cx + 10 * s, my], fill=INK, width=6)
+    else:
+        d.line([cx - 20 * s, my, cx + 20 * s, my + 2], fill=INK, width=6)
+
+
+def _face_brows(d, cx, by, dx, kind: str, span: float, width: int = 7) -> None:
+    for sgn in (-1, 1):
+        x = cx + sgn * dx
+        if kind == "up":
+            d.arc([x - span, by - 4, x + span, by + span * 0.9], 200, 340, fill=INK, width=width)
+        elif kind == "angry":
+            d.line([x - span * sgn, by - 10, x + span * sgn * 0.9, by + 12], fill=INK, width=width + 1)
+        elif kind == "worry":
+            d.line([x - span * sgn, by + 12, x + span * sgn * 0.9, by - 8], fill=INK, width=width)
+        elif kind == "down":
+            d.line([x - span, by + 8, x + span, by + 8], fill=INK, width=width)
+        elif kind == "slant":
+            d.line([x - span, by + (8 if sgn < 0 else -6), x + span, by + (-6 if sgn < 0 else 8)],
+                   fill=INK, width=width)
+        else:
+            d.line([x - span, by + 2, x + span, by + 2], fill=INK, width=width)
+
+
+def _gray_face(layer_d, g: Geometry, expression: str, mouth_open: bool) -> None:
+    """Mặt kiểu TikTok Mỹ: mắt trắng to, con ngươi liếc, không mũi."""
+    size, (lx, ly), brow, mouth = GRAY_FACE.get(expression, GRAY_FACE["neutral"])
+    d = layer_d
+    cx, cy, r = g.head_cx, g.head_cy, g.head_rx
+    ex, ey = r * 0.33, cy - r * 0.04
+    er = r * 0.3
+    for sgn in (-1, 1):
+        x = cx + sgn * ex
+        if size <= 0:                                       # cười híp mắt
+            d.arc([x - er, ey - er * 0.6, x + er, ey + er], 200, 340, fill=INK, width=8)
+            continue
+        rw, rh = er * 0.85 * size, er * 1.05 * size
+        d.ellipse([x - rw, ey - rh, x + rw, ey + rh], fill=(255, 255, 255, 255), outline=INK, width=5)
+        pr = er * (0.34 if size < 1.3 else 0.2)
+        px = x + lx * (rw - pr - 3)
+        py = ey + ly * (rh - pr - 3)
+        d.ellipse([px - pr, py - pr, px + pr, py + pr], fill=INK)
+        if size < 0.8:                                      # mí mắt sụp (chán, nghi ngờ)
+            d.chord([x - rw - 2, ey - rh - 2, x + rw + 2, ey + rh * 0.4], 180, 360, fill=GRAY_SKIN)
+            d.line([x - rw, ey - rh * 0.3, x + rw, ey - rh * 0.3], fill=INK, width=5)
+    _face_brows(d, cx, ey - er * 1.55 * max(size, 0.8), ex, brow, er * 0.9, 7)
+    _face_mouth(d, cx, cy + r * 0.45, mouth, mouth_open, 0.9)
+    if expression in ("crying", "sad"):
+        for sgn in (-1, 1):
+            x = cx + sgn * ex
+            d.ellipse([x - 8, ey + er * 1.2, x + 8, ey + er * 2.4], fill=(140, 200, 240, 255))
+    if expression in ("embarrassed", "worried", "scared"):
+        x, y = cx + r * 0.78, cy - r * 0.55
+        d.polygon([(x, y), (x + 14, y + 26), (x - 14, y + 26)], fill=(140, 200, 240, 255))
+        d.ellipse([x - 14, y + 16, x + 14, y + 42], fill=(140, 200, 240, 255))
+
+
+# biểu cảm -> (mắt, mày, miệng, thêm) cho kiểu vẽ tay Hàn
+KHAND_FACE = {
+    "neutral": ("round", "flat", "line", ""),
+    "happy": ("arc", "up", "smile", ""),
+    "laughing": ("squeeze", "up", "laugh", ""),
+    "proud": ("half", "up", "smirk", ""),
+    "smug": ("half", "slant", "smirk", ""),
+    "sad": ("droop", "worry", "frown", "tear"),
+    "crying": ("squeeze", "worry", "cry", "rivers"),
+    "angry": ("small", "angry", "teeth", "vein"),
+    "annoyed": ("half", "angry", "line", "sweat"),
+    "shocked": ("huge", "up", "o", "sweat"),
+    "surprised": ("huge", "up", "o", ""),
+    "scared": ("huge", "worry", "teeth", "sweat"),
+    "worried": ("round", "worry", "wavy", "sweat"),
+    "confused": ("odd", "slant", "wavy", ""),
+    "thinking": ("up", "flat", "line", ""),
+    "suspicious": ("half", "slant", "line", ""),
+    "disgusted": ("half", "angry", "wavy", ""),
+    "embarrassed": ("squeeze", "worry", "wavy", "blush"),
+    "shy": ("droop", "worry", "small", "blush"),
+    "love": ("heart", "up", "smile", "blush"),
+    "determined": ("small", "angry", "line", ""),
+    "tired": ("half", "down", "line", ""),
+    "bored": ("half", "flat", "line", ""),
+}
+
+
+def _khand_face(d, spec: CharSpec, g: Geometry, expression: str, mouth_open: bool) -> None:
+    """Mặt vẽ tay kiểu meme Hàn: mắt lồi tròng nhỏ, mũi to, môi dày hồng."""
+    eye, brow, mouth, extra = KHAND_FACE.get(expression, KHAND_FACE["neutral"])
+    cx, cy, rx, ry = g.head_cx, g.head_cy, g.head_rx, g.head_ry
+    skin = _soft_skin(spec)
+    ex, ey, er = rx * 0.3, cy - ry * 0.12, rx * 0.17
+    white = (255, 255, 255, 255)
+    for sgn in (-1, 1):
+        x = cx + sgn * ex
+        if eye in ("round", "huge", "small", "droop", "up", "odd"):
+            k = {"huge": 1.3, "small": 0.9, "odd": 1.15 if sgn < 0 else 0.8}.get(eye, 1.0)
+            rr = er * k
+            d.ellipse([x - rr, ey - rr, x + rr, ey + rr], fill=white, outline=INK, width=6)
+            pr = rr * (0.18 if eye == "huge" else 0.3 if eye == "small" else 0.36)
+            oy = {"droop": rr * 0.35, "up": -rr * 0.4}.get(eye, 0)
+            ox = -sgn * rr * 0.1                       # hơi lác vào trong cho hài
+            d.ellipse([x + ox - pr, ey + oy - pr, x + ox + pr, ey + oy + pr], fill=INK)
+        elif eye == "arc":
+            d.arc([x - er, ey - er * 0.7, x + er, ey + er], 200, 340, fill=INK, width=8)
+        elif eye == "squeeze":                         # > <
+            k = -sgn
+            d.line([x - er * k, ey - er * 0.7, x + er * k, ey, x - er * k, ey + er * 0.7],
+                   fill=INK, width=8, joint="curve")
+        elif eye == "half":
+            d.ellipse([x - er, ey - er, x + er, ey + er], fill=white, outline=INK, width=6)
+            d.chord([x - er - 3, ey - er - 3, x + er + 3, ey + er * 0.2], 180, 360, fill=skin)
+            d.line([x - er, ey - er * 0.1, x + er, ey - er * 0.1], fill=INK, width=6)
+            d.ellipse([x - er * 0.3, ey + er * 0.1, x + er * 0.3, ey + er * 0.7], fill=INK)
+        elif eye == "heart":
+            hc = (230, 60, 100, 255)
+            for off in (-1, 1):
+                d.ellipse([x + off * er * 0.45 - er * 0.6, ey - er * 0.7,
+                           x + off * er * 0.45 + er * 0.6, ey + er * 0.4], fill=hc)
+            d.polygon([(x - er, ey - 4), (x + er, ey - 4), (x, ey + er * 1.1)], fill=hc)
+    _face_brows(d, cx, ey - er * 1.75, ex, brow, er * 1.05, 9)
+    # mũi to tròn: ở giữa, có lỗ mũi
+    ny = cy + ry * 0.18
+    nw, nh = rx * 0.2, ry * 0.17
+    d.ellipse([cx - nw, ny - nh, cx + nw, ny + nh], fill=skin, outline=INK, width=6)
+    d.arc([cx - nw * 0.95, ny - nh * 1.6, cx - nw * 0.2, ny + nh * 0.2], 260, 330, fill=INK, width=5)
+    for sgn in (-1, 1):
+        d.ellipse([cx + sgn * nw * 0.45 - 6, ny + nh * 0.2 - 5, cx + sgn * nw * 0.45 + 6, ny + nh * 0.2 + 5],
+                  fill=INK)
+    lips = (236, 128, 140, 255)
+    _face_mouth(d, cx, cy + ry * 0.52, mouth, mouth_open, 1.0, lips=lips)
+    blue = (120, 190, 240, 240)
+    if extra == "tear":
+        x = cx + ex
+        d.ellipse([x - 9, ey + er, x + 9, ey + er * 2.2], fill=blue)
+    if extra == "rivers":
+        for sgn in (-1, 1):
+            x = cx + sgn * ex
+            d.rounded_rectangle([x - 11, ey + er * 0.6, x + 11, ey + er * 5.0], radius=11, fill=blue)
+    if extra == "sweat":
+        x, y = cx + rx * 0.72, cy - ry * 0.5
+        d.polygon([(x, y), (x + 18, y + 32), (x - 18, y + 32)], fill=blue, outline=INK)
+        d.ellipse([x - 18, y + 20, x + 18, y + 52], fill=blue, outline=INK, width=4)
+    if extra == "blush":
+        for sgn in (-1, 1):
+            x = cx + sgn * rx * 0.58
+            d.ellipse([x - 26, cy + ry * 0.2, x + 26, cy + ry * 0.38], fill=(240, 130, 140, 170))
+    if extra == "vein":
+        x, y = cx + rx * 0.5, cy - ry * 0.62
+        for a0 in (0, 90, 180, 270):
+            d.arc([x - 30, y - 30, x + 30, y + 30], a0 + 20, a0 + 70, fill=(210, 40, 50, 255), width=10)
+
+
+def _soft_head(spec: CharSpec, g: Geometry, mouth_open: bool,
+               expression: str = "neutral") -> Image.Image:
+    """Đầu nét mềm: tóc khối + mặt theo kiểu (gray / khand). Chỉ màu, viền tự tạo."""
+    img = _new_canvas()
+    layer = Image.new("RGBA", (CW, CH), (0, 0, 0, 0))
+    d = ImageDraw.Draw(layer)
+    cx, cy, rx, ry = g.head_cx, g.head_cy, g.head_rx, g.head_ry
+    skin = _soft_skin(spec)
+    hair = _soft_hair_col(spec)
+    st = spec.hair_style
+    gray = spec.style == "gray"
+
+    # tóc phía sau
+    if st in ("long", "wavy"):
+        d.rounded_rectangle([cx - rx - 6, cy - ry * 0.4, cx + rx + 6, cy + ry * (1.25 if gray else 1.1)],
+                            radius=int(rx * 0.6), fill=hair)
+    elif st == "ponytail":
+        d.ellipse([cx + rx * 0.55, cy - ry * 0.95, cx + rx * 1.25, cy - ry * 0.25], fill=hair)
+    elif st == "twintails":
+        for sgn in (-1, 1):
+            x = cx + sgn * rx * 1.0
+            d.ellipse([x - rx * 0.3, cy - ry * 0.3, x + rx * 0.3, cy + ry * 0.7], fill=hair)
+    elif st == "bun":
+        d.ellipse([cx - rx * 0.32, cy - ry * 1.42, cx + rx * 0.32, cy - ry * 0.78], fill=hair)
+
+    # tai (kiểu vẽ tay Hàn)
+    if not gray:
+        for sgn in (-1, 1):
+            x = cx + sgn * rx * 0.98
+            d.ellipse([x - rx * 0.16, cy - ry * 0.05, x + rx * 0.16, cy + ry * 0.33], fill=skin)
+    # mặt: tròn, kiểu Hàn hơi bành ở má
+    if gray:
+        d.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], fill=skin)
+    else:
+        d.chord([cx - rx, cy - ry, cx + rx, cy + ry], 180, 360, fill=skin)
+        d.ellipse([cx - rx * 1.02, cy - ry * 0.35, cx + rx * 1.02, cy + ry * 1.02], fill=skin)
+
+    # tóc phía trước
+    if st == "buzz" and not gray:                      # hói, vài sợi tóc (kiểu ông bố)
+        for k in (-0.25, 0.0, 0.22):
+            x = cx + k * rx
+            d.arc([x - 28, cy - ry - 36, x + 28, cy - ry + 18], 200, 330, fill=INK, width=5)
+    elif st == "buzz":
+        d.chord([cx - rx * 0.98, cy - ry * 1.02, cx + rx * 0.98, cy - ry * 0.1], 180, 360, fill=hair)
+    elif st == "curly":                                 # tóc xoăn ajumma
+        for i in range(9):
+            a = math.pi * (0.02 + 0.12 * i)
+            x = cx - math.cos(a) * rx * 0.92
+            y = cy - math.sin(a) * ry * 0.9
+            d.ellipse([x - rx * 0.24, y - rx * 0.24, x + rx * 0.24, y + rx * 0.24], fill=hair)
+    else:
+        # mũ tóc phủ đỉnh đầu, mép trước nham nhở (nét tay)
+        edge = cy - ry * (0.35 if st != "bowl" else 0.18)
+        d.chord([cx - rx * 1.02, cy - ry * 1.04, cx + rx * 1.02, 2 * edge - (cy - ry * 1.04)],
+                180, 360, fill=hair)
+        n = 7
+        rnd = random.Random(sum(map(ord, spec.name or "x")))
+        for i in range(n):
+            x0 = cx - rx * 0.85 + i * rx * 1.7 / n
+            x1 = x0 + rx * 1.7 / n
+            dep = ry * (0.08 + 0.08 * rnd.random())
+            d.polygon([(x0, edge - 2), (x1, edge - 2), ((x0 + x1) / 2 + rnd.uniform(-6, 6), edge + dep)],
+                      fill=hair)
+        if st == "sidepart":
+            d.polygon([(cx - rx * 0.95, edge + 10), (cx + rx * 0.2, cy - ry * 1.05),
+                       (cx + rx * 0.95, edge - ry * 0.25)], fill=hair)
+        if st == "short" and gray:                      # tóc ngắn có chỏm (nam, ảnh mẫu)
+            d.polygon([(cx - rx * 0.2, cy - ry * 0.98), (cx + rx * 0.45, cy - ry * 1.18),
+                       (cx + rx * 0.5, cy - ry * 0.8)], fill=hair)
+        if st == "bob":
+            for sgn in (-1, 1):
+                x = cx + sgn * rx * 0.9
+                d.rounded_rectangle([x - rx * 0.22, edge - 10, x + rx * 0.22, cy + ry * 0.55],
+                                    radius=24, fill=hair)
+
+    # mặt + phụ kiện
+    if gray:
+        _gray_face(d, g, expression, mouth_open)
+    else:
+        _khand_face(d, spec, g, expression, mouth_open)
+    fg = {"head_cx": cx, "head_cy": cy, "head_rx": rx, "head_ry": ry,
+          "eye_dx": int(rx * 0.32), "eye_y": int(cy - ry * 0.1), "eye_r": int(rx * 0.18),
+          "mouth_y": int(cy + ry * 0.5), "brow_y": int(cy - ry * 0.42)}
+    if spec.accessory == "cap" and gray:               # mũ lưỡi trai xám đội ngược (ảnh mẫu)
+        d.chord([cx - rx * 1.04, cy - ry * 1.1, cx + rx * 1.04, cy - ry * 0.02], 180, 360, fill=GRAY_DARK)
+        d.rounded_rectangle([cx - rx * 1.45, cy - ry * 0.6, cx - rx * 0.5, cy - ry * 0.4],
+                            radius=10, fill=GRAY_DARK)
+    elif spec.accessory != "none":
+        ck._draw_extras(d, spec, fg, {})
+    img.alpha_composite(layer, (PAD_X, PAD_Y))
+    return img
+
+
+# ---------------------------------------------------------------- thân, tay, chân
+
+def _soft_torso(spec: CharSpec, g: Geometry) -> Image.Image:
+    img = _new_canvas()
+    d = ImageDraw.Draw(img)
+    cx = g.head_cx
+    top, hip = g.shoulder_y - 16, g.hip[1]
+    hw = g.body_w / 2
+    if spec.style == "gray":
+        # thân xám mảnh hơi thon eo; nữ mặc váy xoè
+        _taper(d, (cx, top + hw), (cx, hip), g.body_w, g.body_w * 0.9, GRAY_SKIN)
+        if spec.outfit == "dress" or spec.hair_style in ("long", "ponytail", "twintails", "bun", "bob", "wavy"):
+            d.polygon([_p((cx - hw * 0.9, hip - 70)), _p((cx + hw * 0.9, hip - 70)),
+                       _p((cx + hw * 1.9, hip + 46)), _p((cx - hw * 1.9, hip + 46))], fill=GRAY_SKIN)
+        return img
+    # vẽ tay Hàn: bụng tròn trong áo cổ chữ V
+    shirt = ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
+    skin = _soft_skin(spec)
+    pants = ck.PANTS_COLORS.get(spec.pants, ck.PANTS_COLORS["navy"]) + (255,)
+    belly = hw * 1.18
+    d.ellipse([*_p((cx - belly, hip - belly * 1.5)), *_p((cx + belly, hip + belly * 0.35))], fill=shirt)
+    d.rounded_rectangle([*_p((cx - hw, top)), *_p((cx + hw, hip - belly * 0.4))], radius=int(hw * 0.7), fill=shirt)
+    # quần đùi
+    d.chord([*_p((cx - belly * 0.95, hip - belly * 0.6)), *_p((cx + belly * 0.95, hip + belly * 0.5))],
+            0, 180, fill=pants)
+    # cổ áo chữ V (da) + nét
+    v = [(cx - hw * 0.24, top + 4), (cx, top + hw * 0.42), (cx + hw * 0.24, top + 4)]
+    d.polygon([_p(q) for q in v], fill=skin)
+    _soft_line(d, v, 6)
+    # nếp bụng
+    d.arc([*_p((cx - belly * 0.45, hip - belly * 0.55)), *_p((cx + belly * 0.45, hip - belly * 0.05))],
+          30, 150, fill=INK, width=5)
+    return img
+
+
+def _soft_neck(spec: CharSpec, g: Geometry) -> Image.Image:
+    img = _new_canvas()
+    d = ImageDraw.Draw(img)
+    w = g.body_w * (0.45 if spec.style == "gray" else 0.3)
+    # cổ dừng ngay trên mép áo, không đè xuống ngực
+    end = g.shoulder_y + (4 if spec.style == "gray" else -12)
+    _taper(d, (g.head_cx, g.chin[1] - 16), (g.head_cx, end), w, w, _soft_skin(spec))
+    return img
+
+
+def _soft_parts(spec: CharSpec, g: Geometry) -> dict:
+    skin = _soft_skin(spec)
+    gray = spec.style == "gray"
+    shirt = ck.SHIRT_COLORS.get(spec.shirt, ck.SHIRT_COLORS["blue"]) + (255,)
+    pants = ck.PANTS_COLORS.get(spec.pants, ck.PANTS_COLORS["navy"]) + (255,)
+    aw = g.arm_w
+
+    def sx(gg, side):
+        return gg.head_cx + (gg.shoulder_dx if side == "right" else -gg.shoulder_dx)
+
+    def hx(gg, side):
+        return gg.head_cx + (gg.hip_dx if side == "right" else -gg.hip_dx)
+
+    def upper(sp, gg, side):
+        img = _new_canvas()
+        d = ImageDraw.Draw(img)
+        x, y0 = sx(gg, side), gg.shoulder_y
+        y1 = y0 + gg.upper_len
+        _taper(d, (x, y0), (x, y1), aw, aw * 0.88, skin)
+        if not gray:                                  # tay áo ngắn
+            _taper(d, (x, y0), (x, y0 + gg.upper_len * 0.45), aw * 1.25, aw * 1.15, shirt)
+        return img
+
+    def fore(sp, gg, side):
+        img = _new_canvas()
+        x, y0 = sx(gg, side), gg.shoulder_y + gg.upper_len
+        _taper(ImageDraw.Draw(img), (x, y0), (x, y0 + gg.fore_len), aw * 0.88, aw * 0.74, skin)
+        return img
+
+    def hand(sp, gg, side):
+        img = _new_canvas()
+        d = ImageDraw.Draw(img)
+        sgn = 1 if side == "right" else -1
+        x, wy = sx(gg, side), gg.shoulder_y + gg.upper_len + gg.fore_len
+        r = gg.hand_r
+        d.ellipse([*_p((x - r, wy - r * 0.2)), *_p((x + r, wy + r * 1.7))], fill=skin)
+        if not gray:                                  # ngón cái
+            tx0, tx1 = sorted((x - sgn * r * 1.25, x - sgn * r * 0.35))
+            d.ellipse([*_p((tx0, wy + r * 0.1)), *_p((tx1, wy + r * 0.95))], fill=skin)
+        return img
+
+    def thigh(sp, gg, side):
+        img = _new_canvas()
+        d = ImageDraw.Draw(img)
+        x, y0 = hx(gg, side), gg.hip[1]
+        y1 = y0 + gg.thigh_len
+        _taper(d, (x, y0), (x, y1), gg.thigh_w, gg.thigh_w * 0.85, skin)
+        if not gray:                                  # ống quần đùi
+            _taper(d, (x, y0), (x, y0 + gg.thigh_len * 0.5), gg.thigh_w * 1.3, gg.thigh_w * 1.2, pants)
+        return img
+
+    def shin(sp, gg, side):
+        img = _new_canvas()
+        x, y0 = hx(gg, side), gg.hip[1] + gg.thigh_len
+        _taper(ImageDraw.Draw(img), (x, y0), (x, y0 + gg.shin_len), gg.thigh_w * 0.85,
+               gg.thigh_w * 0.7, skin)
+        return img
+
+    def foot(sp, gg, side):
+        img = _new_canvas()
+        d = ImageDraw.Draw(img)
+        sgn = 1 if side == "right" else -1
+        x, ay = hx(gg, side), gg.hip[1] + gg.thigh_len + gg.shin_len
+        if gray:                                      # chân nhọn nhỏ như ảnh mẫu
+            d.ellipse([*_p((x - 14, ay - 12)), *_p((x + 14 + sgn * 10, ay + 16))], fill=skin)
+            return img
+        fw = gg.foot_w
+        x0, x1 = (x - fw * 0.35, x + fw * 0.75) if sgn > 0 else (x - fw * 0.75, x + fw * 0.35)
+        d.ellipse([*_p((x0, ay - 16)), *_p((x1, ay + 26))], fill=skin)
+        tip = x1 if sgn > 0 else x0                   # ngón chân
+        for k in range(4):
+            tx = tip - sgn * (6 + k * fw * 0.16)
+            d.ellipse([*_p((tx - 10, ay + 6)), *_p((tx + 10, ay + 28))], fill=skin)
+        return img
+
+    return {"torso": _soft_torso, "neck": _soft_neck, "head": _soft_head,
+            "upper": upper, "fore": fore, "hand": hand,
+            "thigh": thigh, "shin": shin, "foot": foot}
+
+
 def _parts_for(spec: CharSpec, g: Geometry):
     """Bảng hàm vẽ bộ phận theo kiểu nhân vật."""
+    if spec.style in SOFT_STYLES:
+        return _soft_parts(spec, g)
     if spec.style in ("box", "kchibi"):
         return _box_parts(spec, g)
     if spec.style == "stick":
@@ -1059,11 +1585,16 @@ STICK_REST = {"vai_right": math.radians(-24), "vai_left": math.radians(24),
               "dui_right": math.radians(-8), "dui_left": math.radians(8)}
 REST_POSES = {
     "stick": STICK_REST,
+    "gray": {"vai_right": math.radians(-17), "vai_left": math.radians(17),
+             "dui_right": math.radians(-4), "dui_left": math.radians(4)},
+    "khand": {"vai_right": math.radians(-20), "vai_left": math.radians(20),
+              "khuyu_right": math.radians(-10), "khuyu_left": math.radians(10),
+              "dui_right": math.radians(-7), "dui_left": math.radians(7)},
     "box": {"vai_right": math.radians(-12), "vai_left": math.radians(12)},
     "kchibi": {"vai_right": math.radians(-16), "vai_left": math.radians(16)},
 }
 # kiểu đầu to: tay vẽ sau đầu và giới hạn góc giơ tay để không che mặt
-BIG_HEAD = ("stick", "box", "kchibi")
+BIG_HEAD = ("stick", "box", "kchibi", "gray", "khand")
 
 
 # ------------------------------------------------------------------ xương
@@ -1076,7 +1607,7 @@ class Bone:
     offset: tuple[float, float]     # lệch từ khớp cha tới khớp mình
     part: str                       # tên file ảnh trong thư mục parts/
     pivot: tuple[float, float]      # pivot trong ảnh (px)
-    layer: int
+    layer: float                    # thứ tự vẽ (lớn hơn vẽ sau, đè lên)
     angle: float = 0.0              # radian, góc tương đối so với cha
 
     def to_dict(self) -> dict:
@@ -1094,7 +1625,7 @@ class Bone:
             name=d["name"], parent=d.get("parent"),
             offset=tuple(d.get("offset", (0, 0))),
             part=d["part"], pivot=tuple(d.get("pivot", (0, 0))),
-            layer=int(d.get("layer", 0)), angle=float(d.get("angle", 0.0)),
+            layer=float(d.get("layer", 0)), angle=float(d.get("angle", 0.0)),
         )
 
 
@@ -1240,9 +1771,14 @@ def build_parts(spec: CharSpec, expression: str = "neutral"
                       offset=(chin[0] - neck[0], chin[1] - neck[1]),
                       part="dau_dong.png", pivot=hpivot, layer=LAYER_DAU))
 
-    # --- tay --- (người que: cả hai tay nằm sau đầu để không che mặt)
-    arm_layers = (("left", LAYER_THAN), ("right", LAYER_THAN)) if spec.style in BIG_HEAD \
-        else (("left", LAYER_TAY_SAU), ("right", LAYER_TAY_TRUOC))
+    # --- tay --- (người que: cả hai tay nằm sau đầu để không che mặt;
+    # nét mềm: mỗi tay một lớp riêng trên thân để viền tách bạch khi khoanh tay)
+    if spec.style in SOFT_STYLES:
+        arm_layers = (("left", 2.5), ("right", 2.6))
+    elif spec.style in BIG_HEAD:
+        arm_layers = (("left", LAYER_THAN), ("right", LAYER_THAN))
+    else:
+        arm_layers = (("left", LAYER_TAY_SAU), ("right", LAYER_TAY_TRUOC))
     for side, layer in arm_layers:
         sgn = 1 if side == "right" else -1
         shoulder = (g.head_cx + sgn * g.shoulder_dx, float(g.shoulder_y))
@@ -1258,21 +1794,22 @@ def build_parts(spec: CharSpec, expression: str = "neutral"
             (wrist[0] - elbow[0], wrist[1] - elbow[1]),
             f"co_tay_{side}.png", _p(wrist), layer, fn["hand"](spec, g, side))
 
-    # --- chân ---
+    # --- chân --- (nét mềm: chân phải lớp trên chân trái để viền rõ khi bước)
     for side in ("left", "right"):
         sgn = 1 if side == "right" else -1
+        leg_layer = (1.2 if side == "right" else 1.0) if spec.style in SOFT_STYLES else LAYER_CHAN
         hip_joint = (g.head_cx + sgn * g.hip_dx, g.hip[1])
         knee = (hip_joint[0], hip_joint[1] + g.thigh_len)
         ankle = (hip_joint[0], knee[1] + g.shin_len)
         add(f"dui_{side}", "than", hip_joint,
             (hip_joint[0] - hip[0], hip_joint[1] - hip[1]),
-            f"dui_{side}.png", _p(hip_joint), LAYER_CHAN, fn["thigh"](spec, g, side))
+            f"dui_{side}.png", _p(hip_joint), leg_layer, fn["thigh"](spec, g, side))
         add(f"goi_{side}", f"dui_{side}", knee,
             (knee[0] - hip_joint[0], knee[1] - hip_joint[1]),
-            f"goi_{side}.png", _p(knee), LAYER_CHAN, fn["shin"](spec, g, side))
+            f"goi_{side}.png", _p(knee), leg_layer, fn["shin"](spec, g, side))
         add(f"co_chan_{side}", f"goi_{side}", ankle,
             (ankle[0] - knee[0], ankle[1] - knee[1]),
-            f"co_chan_{side}.png", _p(ankle), LAYER_CHAN, fn["foot"](spec, g, side))
+            f"co_chan_{side}.png", _p(ankle), leg_layer, fn["foot"](spec, g, side))
 
     return bones, images
 
@@ -1349,9 +1886,37 @@ class RigRenderer:
     def _part(self, filename: str) -> Image.Image:
         img = self._cache.get(filename)
         if img is None:
-            img = Image.open(self.parts_dir / filename).convert("RGBA")
+            if filename.endswith("#o"):
+                img = _outline_img(self._part(filename[:-2]))
+            else:
+                img = Image.open(self.parts_dir / filename).convert("RGBA")
             self._cache[filename] = img
         return img
+
+    def _sequence(self, ordered: list["Bone"], world: dict) -> list[tuple["Bone", bool]]:
+        """Thứ tự vẽ (xương, là_viền). Kiểu nét mềm: mỗi lớp vẽ viền của mọi
+        bộ phận trong lớp trước rồi mới tô màu, nên các khớp liền một khối."""
+        if self.rig.spec.get("style") not in SOFT_STYLES:
+            return [(b, False) for b in ordered]
+        seq: list[tuple[Bone, bool]] = []
+        i = 0
+        while i < len(ordered):
+            lay = world[ordered[i].name]["layer"]
+            group = []
+            while i < len(ordered) and world[ordered[i].name]["layer"] == lay:
+                group.append(ordered[i])
+                i += 1
+            seq += [(b, True) for b in group] + [(b, False) for b in group]
+        return seq
+
+    def _resolve(self, b: "Bone", outline: bool, mouth_open: bool,
+                 expression: str | None) -> tuple[str, tuple[float, float]]:
+        filename, pivot = b.part, b.pivot
+        if b.name == "dau":
+            filename, pivot = self._head_part(b, mouth_open, expression)
+        if outline:
+            return filename + "#o", (pivot[0] + SOFT_OUTLINE, pivot[1] + SOFT_OUTLINE)
+        return filename, pivot
 
     def _head_part(self, b: "Bone", mouth_open: bool, expression: str | None
                    ) -> tuple[str, tuple[float, float]]:
@@ -1388,10 +1953,8 @@ class RigRenderer:
 
         canvas = Image.new("RGBA", (PART_W, PART_H), (0, 0, 0, 0))
 
-        for b in ordered:
-            filename, pivot_img = b.part, b.pivot
-            if b.name == "dau":
-                filename, pivot_img = self._head_part(b, mouth_open, expression)
+        for b, is_outline in self._sequence(ordered, world):
+            filename, pivot_img = self._resolve(b, is_outline, mouth_open, expression)
             img = self._part(filename)
             angle = world[b.name]["angle"]
 
@@ -1442,10 +2005,8 @@ class RigRenderer:
         np = self._np
         canvas = np.zeros((PART_H, PART_W, 4), dtype=np.uint8)
 
-        for b in ordered:
-            filename, pivot0 = b.part, b.pivot
-            if b.name == "dau":
-                filename, pivot0 = self._head_part(b, mouth_open, expression)
+        for b, is_outline in self._sequence(ordered, world):
+            filename, pivot0 = self._resolve(b, is_outline, mouth_open, expression)
             angle = world[b.name]["angle"]
             if abs(angle) > 1e-6:
                 # khung vuông tâm ở khớp: xoay góc nào cũng không bị cắt

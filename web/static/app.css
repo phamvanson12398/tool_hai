@@ -525,28 +525,34 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
   background: linear-gradient(180deg, rgba(0,0,0,.32) 0%, transparent 30%, transparent 62%, rgba(0,0,0,.45) 100%);
 }
 
+/* Nhân vật đặt giống hệt video: tâm theo vị trí trái/giữa/phải,
+   cao 50% khung (3 người: 42%), chân đứng ở 80% chiều cao. */
 .stage-cast {
   position: absolute;
   inset: 0;
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  gap: 2%;
-  padding: 0 6% 22%;
 }
 
 .sprite {
-  flex: 0 0 auto;
+  position: absolute;
+  bottom: 20%;
+  height: 50%;
+  transform: translateX(-50%);
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 4px;
+  justify-content: flex-end;
   pointer-events: none;
 }
-.sprite.pos-left   { align-self: flex-end; }
-.sprite.pos-right  { align-self: flex-start; }
-.sprite.pos-center { align-self: center; }
+.sprite.small { height: 42%; }
+.sprite img {
+  height: 100%;
+  width: auto;
+  max-width: none;
+  display: block;
+}
 .sprite-name {
+  position: absolute;
+  bottom: -18px;
   font-size: 10px;
   font-weight: 700;
   padding: 2px 7px;

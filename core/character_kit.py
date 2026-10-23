@@ -74,8 +74,10 @@ BODIES = ["adult", "child"]
 #   stick  = người que đầu to, tay chân nét đen
 #   box    = người que thân vuông mặc quần áo (đầu tròn to như người que)
 #   kchibi = webtoon Hàn: đầu rất to, người ngắn, mặt kiểu meme Hàn (^^, ㅠㅠ, -_-)
+#   gray   = kiểu TikTok Mỹ: người xám đầu tròn, mắt trắng to liếc ngang
+#   khand  = vẽ tay kiểu meme Hàn: mắt lồi, mũi to, môi dày, bụng tròn
 #   flat   = hoạt hình phẳng kiểu cũ
-STYLES = ["stick", "box", "kchibi", "flat"]
+STYLES = ["gray", "khand", "stick", "box", "kchibi", "flat"]
 
 # Trang phục (dùng cho box và kchibi) — nhiều kiểu quen thuộc trong hài Hàn
 OUTFITS = [
@@ -509,7 +511,7 @@ def _draw_extras(d: ImageDraw.ImageDraw, spec: CharSpec, g: dict,
 def render_character(spec: CharSpec, expression: str = "neutral",
                      mouth_open: bool = False) -> Image.Image:
     """Vẽ một nhân vật với biểu cảm và trạng thái miệng cho trước."""
-    if spec.style in ("stick", "box", "kchibi"):
+    if spec.style != "flat":
         # dựng từ bộ xương (cùng bộ phận với chế độ cử động)
         from .rig import render_still
         return render_still(spec, expression, mouth_open)

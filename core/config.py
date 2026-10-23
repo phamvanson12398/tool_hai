@@ -89,7 +89,7 @@ DEFAULT_SETTINGS = {
     "tts_engine": "",           # rỗng = dùng mặc định "omnivoice"
     # --- Cử động nhân vật (Bước D) ---
     "enable_rig": False,        # True = bật cử động bằng khung xương + cử chỉ
-    # kiểu nhân vật AI vẽ: auto (tiếng Hàn -> kchibi, tiếng Anh -> box) | stick | box | kchibi | flat
+    # kiểu nhân vật AI vẽ: auto (tiếng Hàn -> khand, tiếng Anh -> gray) | gray | khand | stick | box | kchibi | flat
     "char_style": "auto",
     # --- Xuất dự án CapCut (thử nghiệm) ---
     "capcut_drafts_root": "",   # rỗng = mặc định %LOCALAPPDATA%\\CapCut\\User Data\\Projects\\com.lveditor.draft

@@ -1039,13 +1039,22 @@
 
     // nhân vật
     cast.innerHTML = "";
-    var chars = assets.characters || [];
+    var chars = (assets.characters || []).slice();
     var n = chars.length;
+    // giống video: xếp trái -> giữa -> phải theo vị trí trong kịch bản
+    var sides = (p.parse && p.parse.sides) || {};
+    var order = { trai: 0, left: 0, giua: 1, center: 1, phai: 2, right: 2 };
+    chars.sort(function (a, b) {
+      var sa = order[String(sides[a.name] || a.side || "giua").toLowerCase()];
+      var sb = order[String(sides[b.name] || b.side || "giua").toLowerCase()];
+      return (sa == null ? 1 : sa) - (sb == null ? 1 : sb);
+    });
+    var slots = { 1: [0.5], 2: [0.27, 0.73], 3: [0.18, 0.5, 0.82] }[n];
     chars.forEach(function (c, i) {
-      var spr = el("div", "sprite");
-      var pos = n === 1 ? "center" : (n === 2 ? (i === 0 ? "left" : "right") :
-        (i === 0 ? "left" : (i === n - 1 ? "right" : "center")));
-      spr.classList.add("pos-" + (c.side || pos));
+      var spr = el("div", "sprite" + (n >= 3 ? " small" : ""));
+      var x = slots ? slots[i] : (i + 1) / (n + 1);
+      spr.style.left = (x * 100).toFixed(1) + "%";
+      if (c.scale && Number(c.scale) !== 1) spr.style.height = ((n >= 3 ? 42 : 50) * Number(c.scale)) + "%";
       var img = document.createElement("img");
       img.alt = c.name || "";
       img.src = assetUrl(c.image);
@@ -1784,7 +1793,7 @@
     $("s-ffmpeg-bin").value = s.ffmpeg_bin || "";
     $("s-enable-rig").value = s.enable_rig ? "1" : "0";
     var cs = s.char_style || "auto";
-    $("s-char-style").value = ["auto", "kchibi", "box", "stick", "flat"].indexOf(cs) >= 0 ? cs : "auto";
+    $("s-char-style").value = ["auto", "gray", "khand", "kchibi", "box", "stick", "flat"].indexOf(cs) >= 0 ? cs : "auto";
     $("bgm-current").textContent = s.bgm_file ? (s.bgm_file) : "Chưa chọn file";
     $("s-capcut-root").value = s.capcut_drafts_root || "";
     $("capcut-root-hint").textContent =

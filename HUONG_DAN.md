@@ -168,7 +168,9 @@ chỗ một dòng:
 
 | Kiểu | Trông thế nào |
 |---|---|
-| **Tự chọn theo ngôn ngữ** (mặc định) | Tập tiếng Hàn → webtoon Hàn, tập tiếng Anh → người que mặc áo |
+| **Tự chọn theo ngôn ngữ** (mặc định) | Tập tiếng Anh → người xám TikTok, tập tiếng Hàn → vẽ tay kiểu Hàn |
+| **Người xám kiểu TikTok Mỹ** | Đầu tròn xám, tóc đen khối, mắt trắng to con ngươi liếc ngang, thân xám mảnh; nữ có váy xoè; mũ lưỡi trai xám đội ngược |
+| **Vẽ tay kiểu Hàn** | Mắt lồi tròng nhỏ, mũi to, môi dày hồng, có tai, bụng tròn trong áo cổ V, quần đùi, chân trần có ngón; tóc ngắn nham nhở, ông bố hói vài sợi (`buzz`), ajumma tóc xoăn (`curly`) |
 | **Webtoon Hàn** | Đầu rất to, người ngắn; mặt kiểu meme Hàn: `^^` vui, `ㅠㅠ` khóc có dòng nước mắt, `-_-` chán, mắt trắng dã + vạch tím khi sốc, dấu nổi gân 💢 khi giận, `///` khi ngượng |
 | **Người que mặc áo** | Đầu tròn to như người que, thân vuông có quần áo, tay áo, quần, giày |
 | **Người que nét đen** | Tay chân là nét kẻ, cà vạt màu áo |
@@ -181,6 +183,9 @@ ajeossi (등산복), áo phao dài (롱패딩), cardigan, váy, hanbok. Thêm ph
 
 Với tập tiếng Hàn, Claude phối đồ theo các vai quen thuộc: học sinh, nhân viên
 văn phòng / sếp, ajumma, ajeossi, bà cụ, giới trẻ MZ, người yêu.
+
+Hai kiểu người xám và vẽ tay Hàn có **viền tự tạo quanh cả khối**, nên khuỷu
+tay, đầu gối liền mạch khi cử động, tay chân thon dần như nét vẽ tay.
 
 Đổi kiểu xong, bấm **Vẽ lại** ở nhân vật đã có để vẽ theo kiểu mới.
 

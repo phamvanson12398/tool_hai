@@ -974,7 +974,9 @@ def api_project_generate(pid):
 
     body = request.get_json(silent=True) or {}
     s = parse_script(data.get("script", ""))
-    language = data.get("language", "ko")
+    # kịch bản có '# ngon_ngu:' thì theo kịch bản (chọn kiểu nhân vật Hàn/Mỹ)
+    has_lang = "ngon_ngu" in (data.get("script") or "")
+    language = s.language if has_lang else data.get("language", "ko")
     pdir = config.project_dir(pid)
     want_chars = body.get("characters")
     if want_chars is None:
@@ -995,7 +997,7 @@ def api_project_generate(pid):
             specs = {}
         style = config.load_settings().get("char_style") or "auto"
         if style not in character_kit.STYLES:      # "auto": theo ngôn ngữ của tập
-            style = "kchibi" if language == "ko" else "box"
+            style = "khand" if language == "ko" else "gray"
         for i, name in enumerate(want_chars):
             spec_d = specs.get(name) or {}
             spec_d["name"] = name
