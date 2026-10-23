@@ -419,14 +419,7 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict, progress
                 film_sfx.put(track, name, row["start"] + at, vol * gain)
         if rows[0].get("hook") and len(rows) > 1:          # hết móc câu: vút về đầu chuyện
             film_sfx.put(track, "swoosh", rows[1]["start"] - 0.25, 0.5 * gain)
-        # tiếng nền liền một mạch từ đầu tới hết video (cả lúc hiện tên truyện, lúc kết)
-        for k, row in enumerate(rows):
-            if not row.get("ambience"):
-                continue
-            v = {"birds": 0.75, "crickets": 0.7, "rain": 0.6, "wind": 0.6}.get(row["ambience"], 0.6)
-            t0 = 0.0 if k == 0 else row["start"] - 0.4
-            t1 = total if k == len(rows) - 1 else row["start"] + row["dur"] + 0.4
-            film_sfx.loop(track, row["ambience"], t0, t1, v * gain)
+        # không lồng tiếng nền (chim, dế, mưa): chị muốn bỏ
     wav = tmp / "film_audio.wav"
     sf.write(str(wav), np.clip(track, -1, 1), sr)
 

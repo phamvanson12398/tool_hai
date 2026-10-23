@@ -715,9 +715,8 @@ lúc giọng đọc tới câu đó.
   lên chõng / ghế gần nhất. Kể chuyện cũng nằm trên giường / chiếu.
 - **Tiếng động**: bước chân khi đi / chạy, tiếng cuốc, chổi, rìu, liềm, vỗ tay,
   nhai, rít điếu cày, chó sủa khi chó mừng / nói, mèo kêu, há hốc khi giật mình,
-  vút khi đưa đồ, phịch khi nằm xuống, cửa kẽo kẹt khi vào nhà; **tiếng nền**:
-  chim hót ban ngày, dế kêu ban đêm, mưa khi cảnh "Trời mưa" (có cả mưa rơi trên
-  hình). Nhịp **Tiếng động** để thêm gà gáy, gõ cửa, sấm... Âm lượng theo Cài đặt →
+  vút khi đưa đồ, phịch khi nằm xuống, cửa kẽo kẹt khi vào nhà. Cảnh "Trời mưa"
+  có mưa rơi trên hình (không lồng tiếng nền). Nhịp **Tiếng động** để thêm gà gáy, gõ cửa, sấm... Âm lượng theo Cài đặt →
   tiếng động (đặt 0 để tắt).
 - **Máy quay tự đổi góc**: toàn cảnh khi mở cảnh và khi người kể nói, hai người
   khi đối đáp, cận mặt người đang nói, lia theo người đi lại; đẩy máy rất chậm
@@ -763,8 +762,8 @@ lúc giọng đọc tới câu đó.
   - Hai người nói qua lại có **khoảng nghỉ** để biết ai nói câu nào; miệng nhép cả
     lúc nói nhỏ.
   - Tiếng động to ngang nhau (chó sủa "gâu gâu" rõ); lúc có người nói thì tiếng
-    cuốc, chổi nhỏ và thưa hẳn. **Tiếng nền** (chim, dế, mưa) liền mạch từ đầu tới
-    cuối video, to hơn trước, không còn chỗ im phăng phắc.
+    cuốc, chổi nhỏ và thưa hẳn. Không lồng tiếng nền (chim, dế, mưa); muốn có nền
+    thì dùng nhạc nền trong Cài đặt.
 - AI viết kịch bản theo thêm luật: khách / hàng xóm không làm việc nhà người khác,
   mỗi câu thoại đúng một người nói, nhân vật đã bán / chết / đi xa không xuất hiện
   lại (trừ hồi tưởng), người đang ngủ không nói.
