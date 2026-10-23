@@ -649,7 +649,7 @@ AI dựng video theo mạch rõ ràng (cả Kể chuyện và Phim):
 - Phim: tool tự đổi cử chỉ khi nói theo lời (hỏi thì gãi đầu / suy nghĩ, chào thì
   vẫy, cảm ơn thì cúi, "trời ơi" thì đập trán, "vâng" thì gật, "không" thì lắc đầu,
   cười "ha ha" thì cười ôm bụng...), không để ai chỉ "nói" mãi; người nghe thỉnh
-  thoảng gật, suy nghĩ, sững sờ. Người đang làm dở việc thì vẫn vừa làm vừa nói.
+  thoảng gật, suy nghĩ, sững sờ.
 
 ### Kiểu nhân vật (Kể chuyện tool vẽ và Phim)
 Ô **Kiểu nhân vật**:
@@ -706,9 +706,11 @@ lúc giọng đọc tới câu đó.
     loại **Đồ vật cầm tay**).
   - **Người kể**: một câu nối cảnh.
 - **Việc đang làm** (cuốc đất, quét sân, bổ củi, gặt lúa, gánh hàng, hút điếu cày,
-  phe phẩy quạt, đọc sách, nấu ăn, cho gà ăn...): nhân vật **làm liên tục** cả lúc
-  người khác nói và lúc chính mình nói, tới khi có hành động khác; nghe chuyện
-  giật mình thì giơ tay rồi làm tiếp. Đạo cụ tự có theo việc: cuốc, chổi, rìu,
+  phe phẩy quạt, đọc sách, nấu ăn, cho gà ăn...): nhân vật làm việc đó lúc không ai
+  nói; **lúc có người nói chuyện thì mọi người ngừng tay** (chống cuốc xuống đất,
+  thôi rít điếu, thôi uống) để nói / nghe cho khỏi vung cuốc vào người hay vừa ngậm
+  điếu vừa nói; nói xong lại làm tiếp, tới khi có hành động khác. Đồ đang cầm không
+  tự biến mất: làm việc khác thì một tay vẫn cầm, chống xuống. Đạo cụ tự có theo việc: cuốc, chổi, rìu,
   liềm, đòn gánh hai thúng, điếu cày, quạt nan, sách, nồi...
 - **Đồ đạc của cảnh** (dòng "+ Đồ đạc"): giường tre, chõng, ghế tựa, bàn (có ấm
   chén), chiếu, bếp lửa (lửa bập bùng), chum nước. Nhân vật **nằm** (ốm, ngủ, chết)

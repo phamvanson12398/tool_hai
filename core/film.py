@@ -75,6 +75,7 @@ class Track:
         self.acts = []                    # (t0, t1, act, to)
         self.speak = []                   # (t0, t1, to, path)
         self.reacts = set()               # thời điểm bắt đầu các phản ứng khi nghe
+        self.pauses = []                  # (t0, t1): đang có người nói chuyện -> ngừng tay
 
     def x_at(self, t):
         for t0, t1, x0, x1, _r in self.moves:
@@ -125,6 +126,8 @@ class Track:
         if not best:
             return None
         t0, t1, a, to = best
+        if a in PAUSE_TALK and any(p0 <= t < p1 for p0, p1 in self.pauses):
+            return None                   # nói chuyện thì ngừng tay, nói xong làm tiếp
         return a, t - t0, to, t1 - t0
 
     def speaking(self, t):
@@ -224,6 +227,10 @@ def norm_prop(name):
     return PROP_ALIAS.get(n, PROP_ALIAS.get(n.replace(" ", "_"), str(name).strip()))
 
 
+# việc tay chân ngừng lại khi có người nói chuyện (đỡ vung cuốc vào người, đỡ nói khi
+# đang ngậm điếu / kề chén); ngồi, nằm, khóc, suy nghĩ... thì vẫn giữ
+PAUSE_TALK = {"work", "dig", "sweep", "chop", "reap", "cook", "feed", "eat", "drink", "smoke",
+              "carry", "fan", "read"}
 GAP_TURN = 0.45          # nghỉ giữa hai người nói khác nhau (biết ai nói câu nào)
 ANIMAL_LIKE = ("pat", "feed", "hug", "give")
 
@@ -344,7 +351,8 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
     floor: list = []                          # đồ đặt dưới đất: (từ lúc, x, tên) — bát cơm cho chó
 
     def hold(cid, t, act):
-        """Việc cần đồ: cầm từ lúc bắt đầu tới khi đổi việc; đổi việc thì bỏ xuống."""
+        """Việc cần đồ: cầm từ lúc bắt đầu; đổi sang việc cần đồ khác thì đổi đồ, việc khác
+        thì vẫn cầm (một tay chống xuống), không để đồ tự biến mất."""
         tr = tracks[cid]
         want = film_act.ACT_PROP.get(act)
         cur = tr.last(tr.props, t)
@@ -353,9 +361,6 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
             if cur != want:
                 tr.props.append((t, want))
             auto_prop[cid] = want
-        elif not want and cur is not None and cur == auto_prop.get(cid) and act not in ("talk", "idle"):
-            tr.props.append((t, None))
-            auto_prop.pop(cid, None)
 
     t = lead
     beats = []
@@ -376,13 +381,13 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
             tr = tracks[who]
             act = film_act.norm(b.get("act") or "talk") if b.get("act") not in ("walk", "run") else "talk"
             tr.speak.append((t + 0.15, t + 0.15 + a, b.get("to"), b.get("path")))
-            if not (act == "talk" and activity.get(who)):          # đang làm dở thì vừa làm vừa nói
+            if not (act == "talk" and activity.get(who)):
                 tr.acts.append((t, t + d, act, b.get("to")))
                 if act in film_act.CONTINUOUS:
                     activity[who] = act
                     hold(who, t, act)
-                elif act != "talk":
-                    activity.pop(who, None)
+                else:                      # cử chỉ khi nói: nói xong lại làm tiếp việc dở
+                    tr.reacts.add(t)
             for rid, ract in (b.get("react") or {}).items():
                 if rid in tracks and rid != who:
                     tracks[rid].acts.append((t, t + d, film_act.norm(ract), who))
@@ -534,6 +539,20 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
 
     def talking(k):
         return any(a <= k <= b for a, b in talk_spans)
+    # lúc nói chuyện (thoại của bất kỳ ai trong cảnh) mọi người ngừng tay; hai câu sát
+    # nhau thì ngừng luôn cả khoảng giữa cho khỏi làm – ngừng – làm lắt nhắt
+    pauses = []
+    for a, b in sorted((s[0] - 0.35, s[1] + 0.35) for tr in tracks.values() for s in tr.speak):
+        if pauses and a - pauses[-1][1] < 1.5:
+            pauses[-1] = (pauses[-1][0], max(pauses[-1][1], b))
+        else:
+            pauses.append((a, b))
+    for cid, tr in tracks.items():
+        if species.get(cid, "human") == "human":
+            tr.pauses = pauses
+
+    def paused(k):
+        return any(a <= k < b for a, b in pauses)
     # tiếng động theo động tác, bước chân, chó sủa...
     for cid, tr in tracks.items():
         sp = species.get(cid, "human")
@@ -568,7 +587,9 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
                 k = t0 + ph
                 n_hit = 0
                 while k < t1:
-                    if talking(k):
+                    if a in PAUSE_TALK and paused(k):
+                        pass                                   # đang ngừng tay nói chuyện
+                    elif talking(k):
                         if n_hit % 3 == 0:
                             sfx.append((k, name, 0.12))
                     else:

@@ -39,7 +39,7 @@ Chương dài khoảng {{minutes}} phút ≈ {{beats}} nhịp (mỗi câu thoạ
 - Người kể (ít) nhưng câu nào cũng đắt: gợi tò mò, đặt câu hỏi, hoặc một nhận xét sâu lắng.
 
 ### Cho phim liền mạch, sinh động
-- Cho nhân vật VIỆC ĐANG LÀM hợp hoàn cảnh (cuốc đất, quét sân, bổ củi, gánh hàng, hút điếu cày, phe phẩy quạt, nấu ăn, cho gà ăn, đọc sách...): ghi một nhịp "act" với việc đó, nhân vật sẽ TIẾP TỤC làm cả lúc người khác nói và cả lúc chính họ nói (câu thoại để "act":"talk"), tới khi có hành động khác. Đừng để ai đứng không suốt cảnh.
+- Cho nhân vật VIỆC ĐANG LÀM hợp hoàn cảnh (cuốc đất, quét sân, bổ củi, gánh hàng, hút điếu cày, phe phẩy quạt, nấu ăn, cho gà ăn, đọc sách...): ghi một nhịp "act" với việc đó; nhân vật làm việc đó trong lúc không ai nói, còn lúc có người nói chuyện thì TỰ NGỪNG TAY (chống cuốc, bỏ điếu xuống) để nói / nghe, nói xong lại làm tiếp, tới khi có hành động khác. Đừng để ai đứng không suốt cảnh.
 - Đạo cụ tự có theo việc (cuốc khi cuốc đất, chổi khi quét, rìu khi bổ củi, đòn gánh khi gánh, điếu cày khi hút, quạt nan khi quạt...).
 - Cảnh sau nối tiếp cảnh trước (ai vừa đi ra ở cảnh trước thì đi vào ở cảnh sau; đang cầm gì thì vẫn cầm), tình huống diễn ra liên tục, có nguyên nhân – kết quả.
 - Đồ đạc của cảnh ("furniture"): kê giường, chõng, ghế, bàn, bếp lửa, chum nước... cho đúng bối cảnh; nhân vật "lie" (nằm, ốm, ngủ, chết) sẽ tự đi tới nằm trên giường / chiếu, "sit" tự ngồi lên chõng / ghế gần nhất. Có thể cho nhân vật nằm / ngồi sẵn từ đầu cảnh bằng "posture".

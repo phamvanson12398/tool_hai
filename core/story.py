@@ -309,27 +309,20 @@ _TALK_MIX = ["talk", "point", "talk", "cross_arms", "talk", "think", "talk", "no
 def liven(beats: list, species: dict | None = None) -> list:
     """Cho phim đỡ đơn điệu: câu thoại "talk" đổi sang cử chỉ hợp lời (hỏi thì gãi đầu /
     suy nghĩ, chào thì vẫy, cảm ơn thì cúi, "trời ơi" thì đập trán...), không để một
-    người "talk" mãi; người nghe thỉnh thoảng phản ứng. Người đang làm dở việc (cuốc,
-    hút điếu...) thì vẫn vừa làm vừa nói."""
-    from . import film_act
+    người "talk" mãi; người nghe thỉnh thoảng phản ứng. (Lúc nói chuyện mọi người ngừng
+    tay — xem film.PAUSE_TALK — nên không lo cử chỉ đụng việc đang làm.)"""
     species = species or {}
-    busy: dict = {}
     last_act: dict = {}
     n_line = 0
     for b in beats:
         who = b.get("who")
         if b.get("t") == "act":
-            a = b.get("act")
-            if a in film_act.CONTINUOUS:
-                busy[who] = a
-            elif a not in ("talk",):
-                busy.pop(who, None)
             continue
         if b.get("t") != "line" or species.get(who, "human") != "human":
             continue
         n_line += 1
         text = (b.get("text") or "").strip().lower()
-        if b.get("act", "talk") == "talk" and not busy.get(who):
+        if b.get("act", "talk") == "talk":           # lúc nói ai cũng ngừng tay, nên cử chỉ thoải mái
             pick = next((a for rx, a in _CUES if re.search(rx, text)), None)
             if pick is None and text.endswith("?"):
                 pick = ["think", "scratch_head", "talk"][n_line % 3]
@@ -337,8 +330,6 @@ def liven(beats: list, species: dict | None = None) -> list:
                 pick = _TALK_MIX[(n_line * 3 + len(text)) % len(_TALK_MIX)]
             if pick:
                 b["act"] = pick
-        elif b.get("act") in film_act.CONTINUOUS and b.get("act") not in ("cry", "sad", "think"):
-            busy[who] = b["act"]
         last_act[who] = b.get("act", "talk")
         # người nghe phản ứng (thưa thôi, không phải câu nào cũng phản ứng)
         to = b.get("to")
