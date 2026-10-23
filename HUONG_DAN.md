@@ -626,6 +626,21 @@ nguyên tác) hay **sáng tác tình huống mới** (nhiều việc đời thư
 tính cách, hoàn cảnh, thời đại, cách nói của nhân vật. Tên video AI tự đặt nếu để
 trống; tên truyện, tác giả, nguyên văn không bắt buộc.
 
+### Nội dung có đầu – thân – kết, mở bằng móc câu
+AI dựng video theo mạch rõ ràng (cả Kể chuyện và Phim):
+- **Móc câu (hook)** 15–30 giây đầu: hé lộ trước khoảnh khắc gay cấn / xúc động
+  nhất (vd lão Hạc oà khóc "Cậu Vàng đi đời rồi ông giáo ạ!") hoặc một câu hỏi bí
+  ẩn, không nói ra kết cục, rồi người kể dẫn về "Mọi chuyện bắt đầu từ...". Cảnh
+  móc câu hơi nhạt màu, tối viền như đoạn trích; hết móc câu có tiếng "vút" rồi
+  **tên truyện mới hiện ra** và câu chuyện kể từ đầu.
+- **Mở đầu**: nhân vật, hoàn cảnh, gieo mầm mâu thuẫn. **Thân**: biến cố nối nhau
+  theo nguyên nhân – kết quả, dồn lên **cao trào** (diễn trọn khoảnh khắc móc câu
+  đã hé lộ); cuối mỗi chương để một gút cho người xem muốn xem tiếp.
+- **Kết**: cởi nút, kết cục trọn vẹn, không bỏ lửng; nhịp chậm lại, hình ảnh cuối
+  đọng lại kèm một câu người kể khép chuyện.
+- Mục 3 ghi vai từng chương (Mở đầu / Thân / Cao trào / Kết) và đánh dấu cảnh
+  **MÓC CÂU mở video**.
+
 ### Kiểu nhân vật (Kể chuyện tool vẽ và Phim)
 Ô **Kiểu nhân vật**:
 - Chọn sẵn một kiểu: **Con nhộng tay chân ngắn** (vẽ tay Hàn, mặc định), **Chibi

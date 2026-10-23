@@ -201,11 +201,18 @@ def plan_timeline(st: dict, audio: dict[str, Path], lines: dict | None = None) -
     """Mốc thời gian từng cảnh: start, dur, audio_at, thẻ chương; câu thoại
     nhân vật (nếu có) đọc ngay sau lời kể của cảnh."""
     import soundfile as sf
-    out, t = [], INTRO
+    first = [sc for ch in st.get("chapters") or [] for sc in ch.get("scenes") or []]
+    hook = len(first) > 1 and bool(first[0].get("hook"))
+    out, t = [], (0.0 if hook else INTRO)      # có móc câu: vào thẳng móc câu, tên truyện hiện sau
     lines = lines or {}
     for ci, ch in enumerate(st.get("chapters") or []):
         for k, sc in enumerate(ch.get("scenes") or []):
             card = CHAPTER_CARD if k == 0 else 0.0
+            title = hook and len(out) == 1
+            if hook and len(out) == 0:
+                card = 0.0
+            elif title:
+                card = INTRO
             p = audio.get(sc["id"])
             ad = sf.info(str(p)).duration if p and Path(p).exists() else 0.0
             at = t + card + LEAD
@@ -219,7 +226,7 @@ def plan_timeline(st: dict, audio: dict[str, Path], lines: dict | None = None) -
                 says.append(dict(ln, at=cur, dur=ld))
                 cur += ld
             dur = max(3.5, cur - t + TAIL)
-            out.append({"sc": sc, "chapter": ci, "card": card, "start": t, "dur": dur,
+            out.append({"sc": sc, "chapter": ci, "card": card, "title": title, "start": t, "dur": dur,
                         "audio": p, "audio_at": at, "audio_dur": ad, "lines": says})
             t += dur
     return out
@@ -328,10 +335,14 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict[str, Path
                 # thẻ tên chương
                 if row["card"] and t - row["start"] < row["card"]:
                     ci = row["chapter"]
-                    if ci not in chapter_cards:
-                        chapter_cards[ci] = _card(size, st["chapters"][ci]["title"], f"Chương {ci + 1}")
+                    if row.get("title"):                  # sau móc câu: tên truyện
+                        card = intro_card
+                    else:
+                        if ci not in chapter_cards:
+                            chapter_cards[ci] = _card(size, st["chapters"][ci]["title"], f"Chương {ci + 1}")
+                        card = chapter_cards[ci]
                     lt = t - row["start"]
-                    frame = _over(frame, chapter_cards[ci], min(1.0, lt / 0.5, (row["card"] - lt) / 0.5))
+                    frame = _over(frame, card, min(1.0, lt / 0.5, (row["card"] - lt) / 0.5))
                 # phụ đề: câu đang đọc (chia thời lượng theo độ dài câu)
                 if sub_on and row["audio_dur"] and row["audio_at"] <= t < row["audio_at"] + row["audio_dur"]:
                     sents = story._sentences(row["sc"].get("text") or "")

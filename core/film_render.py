@@ -308,6 +308,22 @@ def top_card(size, big: str, small: str = ""):
     return _tight(np.asarray(img))
 
 
+_VIG: dict = {}
+
+
+def hook_look(frame: np.ndarray) -> np.ndarray:
+    """Cảnh móc câu: nhạt màu, tối viền như hé lộ trước, để người xem biết là đoạn trích."""
+    H, W = frame.shape[:2]
+    if (W, H) not in _VIG:
+        y, x = np.ogrid[:H, :W]
+        r = np.sqrt(((x - W / 2) / (W / 2)) ** 2 + ((y - H / 2) / (H / 2)) ** 2)
+        _VIG[(W, H)] = np.clip(1.08 - 0.32 * r ** 2, 0.55, 1.0).astype(np.float32)[..., None]
+    f = frame.astype(np.float32)
+    g = f.mean(axis=2, keepdims=True)
+    f = (f * 0.7 + g * 0.3) * np.array([1.03, 1.0, 0.94], np.float32)
+    return np.clip(f * _VIG[(W, H)], 0, 255).astype(np.uint8)
+
+
 def plan_all(st: dict, size, audio: dict) -> list[dict]:
     """Mốc thời gian từng cảnh (đã mô phỏng)."""
     import soundfile as sf
@@ -318,7 +334,9 @@ def plan_all(st: dict, size, audio: dict) -> list[dict]:
         if not c.get("kit"):
             from . import doodle
             c["kit"] = doodle.kit_from_look(c.get("name", ""), c.get("look", ""))
-    rows, t = [], INTRO
+    allsc = [sc for ch in st.get("chapters") or [] for sc in ch.get("scenes") or []]
+    hook = len(allsc) > 1 and bool(allsc[0].get("hook"))
+    rows, t = [], (0.0 if hook else INTRO)    # có móc câu: vào thẳng, tên truyện hiện sau móc câu
     for ci, ch in enumerate(st.get("chapters") or []):
         for k, sc in enumerate(ch.get("scenes") or []):
             durs, beats = {}, []
@@ -333,7 +351,7 @@ def plan_all(st: dict, size, audio: dict) -> list[dict]:
             scn["time"] = scene_time(ch, sc)
             amb, indoor = ambience(st, scn)
             plan = film.simulate(scn, chars, W, T, durs, lead=film.LEAD_IN, indoor=indoor)   # thẻ chương ở trên, diễn luôn
-            rows.append({"sc": scn, "chapter": ci, "start": t, "dur": plan["dur"],
+            rows.append({"sc": scn, "chapter": ci, "hook": hook and not rows, "start": t, "dur": plan["dur"],
                          "plan": plan, "ambience": amb})
             t += plan["dur"]
     return rows
@@ -399,6 +417,8 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict, progress
         for row in rows:
             for at, name, vol in row["plan"].get("sfx") or []:
                 film_sfx.put(track, name, row["start"] + at, vol * gain)
+        if rows[0].get("hook") and len(rows) > 1:          # hết móc câu: vút về đầu chuyện
+            film_sfx.put(track, "swoosh", rows[1]["start"] - 0.25, 0.5 * gain)
         # tiếng nền liền một mạch từ đầu tới hết video (cả lúc hiện tên truyện, lúc kết)
         for k, row in enumerate(rows):
             if not row.get("ambience"):
@@ -454,6 +474,11 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict, progress
                     frame = _dim(frame, max(0.0, (nxt - t) / FADE))
                 elif i > 0 and lt < FADE:                            # ... rồi hiện cảnh mới
                     frame = _dim(frame, max(0.0, lt / FADE))
+                if row.get("hook"):                                  # móc câu: màu như ký ức
+                    frame = hook_look(frame)
+                if i == 1 and rows[0].get("hook") and 0.4 < lt < 0.4 + INTRO:   # tên truyện sau móc câu
+                    u = lt - 0.4
+                    frame = _over(frame, intro, min(1.0, u / 0.5, (INTRO - u) / 0.5))
                 if sub_on:
                     while si < len(subs_plan) - 1 and subs_plan[si][1] < t:
                         si += 1

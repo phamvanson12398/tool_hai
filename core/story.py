@@ -164,12 +164,16 @@ def write_story(st: dict, progress=None) -> dict:
     if plan.get("title") and not (st.get("title") or "").strip():
         st["title"] = str(plan["title"]).strip()[:120]
     st["era"] = str(plan.get("era") or "")
+    st["hook"] = str(plan.get("hook") or "").strip()[:400]
     if tool:
         _make_parts(plan.get("new_parts"), say)
     st["characters"] = [_clean_char(c) for c in plan.get("characters") or [] if isinstance(c, dict)]
     st["places"] = [_clean_place(p) for p in plan.get("places") or [] if isinstance(p, dict)]
     parts = _split_source(src, len(chapters)) if src else [""] * len(chapters)
-    outline = "\n".join(f"{i + 1}. {c.get('title')}: {c.get('summary')}" for i, c in enumerate(chapters))
+    outline = "\n".join(f"{i + 1}. [{PARTS.get(c.get('part'), '')}] {c.get('title')}: {c.get('summary')}"
+                        for i, c in enumerate(chapters))
+    if st["hook"]:
+        outline = f"Móc câu mở video: {st['hook']}\n" + outline
     chars_txt = "\n".join(f"- {c['id']}: {c['name']}" for c in st["characters"]) or "(không có)"
     places_txt = "\n".join(f"- {p['id']}: {p['name']}" for p in st["places"]) or "(không có)"
     per_min = minutes / len(chapters)
@@ -181,13 +185,14 @@ def write_story(st: dict, progress=None) -> dict:
             block = brief + ("\n\n" + block if block else "")
         if film_mode:
             out_chapters.append(_write_film_chapter(st, i, c, outline, chars_txt, places_txt,
-                                                    block, per_min))
+                                                    block, per_min, structure_block(st, i, chapters, True)))
             continue
         data = claude_cli._run_json(claude_cli._load_prompt(
             "story_chapter", title=st.get("title") or "", author=st.get("author") or "",
             outline=outline, characters=chars_txt, places=places_txt, index=str(i + 1),
             chapter_title=str(c.get("title") or ""), chapter_summary=str(c.get("summary") or ""),
             source_block=block, syllables=str(int(per_min * SYLLABLES_PER_MIN)),
+            structure_block=structure_block(st, i, chapters, False),
             minutes=f"{per_min:.1f}", scene_block=scene_block,
             dialogue_block=DIALOGUE.get(st.get("dialogue", "some"), DIALOGUE["some"])[1]),
             task="story", timeout=600)
@@ -196,10 +201,52 @@ def write_story(st: dict, progress=None) -> dict:
             raise RuntimeError(f"AI không viết được chương {i + 1}.")
         out_chapters.append({"title": str(c.get("title") or f"Chương {i + 1}"),
                              "scenes": [_clean_scene(s) for s in scenes if isinstance(s, dict)]})
+    for i, c in enumerate(chapters):
+        if i < len(out_chapters) and c.get("part") in PARTS:
+            out_chapters[i]["part"] = c["part"]
+    for k, sc in enumerate(s for ch in out_chapters for s in ch.get("scenes") or []):
+        if k > 0:                               # móc câu chỉ là cảnh đầu tiên của video
+            sc.pop("hook", None)
     st["chapters"] = out_chapters
     renumber(st)
     say(1.0, "xong")
     return st
+
+
+PARTS = {"mo_dau": "MỞ ĐẦU", "than": "THÂN", "cao_trao": "CAO TRÀO", "ket": "KẾT"}
+
+
+def structure_block(st: dict, i: int, chapters: list, film: bool) -> str:
+    """Vai của chương trong mạch đầu – thân – kết; chương 1 mở bằng móc câu (hook)."""
+    n = len(chapters)
+    part = str(chapters[i].get("part") or "")
+    if part not in PARTS:
+        part = "mo_dau" if i == 0 else ("ket" if i == n - 1 else "than")
+    hook = (st.get("hook") or "").strip()
+    unit = "nhịp" if film else "cảnh"
+    out = ["### Vị trí của chương trong video (đầu – thân – kết)"]
+    if i == 0:
+        out.append(
+            "- CẢNH ĐẦU TIÊN của video là MÓC CÂU (hook), ghi thêm \"hook\": true vào cảnh đó"
+            + (f": {hook}" if hook else ": hé lộ trước khoảnh khắc gay cấn / xúc động nhất của câu chuyện")
+            + f". Ngắn (15–30 giây, {'4–8 nhịp, có thoại và hành động' if film else '1–2 cảnh'}), "
+            "làm người xem tò mò; KHÔNG nói ra kết cục. Kết móc câu bằng một câu người kể bỏ ngỏ "
+            "(vd \"Vì sao một ông lão hiền lành lại khóc như đứa trẻ?\") rồi dẫn về đầu câu chuyện "
+            "(\"Mọi chuyện bắt đầu từ...\"). Từ cảnh thứ hai kể theo thứ tự thời gian.")
+    if part == "mo_dau" or i == 0:
+        out.append("- MỞ ĐẦU: giới thiệu nhân vật, hoàn cảnh, nếp sống; gieo mầm mâu thuẫn.")
+    if part in ("than", "cao_trao") or (n <= 2 and i == 0):
+        out.append("- THÂN: biến cố nối nhau theo nguyên nhân – kết quả, mâu thuẫn tăng dần.")
+    if part == "cao_trao":
+        out.append("- Đây là CAO TRÀO: cảm xúc mạnh nhất, nhịp dồn dập; nếu móc câu hé lộ khoảnh khắc "
+                   "nào thì giờ diễn trọn khoảnh khắc đó.")
+    if part == "ket" or i == n - 1:
+        out.append(f"- KẾT{' (chương cuối)' if i == n - 1 else ''}: cởi nút, kết cục trọn vẹn, không bỏ lửng; "
+                   "trả lời câu hỏi của móc câu. Nhịp chậm lại, "
+                   f"{unit} cuối là một hình ảnh đọng lại và một câu người kể khép lại câu chuyện / gợi suy ngẫm.")
+    elif i < n - 1:
+        out.append("- Cuối chương để lại một gút hoặc câu hỏi khiến người xem muốn xem tiếp chương sau.")
+    return "\n".join(out)
 
 
 def _slug(v) -> str:
@@ -225,14 +272,15 @@ def _film_lists() -> tuple[str, str, str]:
     return acts, spots, ", ".join(f"{k} ({v})" for k, v in props.items())
 
 
-def _write_film_chapter(st, i, c, outline, chars_txt, places_txt, block, per_min) -> dict:
+def _write_film_chapter(st, i, c, outline, chars_txt, places_txt, block, per_min, structure="") -> dict:
     """AI viết một chương dạng kịch bản phim (cảnh -> nhịp thoại / hành động)."""
     acts, spots, props = _film_lists()
     data = claude_cli._run_json(claude_cli._load_prompt(
         "film_chapter", title=st.get("title") or "", author=st.get("author") or "",
         outline=outline, characters=chars_txt, places=places_txt, index=str(i + 1),
         chapter_title=str(c.get("title") or ""), chapter_summary=str(c.get("summary") or ""),
-        source_block=block, minutes=f"{per_min:.1f}", beats=str(int(per_min * 60 / 3.0)),
+        source_block=block, structure_block=structure, minutes=f"{per_min:.1f}",
+        beats=str(int(per_min * 60 / 3.0)),
         actions=acts, spots=spots, props=props, furniture=_film_extra()[0],
         sfx=_film_extra()[1]), task="story", timeout=900)
     scenes = data.get("scenes") if isinstance(data, dict) else None
@@ -305,6 +353,8 @@ def clean_film_scene(s: dict, known: set | None = None) -> dict:
         out["furniture"] = furn[:5]
     if s.get("weather") == "rain":
         out["weather"] = "rain"
+    if s.get("hook") is True:
+        out["hook"] = True
     post = {_slug(k): v for k, v in (s.get("posture") or {}).items() if v in ("sit", "lie")}
     if post:
         out["posture"] = post
@@ -453,6 +503,8 @@ def _clean_scene(s: dict) -> dict:
         out["talk"] = _slug(s["talk"]) if s.get("talk") else ""
     if s.get("time") in ("ngay", "dem"):
         out["time"] = s["time"]
+    if s.get("hook") is True:
+        out["hook"] = True
     lines = [{"who": _slug(x.get("who")), "text": str(x.get("text") or "").strip()}
              for x in (s.get("lines") or []) if isinstance(x, dict) and x.get("who")]
     lines = [x for x in lines if x["text"]][:3]

@@ -12,6 +12,7 @@ Bạn là biên kịch phim hoạt hình chuyển thể văn học cho kênh You
 
 ### Chương cần viết: Chương {{index}} — {{chapter_title}}
 {{chapter_summary}}
+{{structure_block}}
 {{source_block}}
 
 ### Độ dài

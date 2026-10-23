@@ -12,6 +12,7 @@ Bạn là người viết lời kể cho kênh YouTube kể chuyện văn học 
 
 ### Chương cần viết: Chương {{index}} — {{chapter_title}}
 {{chapter_summary}}
+{{structure_block}}
 {{source_block}}
 
 ### Yêu cầu lời kể

@@ -210,6 +210,7 @@
         var t = document.querySelector('[data-chapter="' + ci + '"]');
         return {
           title: t ? t.value : ch.title,
+          part: ch.part,
           scenes: (ch.scenes || []).map(function (sc) {
             var fbox = document.querySelector('[data-fscene="' + sc.id + '"]');
             if (fbox) return collectFilmScene(sc, fbox);
@@ -676,7 +677,7 @@
       t.className = "st-chapter";
       t.value = ch.title || "";
       t.setAttribute("data-chapter", ci);
-      box.appendChild(el("div", "st-meta", "Chương " + (ci + 1)));
+      box.appendChild(el("div", "st-meta", "Chương " + (ci + 1) + partLabel(ch)));
       box.appendChild(t);
       (ch.scenes || []).forEach(function (sc) {
         var card = el("div", "st-fscene");
@@ -687,7 +688,8 @@
         img.loading = "lazy";
         img.src = "/api/story/" + encodeURIComponent(st.id) + "/preview/" + sc.id + ".png?v=" + stamp();
         var hr = el("div", "");
-        hr.appendChild(el("div", "st-meta", "Cảnh " + sc.id + " · " + (sc.beats || []).length + " nhịp"));
+        hr.appendChild(el("div", "st-meta", "Cảnh " + sc.id + " · " + (sc.beats || []).length + " nhịp" +
+          (sc.hook ? " · MÓC CÂU mở video" : "")));
         var pl = opt(document.createElement("select"), places, sc.place);
         pl.className = "st-f-place";
         var tm = opt(document.createElement("select"), [["ngay", "Ban ngày"], ["dem", "Ban đêm"]], sc.time || "ngay");
@@ -737,6 +739,11 @@
     });
   }
 
+  var PART_VI = { mo_dau: "Mở đầu", than: "Thân", cao_trao: "Cao trào", ket: "Kết" };
+  function partLabel(ch) {
+    return PART_VI[ch.part] ? " · " + PART_VI[ch.part] : "";
+  }
+
   function renderScenes(d) {
     var box = $("st-scenes");
     box.innerHTML = "";
@@ -757,7 +764,7 @@
       t.className = "st-chapter";
       t.value = ch.title || "";
       t.setAttribute("data-chapter", ci);
-      var head = el("div", "st-meta", "Chương " + (ci + 1));
+      var head = el("div", "st-meta", "Chương " + (ci + 1) + partLabel(ch));
       box.appendChild(head);
       box.appendChild(t);
       (ch.scenes || []).forEach(function (sc) {
@@ -781,7 +788,7 @@
         var right = el("div", "");
         var meta = el("div", "st-meta", isSync()
           ? "Câu " + sc.id + " · " + fmtTime(sc.t0) + "–" + fmtTime(sc.t1) + " · máy quay"
-          : "Cảnh " + sc.id + " · máy quay");
+          : "Cảnh " + sc.id + (sc.hook ? " · MÓC CÂU mở video" : "") + " · máy quay");
         if (isSync()) meta.classList.add("st-sync-meta");
         var cam = document.createElement("select");
         cam.className = "st-cam";
