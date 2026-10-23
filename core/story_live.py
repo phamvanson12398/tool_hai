@@ -17,41 +17,51 @@ from pathlib import Path
 import numpy as np
 from PIL import Image
 
-from . import config, doodle, scene_art
+from . import config, doodle, film_act, film_rig, scene_art
 
-# hành động -> (nhãn, biểu cảm, kiểu chuyển động)
-ACTS = {
-    "idle": ("Đứng yên (thở, chớp mắt)", "neutral", "breathe"),
-    "happy": ("Vui, nhún nhảy", "happy", "bounce"),
-    "hop": ("Mừng rỡ nhảy cẫng", "happy", "hop"),
-    "sad": ("Buồn, cúi đầu", "sad", "droop"),
-    "cry": ("Khóc", "cry", "tremble"),
-    "angry": ("Giận dữ", "angry", "stomp"),
-    "shocked": ("Giật mình, sững sờ", "shocked", "jolt"),
-    "worried": ("Lo lắng", "worried", "sway"),
-    "think": ("Suy nghĩ", "think", "tilt"),
-    "sly": ("Ranh mãnh, cười nhếch", "sly", "lean"),
-    "nod": ("Gật gù", "neutral", "nod"),
-    "shake": ("Lắc đầu", "sad", "shake"),
-    "sleep": ("Ngủ", "sleep", "sleep"),
-    "lie": ("Nằm (ốm, chết)", "sleep", "lie"),
-    "walk_in": ("Đi vào", "neutral", "walk_in"),
-    "walk_out": ("Đi ra", "neutral", "walk_out"),
-}
+# hành động -> (nhãn, biểu cảm). Dùng chung thư viện của chế độ Phim; tên cũ
+# (hop, shocked, worried, shake, sly) vẫn hiểu được.
+ACTS = {k: v for k, v in film_act.ACTIONS.items() if k not in ("walk", "run")}
+ACTS["walk_in"] = ("Đi vào", "neutral")
+ACTS["walk_out"] = ("Đi ra", "neutral")
+
+
+def act_of(name: str) -> str:
+    if name in ("walk_in", "walk_out"):
+        return name
+    return film_act.norm(name)
+
 
 # đoán hành động từ lời kể khi AI chưa ghi
 _ACT_WORDS = [
     (r"khóc|nước mắt|mếu|nức nở|sụt sùi|rưng rưng", "cry"),
     (r"chết|qua đời|tắt thở|vật vã|nằm|ốm|lăn lộn", "lie"),
-    (r"giật mình|sững|hoảng|sợ|kinh ngạc|bàng hoàng|ngạc nhiên", "shocked"),
+    (r"giật mình|sững|hoảng|kinh ngạc|bàng hoàng|ngạc nhiên", "hands_up"),
+    (r"run|sợ hãi|sợ", "tremble"),
     (r"giận|tức|quát|chửi|gắt|cáu", "angry"),
+    (r"cười to|cười ha|cười ngặt", "laugh"),
     (r"cười|vui|mừng|hớn hở|phấn khởi", "happy"),
+    (r"vỗ tay", "clap"),
+    (r"vẫy", "wave"),
+    (r"chỉ tay|chỉ vào|trỏ", "point"),
+    (r"ôm", "hug"),
+    (r"ăn|xới cơm|gắp", "eat"),
+    (r"uống|nhấp", "drink"),
+    (r"van xin|lạy|cầu xin|chắp tay", "beg"),
+    (r"đưa|trao|biếu|gửi", "give"),
+    (r"xoa đầu|vỗ về|vuốt ve", "pat"),
+    (r"gãi đầu|bối rối|lúng túng", "scratch_head"),
+    (r"khoanh tay", "cross_arms"),
+    (r"chống nạnh", "hands_hips"),
+    (r"cúi chào|vái", "bow"),
+    (r"cuốc|quét|cày|làm lụng|gánh|đào", "work"),
+    (r"ngồi", "sit"),
     (r"ngủ|thiếp đi", "sleep"),
-    (r"lo |lo lắng|băn khoăn|day dứt|áy náy", "worried"),
+    (r"lo |lo lắng|băn khoăn|day dứt|áy náy", "scratch_head"),
     (r"buồn|thở dài|lặng lẽ|cúi|đau khổ|chua chát|ngậm ngùi|cô đơn", "sad"),
     (r"nghĩ|ngẫm|suy|tính toán", "think"),
     (r"gật", "nod"),
-    (r"lắc đầu", "shake"),
+    (r"lắc đầu", "shake_head"),
     (r"bỏ đi|ra đi|đi mất|đi khỏi|rời", "walk_out"),
     (r"bước vào|đến nhà|sang chơi|chạy vào|đi vào|tới", "walk_in"),
 ]
@@ -101,7 +111,7 @@ def guess_acts(text: str, chars: list[dict]) -> dict:
     for c in chars:                     # chó mèo mừng chủ
         sp = (c.get("kit") or {}).get("species")
         if sp in ("dog", "cat") and c["id"] not in out and re.search(r"vẫy đuôi|mừng|quấn", low):
-            out[c["id"]] = "hop"
+            out[c["id"]] = "jump"
     return out
 
 
@@ -267,8 +277,8 @@ class LiveShot:
                 chars.append(c)
             self.speech.append(dict(sp, env=envelope(sp.get("path"), fps)))
         self._layout(chars, acts, talk, kind)
-        self._cache: dict = {}
         self._shadows: dict = {}
+        self.cam = np.array([[1.0, 0, 0], [0, 1.0, 0]])
 
     # --- bố cục: ai đứng đâu, quay về phía ai
     def _layout(self, chars, acts, talk, kind):
@@ -280,13 +290,16 @@ class LiveShot:
         self.T = T
         self.actors = []
         for i, c in enumerate(chars):
-            act = acts.get(c["id"]) or "idle"
-            if act not in ACTS:
-                act = "idle"
+            act = act_of(acts.get(c["id"]) or "idle")
             back = n >= 3 and i % 2 == 1
             x = slots[i] * self.bw if n else self.bw / 2
+            kit = doodle.clean_kit(c["kit"])
+            seed = zlib.crc32(c["id"].encode()) % 997
+            k = 0.93 if back else 1.0
+            rig = film_rig.Rig(kit, T * k, seed) if kit["species"] == "human" \
+                else film_rig.AnimalRig(kit, T * k, seed)
             self.actors.append({
-                "c": c, "kit": doodle.clean_kit(c["kit"]), "act": act,
+                "c": c, "kit": kit, "act": act, "rig": rig,
                 "x": x, "y": floor - (self.bh * 0.03 if back else 0),
                 "k": 0.93 if back else 1.0, "talk": c["id"] == talk,
                 "seed": zlib.crc32(c["id"].encode()) % 997, "back": back,
@@ -300,85 +313,16 @@ class LiveShot:
                 a["face"] = 0.15 if a["x"] < self.bw / 2 else -0.15
         self.actors.sort(key=lambda a: (not a["back"], a["x"]))
 
-    def _sprite(self, a, expr, mouth, blink):
-        key = (a["c"]["id"], expr, mouth, blink, a["face"] > 0)
-        if key not in self._cache:
-            img, foot, eye = doodle.render(a["kit"], expr, mouth, blink, a["face"],
-                                           height=int(self.T * a["k"]), seed=a["seed"])
-            arr = np.asarray(img).astype(np.float32)
-            if self.night:
-                arr[..., :3] *= np.array([0.78, 0.8, 0.95], dtype=np.float32)
-            arr[..., :3] *= arr[..., 3:4] / 255.0          # nhân trước alpha: trộn nhanh bằng cv2
-            self._cache[key] = (np.clip(arr + 0.5, 0, 255).astype(np.uint8), foot, eye)
-        return self._cache[key]
-
-    # --- cử động
-    def _motion(self, a, t):
-        """(dx, dy, góc độ, sx, sy) — dx, dy tính theo phần của T."""
-        m = ACTS[a["act"]][2]
-        ph = a["seed"] / 97.0
-        br = math.sin(2 * math.pi * t / 2.4 + ph)
-        dx = dy = rot = 0.0
-        sx = 1.0
-        sy = 1.0 + 0.012 * br
-        f = 1 if a["face"] > 0 else -1
-        if m == "bounce":
-            dy = -0.035 * abs(math.sin(math.pi * t / 0.45)) if (t + ph) % 2.6 < 1.4 else 0.0
-        elif m == "hop":
-            dy = -0.11 * abs(math.sin(math.pi * t / 0.55)) if (t + ph) % 3.0 < 1.6 else 0.0
-            sy += 0.03 * (1 - abs(math.sin(math.pi * t / 0.55))) * (dy != 0)
-        elif m == "droop":
-            rot = -f * 4.0
-            sy = 0.985 + 0.008 * math.sin(2 * math.pi * t / 3.2 + ph)
-        elif m == "tremble":
-            dx = 0.004 * math.sin(2 * math.pi * 11 * t)
-            rot = -f * 3.0
-            sy = 1.0 + 0.02 * max(0.0, math.sin(2 * math.pi * t / 1.1))     # nấc
-        elif m == "stomp":
-            if (t + ph) % 2.2 < 0.6:
-                dx = 0.012 * math.sin(2 * math.pi * 9 * t)
-                dy = -0.025 * abs(math.sin(2 * math.pi * 4 * t))
-        elif m == "jolt":
-            j = _bump(t, 0.15, 0.55)
-            dy = -0.1 * j
-            sy += 0.06 * j
-            sx = 1 - 0.04 * j
-            if t > 0.55:
-                dx = 0.002 * math.sin(2 * math.pi * 13 * t)
-        elif m == "sway":
-            rot = 3.0 * math.sin(2 * math.pi * t / 1.8 + ph)
-        elif m == "tilt":
-            rot = -f * 5.0
-        elif m == "lean":
-            rot = f * 4.0 + 1.0 * math.sin(2 * math.pi * t / 2.0)
-        elif m == "nod":
-            if (t + ph) % 2.5 < 1.4:
-                sy = 1 - 0.035 * max(0.0, math.sin(2 * math.pi * t / 0.7))
-                rot = f * 2.0 * max(0.0, math.sin(2 * math.pi * t / 0.7))
-        elif m == "shake":
-            if (t + ph) % 2.6 < 1.2:
-                rot = 4.0 * math.sin(2 * math.pi * t / 0.45)
-        elif m == "sleep":
-            sy = 1.0 + 0.025 * math.sin(2 * math.pi * t / 3.5)
-        elif m == "lie":
-            rot = 90.0 * f
-            dy = -0.0
-            sy = 1.0 + 0.01 * math.sin(2 * math.pi * t / 3.5)
-        elif m in ("walk_in", "walk_out"):
-            walk = min(3.0, max(1.6, self.dur * 0.35))
-            if m == "walk_in":
-                u = min(1.0, t / walk)
-                moving = u < 1
-            else:
-                u = max(0.0, (t - (self.dur - walk)) / walk)
-                moving = 0 < u < 1
-            if moving:
-                dy = -0.03 * abs(math.sin(math.pi * t / 0.28))
-                rot = 3.0 * math.sin(math.pi * t / 0.28)
-        return dx, dy, rot, sx, sy
+    def _walking(self, a, t):
+        """Đang đi (vào / ra khung) không."""
+        m = a["act"]
+        if m not in ("walk_in", "walk_out"):
+            return False
+        walk = min(3.0, max(1.6, self.dur * 0.35))
+        return t < walk if m == "walk_in" else (self.dur - walk) < t < self.dur
 
     def _walk_x(self, a, t):
-        m = ACTS[a["act"]][2]
+        m = a["act"]
         if m not in ("walk_in", "walk_out"):
             return a["x"]
         walk = min(3.0, max(1.6, self.dur * 0.35))
@@ -408,36 +352,19 @@ class LiveShot:
             return False
         return int(t * 8) % 2 == 0
 
+    def _speaking(self, a, t):
+        for sp in self.speech:
+            if sp["who"] == a["c"]["id"] and sp["at"] <= t <= sp["at"] + sp["dur"]:
+                return True
+        return a["talk"] and any(x0 <= t <= x1 for x0, x1 in self.talk_win)
+
     def _blink(self, a, t):
-        if ACTS[a["act"]][1] in ("sleep", "cry", "happy"):
+        if ACTS.get(a["act"], ("", "neutral"))[1] in ("sleep", "cry", "happy"):
             return False
         per = 3.2 + (a["seed"] % 13) / 8.0
         return (t + a["seed"] / 50.0) % per < 0.13
 
     # --- vẽ
-    def _paste(self, canvas, arr, foot, x, y, rot, sx, sy):
-        cv2 = self.cv2
-        h, w = arr.shape[:2]
-        ang = math.radians(rot)
-        ca, sa_ = math.cos(ang), math.sin(ang)
-        # sprite -> canvas: dời chân về gốc, co giãn, xoay, đặt vào (x, y)
-        A = np.array([[ca * sx, -sa_ * sy], [sa_ * sx, ca * sy]], dtype=np.float64)
-        b = np.array([x, y]) - A @ np.array(foot)
-        corners = np.array([[0, 0], [w, 0], [0, h], [w, h]], dtype=np.float64) @ A.T + b
-        x0, y0 = np.floor(corners.min(axis=0)).astype(int)
-        x1, y1 = np.ceil(corners.max(axis=0)).astype(int)
-        H, W = canvas.shape[:2]
-        x0c, y0c, x1c, y1c = max(0, x0), max(0, y0), min(W, x1), min(H, y1)
-        if x1c <= x0c or y1c <= y0c:
-            return
-        M = np.hstack([A, (b - np.array([x0c, y0c]))[:, None]]).astype(np.float32)
-        part = cv2.warpAffine(arr, M, (x1c - x0c, y1c - y0c), flags=cv2.INTER_LINEAR,
-                              borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0))
-        inv = 255 - part[..., 3]
-        reg = canvas[y0c:y1c, x0c:x1c]
-        keep = cv2.multiply(reg, cv2.merge([inv, inv, inv]), scale=1 / 255.0)
-        canvas[y0c:y1c, x0c:x1c] = cv2.add(keep, np.ascontiguousarray(part[..., :3]))
-
     def _marks(self, canvas, a, t, head):
         cv2 = self.cv2
         act = a["act"]
@@ -453,14 +380,14 @@ class LiveShot:
                     rr = max(2, int(r * 0.07 * (1 - u * 0.4)))
                     cv2.circle(canvas, (x, y), rr, (150, 204, 240), -1, cv2.LINE_AA)
                     cv2.circle(canvas, (x, y), rr, (60, 90, 120), max(1, lw // 2), cv2.LINE_AA)
-        if act in ("worried", "shocked"):
+        if act in ("scratch_head", "hands_up", "tremble", "facepalm"):
             x, y = int(hx + r * 0.95), int(hy - r * 0.5 + 0.02 * T * math.sin(t * 3))
             pts = np.array([[x, y - int(r * 0.22)], [x - int(r * 0.1), y],
                             [x + int(r * 0.1), y]], np.int32)
             cv2.circle(canvas, (x, y + int(r * 0.03)), int(r * 0.1), (170, 214, 244), -1, cv2.LINE_AA)
             cv2.fillPoly(canvas, [pts], (170, 214, 244), cv2.LINE_AA)
             cv2.circle(canvas, (x, y + int(r * 0.03)), int(r * 0.1), (60, 90, 120), lw // 2 + 1, cv2.LINE_AA)
-        if act == "shocked" and t < 1.8:
+        if act == "hands_up" and t < 1.8:
             for k in (-1, 0, 1):
                 ang = math.radians(-90 + k * 30)
                 x0, y0 = hx + math.cos(ang) * r * 1.25, hy - r * 0.2 + math.sin(ang) * r * 1.25
@@ -508,29 +435,45 @@ class LiveShot:
         reg = canvas[y0:y1, x0:x1]
         canvas[y0:y1, x0:x1] = cv2.multiply(reg, cv2.merge([m, m, m]), scale=1 / 255.0)
 
+    def _pose(self, a, t):
+        """Tư thế nhân vật ở giây t: đi vào/ra, hành động của cảnh, vung tay khi nói."""
+        speaking = self._speaking(a, t)
+        moving = self._walking(a, t)
+        x = self._walk_x(a, t)
+        human = a["kit"]["species"] == "human"
+        act = "idle" if a["act"] in ("walk_in", "walk_out") else a["act"]
+        if not human:
+            p = film_act.animal_pose(act, t, a["seed"], moving)
+        elif moving:
+            dist = abs(x - a["x"]) / self.T
+            p = film_act.walk_cycle(dist, t)
+            p["expr"] = "neutral"
+        else:
+            p = film_act.pose(act, t, a["seed"], self.dur, speaking,
+                              posture="sit" if act == "sit" else "stand")
+        d = 1 if a["face"] > 0 else -1
+        if moving:
+            d = 1 if (self._walk_x(a, t + 0.05) - x) > 0 else -1
+        p.update(x=x, y=a["y"], dir=d,
+                 look=max(-1.0, min(1.0, a["face"] + p.get("look_shift", 0.0) * 0.4)),
+                 mouth=self._mouth(a, t), blink=self._blink(a, t))
+        if p.get("prop_default") and not p.get("prop"):
+            p["prop"] = p["prop_default"]
+        return p
+
     def scene_frame(self, t: float) -> np.ndarray:
         canvas = self.base.copy()
-        for a in self.actors:
-            if ACTS[a["act"]][2] != "lie":
+        poses = [self._pose(a, t) for a in self.actors]
+        for a, p in zip(self.actors, poses):
+            if a["act"] != "lie":
                 w = self.T * a["k"] * (0.42 if a["kit"]["species"] == "human" else 0.5) * \
                     (doodle.char_height(a["kit"], 1.0) if a["kit"]["species"] != "human" else 1.0)
-                self._shadow(canvas, self._walk_x(a, t), a["y"], w)
-        for a in self.actors:
-            expr = ACTS[a["act"]][1]
-            arr, foot, eye = self._sprite(a, expr, self._mouth(a, t), self._blink(a, t))
-            dx, dy, rot, sx, sy = self._motion(a, t)
-            x = self._walk_x(a, t) + dx * self.T
-            y = a["y"] + dy * self.T
-            if ACTS[a["act"]][2] == "lie":
-                y -= self.T * 0.18 * a["k"]
-            self._paste(canvas, arr, foot, x, y, rot, sx, sy)
-            # vị trí đầu trên khung (bỏ qua xoay nhỏ) để vẽ nước mắt, mồ hôi...
-            if ACTS[a["act"]][2] != "lie":
-                hx = x + (eye[0] - foot[0]) * sx
-                hy = y + (eye[1] - foot[1]) * sy
-                self._marks(canvas, a, t, (hx, hy, eye[2]))
-            elif a["act"] == "lie":
-                self._marks(canvas, a, t, (x, y - self.T * 0.25, self.T * 0.2))
+                self._shadow(canvas, p["x"], a["y"], w)
+        night = (0.78, 0.8, 0.95) if self.night else None
+        for a, p in zip(self.actors, poses):
+            info = a["rig"].draw(canvas, p, self.cam, 1.0, night)
+            hx, hy = info["head"]
+            self._marks(canvas, a, t, (hx, hy + 0.08 * info["r"], info["r"]))
         return canvas
 
     def frame(self, u: float) -> np.ndarray:

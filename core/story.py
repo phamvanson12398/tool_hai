@@ -311,7 +311,8 @@ def _clean_scene(s: dict) -> dict:
            "place": _slug(s.get("place")) if s.get("place") else "",
            "camera": cam if cam in CAMERAS else "zoom_in"}
     if isinstance(s.get("acts"), dict):
-        out["acts"] = {_slug(k): v for k, v in s["acts"].items() if v in story_live.ACTS}
+        out["acts"] = {_slug(k): story_live.act_of(v) for k, v in s["acts"].items()
+                       if isinstance(v, str) and (v in story_live.ACTS or story_live.act_of(v) != "idle")}
     if "talk" in s:
         out["talk"] = _slug(s["talk"]) if s.get("talk") else ""
     if s.get("time") in ("ngay", "dem"):
