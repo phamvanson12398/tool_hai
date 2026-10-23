@@ -9,7 +9,7 @@ Bạn là biên tập viên hài kịch viết kịch bản video ngắn mạng 
 {{cast_txt}}
 {{cast_hint}}
 - Gợi ý thêm từ chị: {{hints}}
-- Độ dài đích: 30–90 giây khi đọc lên. Khoảng 8–16 nhịp (câu + nhịp phản ứng).
+- Độ dài đích: {{length_block}}
 - 2 hoặc 3 nhân vật, không cố định.
 
 ### Chống lặp khuôn — KHÔNG được dùng lại các kiểu sau từ 5 tập gần nhất
@@ -36,7 +36,8 @@ Quy tắc:
 - Tên biểu cảm, cử chỉ, tiếng động phải chép ĐÚNG Y HỆT danh sách trên (vd vỗ tay là `voratay`, không viết `vortay`/`votay`); không tự đặt tên mới.
 - Tuỳ chọn thêm: pause=0.5 (nghỉ thêm sau câu, giây), Tên=biểu_cảm (đổi biểu cảm người nghe), zoom=Tên (zoom vào người khác).
 - Dòng bắt đầu bằng `>` là nhịp phản ứng KHÔNG có lời, kèm số giây (0.5–1.2). Đây là khoảng lặng có chủ đích.
-- Bối cảnh: nếu câu chuyện diễn ra ở nhiều nơi (vd ở nhà rồi ra quán, hoặc cú lật ở chỗ khác), chuyển cảnh bằng một dòng riêng `## canh: <mô tả ngắn bằng tiếng Việt, kèm ngày/đêm nếu cần>` (vd `## canh: quán cà phê, buổi tối`). Các câu phía sau thuộc cảnh đó. Tối đa 3 cảnh, chỉ đổi cảnh khi giúp câu chuyện buồn cười hơn; truyện ở một chỗ thì đặt một dòng `## canh:` ở đầu. Quay lại chỗ cũ thì viết đúng mô tả cũ.
+- Bối cảnh: nếu câu chuyện diễn ra ở nhiều nơi (vd ở nhà rồi ra quán, hoặc cú lật ở chỗ khác), chuyển cảnh bằng một dòng riêng `## canh: <mô tả ngắn bằng tiếng Việt, kèm ngày/đêm nếu cần>` (vd `## canh: quán cà phê, buổi tối`). Các câu phía sau thuộc cảnh đó. Tối đa {{max_scenes}} cảnh, chỉ đổi cảnh khi giúp câu chuyện buồn cười hơn; truyện ở một chỗ thì đặt một dòng `## canh:` ở đầu. Quay lại chỗ cũ thì viết đúng mô tả cũ.
+- Không phải cảnh nào cũng có mọi nhân vật. Khi nhân vật ở hai nơi khác nhau (gọi điện thoại, nhắn tin, một người đứng ngoài cửa...), ghi tên người có mặt sau dấu `|`: `## canh: đường phố, buổi tối | 민준` rồi `## canh: phòng khách, buổi tối | 수아`. Sau đó mỗi khi một người nói, video tự cắt sang nơi của người đó, không cần lặp lại `## canh:`. Khi họ gặp lại nhau thì viết `## canh: <nơi>` không có `|`.
 - Mỗi dòng thoại có thể kèm dòng bản dịch tiếng Việt bắt đầu bằng `//` ngay sau dòng đó (để chị dễ đọc).
 - Câu chốt phải có cú lật hoặc châm biếm đáng nhớ.
 - Câu nối câu: ít dấu câu ở cuối, nhịp nhanh, không dài dòng.

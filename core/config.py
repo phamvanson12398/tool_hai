@@ -16,10 +16,37 @@ LOGS = DATA / "logs"
 for _d in (DATA, PROJECTS, LIBRARY, PREVIEWS, LOGS):
     _d.mkdir(parents=True, exist_ok=True)
 
-# --- Khung video 9:16 ---
+# --- Khung video: 9:16 (TikTok/Shorts) mặc định, thêm 16:9 (YouTube), 1:1 ---
 WIDTH = 1080
 HEIGHT = 1920
 FPS = 30
+FORMATS = {
+    "9:16": (1080, 1920),
+    "16:9": (1920, 1080),
+    "1:1": (1080, 1080),
+}
+DEFAULT_FORMAT = "9:16"
+
+
+def frame_size(fmt: str | None) -> tuple[int, int]:
+    """Kích thước khung theo tỉ lệ ("9:16", "16:9", "1:1")."""
+    return FORMATS.get(str(fmt or "").strip(), FORMATS[DEFAULT_FORMAT])
+
+
+def stage_layout(w: int, h: int) -> dict:
+    """Bố cục sân khấu theo khung: chân đứng ở floor*h, người cao
+    height[0]*h (1-2 người) hoặc height[1]*h (3 người trở lên), vị trí
+    ngang theo slots. Khung ngang để người to hơn và đứng gần nhau hơn
+    (như phim hoạt hình YouTube); khung dọc như TikTok."""
+    r = w / h
+    if r >= 1.3:       # 16:9
+        return {"floor": 0.90, "height": (0.68, 0.60),
+                "slots": {1: [0.5], 2: [0.33, 0.67], 3: [0.24, 0.5, 0.76]}}
+    if r >= 0.8:       # 1:1
+        return {"floor": 0.88, "height": (0.62, 0.54),
+                "slots": {1: [0.5], 2: [0.29, 0.71], 3: [0.2, 0.5, 0.8]}}
+    return {"floor": 0.80, "height": (0.50, 0.42),
+            "slots": {1: [0.5], 2: [0.27, 0.73], 3: [0.18, 0.5, 0.82]}}
 
 # --- Mô hình ---
 OMNIVOICE_MODEL = "k2-fsa/OmniVoice"

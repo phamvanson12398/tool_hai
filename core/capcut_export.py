@@ -564,7 +564,8 @@ class CapCutExporter:
             raise RuntimeError("ffmpeg lỗi khi tách audio:\n" + "\n".join(tail))
         log.info(f"Đã tạo video không tiếng: {dst}")
 
-    def _build_extra_refs_for_video(self, template: dict) -> list[dict]:
+    def _build_extra_refs_for_video(self, template: dict,
+                                    size: tuple[int, int] = (1080, 1920)) -> list[dict]:
         """Tạo các extra material chuẩn cho một segment (speed, placeholder, mapping...)."""
         total = _microseconds(10.0)
         speed = {"id": _uuid(), "type": "speed", "speed": 1.0, "mode": 0}
@@ -575,8 +576,8 @@ class CapCutExporter:
             "id": _uuid(),
             "type": "canvas_color",
             "material_type": "",
-            "height": 1920,
-            "width": 1080,
+            "height": size[1],
+            "width": size[0],
             "duration": total,
             "path": "",
         }
@@ -932,8 +933,12 @@ class CapCutExporter:
         video_mat["material_name"] = video_path.name
         video_mat["duration"] = total_duration
         video_mat["has_audio"] = False
+        # khung theo video đã dựng (9:16, 16:9 hoặc 1:1)
+        cw = int(timeline.get("width") or 1080)
+        chh = int(timeline.get("height") or 1920)
+        video_mat["width"], video_mat["height"] = cw, chh
 
-        video_extra_refs = self._build_extra_refs_for_video(template)
+        video_extra_refs = self._build_extra_refs_for_video(template, (cw, chh))
         video_seg = self._clone_segment(self._tmpl_segment(template, "video"))
         video_seg["id"] = _uuid()
         video_seg["material_id"] = video_id
@@ -1008,7 +1013,7 @@ class CapCutExporter:
             "is_drop_frame_timecode": False,
             "color_space": 0,
             "config": template.get("config", {}),
-            "canvas_config": {"ratio": "original", "width": 1080, "height": 1920, "background": None},
+            "canvas_config": {"ratio": "original", "width": cw, "height": chh, "background": None},
             "tracks": all_tracks,
             "group_container": template.get("group_container", {}),
             "materials": {

@@ -223,9 +223,29 @@ def _comedy_block(lang: str) -> str:
     return "\n".join(lines)
 
 
+def length_hint(duration: float | None) -> tuple[str, int]:
+    """Câu dặn độ dài cho prompt + số cảnh tối đa, theo số giây đích."""
+    if not duration:
+        lo, hi = config.TARGET_DURATION
+        return (f"{lo}–{hi} giây khi đọc lên. Khoảng 8–16 nhịp (câu + nhịp phản ứng).", 3)
+    d = max(15, min(600, int(duration)))
+    beats = max(5, round(d / 3.8))
+    lo, hi = max(4, int(beats * 0.85)), int(beats * 1.15) + 1
+    scenes = 3 if d <= 90 else (4 if d <= 180 else 6)
+    txt = (f"khoảng {d} giây khi đọc lên (chênh tối đa 15%). Cần khoảng {lo}–{hi} "
+           f"nhịp (câu + nhịp phản ứng), mỗi câu thoại ngắn 2–4 giây.")
+    if d > 120:
+        txt += (" Tập dài: chia thành vài đoạn có mở đầu, leo thang, cú lật giữa tập "
+                "và cú lật cuối; mỗi đoạn có một tình huống buồn cười riêng.")
+    return txt, scenes
+
+
 def write_script(title: str, language: str, kind: str | None = None,
-                 hints: str = "", *, cast: list[str] | None = None) -> str:
-    """Claude viết kịch bản. Trả về nội dung kịch bản theo đúng quy cách."""
+                 hints: str = "", *, cast: list[str] | None = None,
+                 duration: float | None = None) -> str:
+    """Claude viết kịch bản. Trả về nội dung kịch bản theo đúng quy cách.
+
+    duration: độ dài tập mong muốn (giây); không có thì 30–90 giây."""
     lang_label = "tiếng Hàn" if language == "ko" else "tiếng Anh"
     kind_name = ""
     if kind and kind in COMEDY_KINDS.get(language, {}):
@@ -252,8 +272,11 @@ def write_script(title: str, language: str, kind: str | None = None,
         cast_txt = (f"\nDàn nhân vật phải dùng đúng các tên sau: "
                     f"{', '.join(cast)}. Không thêm nhân vật mới.")
 
+    length_block, max_scenes = length_hint(duration)
     prompt = _load_prompt(
         "write_script",
+        length_block=length_block,
+        max_scenes=str(max_scenes),
         comedy_block=_comedy_block(language),
         lang_label=lang_label,
         title=title,

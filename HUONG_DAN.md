@@ -67,6 +67,20 @@ Phần nào cũng có hai cách: chị tự đưa vào, hoặc để AI làm. M�
 
 Nhân vật hoặc giọng nào chị không tải lên thì tool tự chuyển sang cách AI làm.
 
+### Khung video và thời lượng (mục 1)
+
+- **Khung video**: 9:16 dọc (TikTok, Shorts, Reels), 16:9 ngang (YouTube) hoặc
+  1:1 vuông. Mỗi tập chọn riêng, nên cùng một câu chuyện làm được hai bản cho
+  hai nền tảng: dựng xong bản 9:16, đổi sang 16:9 rồi dựng lại.
+  - Khung ngang: nhân vật to hơn và đứng gần nhau hơn, thấy rộng bối cảnh hơn.
+  - Đổi khung thì các bối cảnh do AI vẽ được **tự vẽ lại** cho vừa khung mới.
+    Ảnh chị tự tải lên thì được cắt cho vừa, nên nên tải ảnh đúng tỉ lệ.
+  - Ô xem trước (mục 9) và dự án CapCut cũng đổi theo khung.
+- **Thời lượng (giây)**: độ dài mong muốn của tập, từ 15 đến 600 giây. AI
+  viết đủ số câu cho độ dài đó (khoảng 1 nhịp cho mỗi 4 giây), tập dài hơn
+  được phép nhiều bối cảnh hơn. Để trống thì AI tự chọn 30–90 giây như trước.
+  Ô “Mục tiêu” ở mục kịch bản đổi theo thời lượng này.
+
 ---
 
 ## 5. Quy cách viết kịch bản
@@ -196,7 +210,29 @@ chỗ một dòng:
 - AI vẽ theo các mẫu có sẵn: phòng khách, nhà bếp, phòng ngủ, văn phòng, lớp
   học, quán cà phê, cửa hàng, đường phố, công viên, bãi biển, nền sân khấu —
   có cả ban ngày và ban đêm, màu chọn theo không khí từng cảnh.
-- Trong video, đổi cảnh có chuyển mờ ngắn (khoảng 0,35 giây).
+- Trong video, vào cảnh mới có chuyển mờ ngắn (khoảng 0,35 giây); quay lại
+  nơi đã có thì cắt thẳng.
+
+### Mỗi người một nơi (gọi điện, nhắn tin...)
+
+Mặc định cảnh nào cũng có mặt mọi nhân vật. Muốn cảnh chỉ có vài người thì
+ghi tên sau dấu `|`:
+
+```
+## canh: đường phố, buổi tối | 민준
+민준 (happy, cam_tai, cam=dienthoai): 여보세요?
+## canh: phòng khách, buổi tối | 수아
+수아 (angry): 지금 몇 시야?!
+민준 (scared): 미안...
+수아 (angry): 빨리 와!
+## canh: phòng khách, buổi tối
+민준 (happy): 나 왔어~
+```
+
+- Người đã được gắn vào một nơi (`| tên`) thì mỗi khi người đó nói, video tự
+  cắt sang nơi của người đó. Không cần viết `## canh:` trước từng câu.
+- Cảnh chỉ có một người thì người đó đứng giữa khung.
+- Ghi lại `## canh:` không có `|` là mọi người lại cùng một chỗ (vd về nhà).
 
 ---
 
@@ -275,7 +311,8 @@ mọi biểu cảm × miệng mở/ngậm, luôn khớp nhau.
 5. Tiêu đề cố định trên cùng; phụ đề vàng viền đen, từng cụm ngắn nhảy theo lời.
 
 ### Đầu ra
-- Video **mp4 dọc 1080×1920**, đăng được luôn.
+- Video **mp4** theo khung đã chọn: dọc 1080×1920, ngang 1920×1080 hoặc
+  vuông 1080×1080, đăng được luôn.
 - Kèm **bộ file rời** để chỉnh trong CapCut: giọng từng câu, phụ đề `.srt`,
   ảnh nhân vật và bối cảnh.
 - Hoặc **xuất thẳng thành dự án CapCut** để mở lên là có sẵn các track
@@ -377,8 +414,10 @@ màn hình đó. Ảnh không đạt (nửa người, tay khoanh) thì báo và 
   đi lại hay vẫy tay.
 - Nhân vật tải lên bằng 1 ảnh thì không đổi được biểu cảm.
 - Chất lượng giọng tiếng Hàn của OmniVoice cần nghe thử trước khi làm nhiều tập.
-- Bối cảnh do AI vẽ hiện là nền phẳng đơn giản (trời / sàn / khối trang trí),
-  chưa phải tranh chi tiết.
+- Bối cảnh do AI vẽ là tranh phẳng 2D (không 3D), nhưng đồ vật vẽ theo kích
+  thước thật so với người (cửa 2,1 m, sofa 85 cm, bàn 75 cm, trần 2,6 m) và
+  sàn có chiều sâu. Khung dọc hẹp (khoảng 2,4 m bề ngang) nên thấy ít đồ hơn
+  khung ngang.
 - Xuất dự án CapCut là tính năng **thử nghiệm**: phụ thuộc cấu trúc file của
   đúng phiên bản CapCut, và CapCut cập nhật có thể làm nó ngừng hoạt động.
 

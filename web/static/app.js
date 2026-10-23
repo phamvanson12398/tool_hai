@@ -280,11 +280,7 @@
       o.textContent = SUBTITLE_LABELS[s] || s;
       sel.appendChild(o);
     });
-    if (state.meta.target_duration) {
-      var td = state.meta.target_duration;
-      var pill = $("est-target");
-      if (pill) pill.textContent = "Mục tiêu " + td[0] + "–" + td[1] + "s";
-    }
+    showTarget();
     updateSubtitleSwatch();
   }
 
@@ -305,6 +301,62 @@
     return state.project.id + " · " + title + " · " + labelForLang(lang);
   }
 
+  /* ---------------------- Khung + thời lượng ----------------------- */
+
+  function formatValue() { return ($("p-format") && $("p-format").value) || "9:16"; }
+
+  function durationValue() {
+    var v = parseInt(($("p-duration") && $("p-duration").value) || "", 10);
+    if (!v || v <= 0) return null;
+    return Math.max(15, Math.min(600, v));
+  }
+
+  var FORMAT_SIZES = { "9:16": "1080×1920", "16:9": "1920×1080", "1:1": "1080×1080" };
+
+  /** Giống config.stage_layout: chân đứng, chiều cao người, vị trí ngang. */
+  function stageLayout(fmt) {
+    if (fmt === "16:9") return { ratio: 16 / 9, floor: 0.90, height: [0.68, 0.60],
+      slots: { 1: [0.5], 2: [0.33, 0.67], 3: [0.24, 0.5, 0.76] } };
+    if (fmt === "1:1") return { ratio: 1, floor: 0.88, height: [0.62, 0.54],
+      slots: { 1: [0.5], 2: [0.29, 0.71], 3: [0.2, 0.5, 0.8] } };
+    return { ratio: 9 / 16, floor: 0.80, height: [0.50, 0.42],
+      slots: { 1: [0.5], 2: [0.27, 0.73], 3: [0.18, 0.5, 0.82] } };
+  }
+
+  function targetRange() {
+    var d = (state.project && state.project.duration) || durationValue();
+    if (d) return [Math.round(d * 0.85), Math.round(d * 1.15)];
+    return state.meta && state.meta.target_duration ? state.meta.target_duration : [30, 90];
+  }
+
+  function showTarget() {
+    var td = targetRange();
+    var pill = $("est-target");
+    if (pill) pill.textContent = "Mục tiêu " + td[0] + "–" + td[1] + "s";
+  }
+
+  /** Đưa khung + thời lượng của tập lên form. */
+  function fillMetaFields(p) {
+    if (!p) return;
+    if ($("p-format")) $("p-format").value = p.format || "9:16";
+    if ($("p-duration")) $("p-duration").value = p.duration ? String(p.duration) : "";
+    showTarget();
+  }
+
+  function saveMeta() {
+    showTarget();
+    updateDurationPill();
+    updateStageFromProject();
+    var p = state.project || {};
+    if (!p.id) return Promise.resolve();
+    return api("/api/project/" + encodeURIComponent(p.id) + "/meta", {
+      method: "POST", body: { format: formatValue(), duration: durationValue() }
+    }).then(function (r) {
+      if (r && r.redrawn) toast("ok", "Đã vẽ lại bối cảnh", "Cho vừa khung " + r.format);
+      return refreshProject();
+    }).catch(function (e) { errToast("Lưu khung / thời lượng thất bại", e); });
+  }
+
   function ensureProject(force) {
     if (state.project && state.project.id && !force) return Promise.resolve(state.project);
     var title = $("p-title").value.trim();
@@ -314,7 +366,8 @@
     if (kind === "__custom__") kind = "";
     return api("/api/project", {
       method: "POST",
-      body: { title: title, language: language, kind: kind }
+      body: { title: title, language: language, kind: kind,
+              format: formatValue(), duration: durationValue() }
     }).then(function (p) {
       state.project = p;
       state.projectTouched = false;
@@ -395,7 +448,7 @@
     var secs = estimateSeconds(text);
     var pill = $("est-duration");
     pill.textContent = "≈ " + secs.toFixed(0) + "s";
-    var td = state.meta && state.meta.target_duration ? state.meta.target_duration : [30, 90];
+    var td = targetRange();
     pill.className = "pill " + (secs >= td[0] && secs <= td[1] ? "ok" : (secs === 0 ? "" : "warn"));
     if (secs === 0) pill.textContent = "≈ 0s";
     var kv = $("kv-duration");
@@ -419,6 +472,7 @@
         if (state.project && state.project.id && data && data.scenes) {
           state.project.parse = state.project.parse || {};
           state.project.parse.scenes = data.scenes;
+          state.project.parse.scene_cast = data.scene_cast || [];
           renderScenes();
           updateStageFromProject();
         }
@@ -482,7 +536,8 @@
       title: $("p-title").value.trim(),
       language: $("p-language").value,
       kind: kind === "__custom__" ? "" : kind,
-      hints: $("p-hints").value.trim()
+      hints: $("p-hints").value.trim(),
+      duration: durationValue()
     };
   }
 
@@ -899,9 +954,31 @@
   }
 
   function currentScenes() {
+    // mỗi nơi một dòng (cùng nơi nhưng khác người có mặt vẫn chung ảnh nền)
     var p = state.project || {};
     var sc = (p.parse && p.parse.scenes) || [];
-    return sc.length ? sc : [""];
+    var out = [], seen = {};
+    sc.forEach(function (d) {
+      var k = String(d || "").trim().toLowerCase();
+      if (!seen[k]) { seen[k] = 1; out.push(d); }
+    });
+    return out.length ? out : [""];
+  }
+
+  /** Ai có mặt ở nơi này (null = mọi nhân vật). */
+  function sceneCast(desc) {
+    var p = state.project || {};
+    var sc = (p.parse && p.parse.scenes) || [];
+    var casts = (p.parse && p.parse.scene_cast) || [];
+    var k = String(desc || "").trim().toLowerCase();
+    var names = {}, any = false;
+    for (var i = 0; i < sc.length; i++) {
+      if (String(sc[i] || "").trim().toLowerCase() !== k) continue;
+      if (!casts[i]) return null;
+      casts[i].forEach(function (n) { names[n] = 1; });
+      any = true;
+    }
+    return any ? Object.keys(names) : null;
   }
 
   function renderScenes() {
@@ -934,6 +1011,8 @@
       var body = el("div", "scene-body");
       body.appendChild(el("div", "scene-title",
         (scenes.length > 1 ? "Cảnh " + (i + 1) + ": " : "") + (desc || "Bối cảnh chung của tập")));
+      var who = sceneCast(desc);
+      if (who) body.appendChild(el("div", "scene-meta", "Có mặt: " + who.join(", ")));
       body.appendChild(el("div", "scene-meta", rec
         ? ("Ảnh: " + (rec.name || "") + (rec.kind ? " · mẫu " + rec.kind : "") + (rec.time === "dem" ? " · đêm" : ""))
         : (shown ? "Đang dùng bối cảnh chung" : "Chưa có ảnh — bấm AI vẽ hoặc tải ảnh lên")));
@@ -999,6 +1078,7 @@
       return api("/api/project/" + encodeURIComponent(p.id));
     }).then(function (data) {
       state.project = data;
+      fillMetaFields(data);
       renderProjectKv();
       renderParsedCharacters((data.assets || {}).characters || []);
       renderScenes();
@@ -1044,6 +1124,12 @@
     // nhân vật
     cast.innerHTML = "";
     var chars = (assets.characters || []).slice();
+    // chỉ người có mặt ở cảnh đang chọn (vd gọi điện: mỗi người một nơi)
+    var here = sceneCast(sdesc);
+    if (here) {
+      var only = chars.filter(function (c) { return here.indexOf(c.name) >= 0; });
+      if (only.length) chars = only;
+    }
     var n = chars.length;
     // giống video: xếp trái -> giữa -> phải theo vị trí trong kịch bản
     var sides = (p.parse && p.parse.sides) || {};
@@ -1053,12 +1139,19 @@
       var sb = order[String(sides[b.name] || b.side || "giua").toLowerCase()];
       return (sa == null ? 1 : sa) - (sb == null ? 1 : sb);
     });
-    var slots = { 1: [0.5], 2: [0.27, 0.73], 3: [0.18, 0.5, 0.82] }[n];
+    // khung + bố cục giống video (9:16, 16:9, 1:1)
+    var fmtNow = (p && p.format) || formatValue();
+    var lay = stageLayout(fmtNow);
+    stage.style.aspectRatio = String(lay.ratio);
+    stage.style.maxWidth = lay.ratio > 1 ? "100%" : (lay.ratio === 1 ? "380px" : "270px");
+    var slots = lay.slots[n];
+    var hpct = (n >= 3 ? lay.height[1] : lay.height[0]) * 100;
     chars.forEach(function (c, i) {
-      var spr = el("div", "sprite" + (n >= 3 ? " small" : ""));
+      var spr = el("div", "sprite");
       var x = slots ? slots[i] : (i + 1) / (n + 1);
       spr.style.left = (x * 100).toFixed(1) + "%";
-      if (c.scale && Number(c.scale) !== 1) spr.style.height = ((n >= 3 ? 42 : 50) * Number(c.scale)) + "%";
+      spr.style.bottom = ((1 - lay.floor) * 100).toFixed(1) + "%";
+      spr.style.height = (hpct * Number(c.scale || 1)).toFixed(1) + "%";
       var img = document.createElement("img");
       img.alt = c.name || "";
       img.src = assetUrl(c.image);
@@ -1074,9 +1167,9 @@
       var info = [];
       if (bg.style.backgroundImage) info.push("bối cảnh ✓");
       if (n) info.push(n + " nhân vật");
-      $("stage-info").textContent = "9:16 · " + info.join(" · ");
+      $("stage-info").textContent = fmtNow + " · " + info.join(" · ");
     } else {
-      $("stage-info").textContent = "9:16 · 1080×1920";
+      $("stage-info").textContent = fmtNow + " · " + FORMAT_SIZES[fmtNow];
     }
   }
 
@@ -1967,6 +2060,8 @@
       }
     }, 350));
     $("p-hints").addEventListener("input", touchProject);
+    $("p-format").addEventListener("change", saveMeta);
+    $("p-duration").addEventListener("change", saveMeta);
 
     $("btn-create").addEventListener("click", function () {
       withBusy($("btn-create"), function () {
@@ -1979,7 +2074,8 @@
         if (kind === "__custom__") kind = "";
         return api("/api/project", {
           method: "POST",
-          body: { title: title, language: $("p-language").value, kind: kind }
+          body: { title: title, language: $("p-language").value, kind: kind,
+                  format: formatValue(), duration: durationValue() }
         }).then(function (p) {
           state.project = p;
           state.projectTouched = false;

@@ -109,13 +109,43 @@ def _draw_scene_bg(data: dict, pdir: Path, desc: str, hint: str = "") -> tuple[d
         bg = {}
     if not bg:
         bg = {"name": desc or "boi_canh", "kind": "phong_khach", "time": "ngay"}
+    size = config.frame_size(data.get("format"))
     slug = assets.config_slug(desc or "chung") or "chung"
-    out = scene_art.save_scene(bg, pdir / "assets" / f"bg_{slug}_{uuid.uuid4().hex[:4]}.png")
+    out = scene_art.save_scene(bg, pdir / "assets" / f"bg_{slug}_{uuid.uuid4().hex[:4]}.png",
+                               size=size)
     rec = assets.save_background(out, bg.get("name") or desc or "boi_canh")
     rec["desc"] = bg.get("desc", desc)
     rec["kind"] = bg.get("kind")
     rec["time"] = bg.get("time")
+    rec["spec"] = bg
+    rec["size"] = list(size)
     return rec, warn
+
+
+def _fit_scene_bgs(data: dict, pdir: Path) -> bool:
+    """Đổi khung (9:16 <-> 16:9...) thì vẽ lại các nền do tool vẽ cho đúng
+    khung mới (ảnh tải lên thì để nguyên, lúc dựng sẽ cắt cho vừa).
+    Trả về True nếu có nền được vẽ lại."""
+    from core import scene_art
+    size = list(config.frame_size(data.get("format")))
+    recs = [data["assets"].get("background")]
+    recs += list((data["assets"].get("backgrounds") or {}).values())
+    changed = False
+    for rec in recs:
+        if not rec or not rec.get("kind"):
+            continue
+        if rec.get("size") == size and Path(rec.get("image") or "").exists():
+            continue
+        spec = rec.get("spec") or {"kind": rec.get("kind"), "time": rec.get("time"),
+                                   "name": rec.get("name", "")}
+        slug = assets.config_slug(rec.get("scene") or rec.get("name") or "chung") or "chung"
+        out = scene_art.save_scene(
+            spec, pdir / "assets" / f"bg_{slug}_{size[0]}x{size[1]}_{uuid.uuid4().hex[:4]}.png",
+            size=tuple(size))
+        rec["image"] = str(out)
+        rec["size"] = size
+        changed = True
+    return changed
 
 
 def _save_project(pid: str, data: dict) -> None:
@@ -391,6 +421,7 @@ def api_parse_script():
             for b in s.beats
         ],
         "scenes": s.scenes,
+        "scene_cast": s.scene_cast,
         "estimate_duration": round(estimate_duration(s), 1),
     })
 
@@ -727,6 +758,8 @@ def api_project_new():
         "title": (body.get("title") or "").strip(),
         "language": body.get("language") or "ko",
         "kind": body.get("kind") or "",
+        "format": _norm_format(body.get("format")),
+        "duration": _norm_duration(body.get("duration")),
         "script": "",
         "assets": {"characters": [], "background": None, "voices": {}},
         "state": "draft",
@@ -737,6 +770,38 @@ def api_project_new():
     return jsonify(data)
 
 
+def _norm_format(v) -> str:
+    v = str(v or "").strip()
+    return v if v in config.FORMATS else config.DEFAULT_FORMAT
+
+
+def _norm_duration(v) -> int | None:
+    """Số giây đích của tập (15–600), None = để AI tự chọn 30–90 giây."""
+    try:
+        d = int(float(v))
+    except (TypeError, ValueError):
+        return None
+    return max(15, min(600, d)) if d > 0 else None
+
+
+@app.post("/api/project/<pid>/meta")
+def api_project_meta(pid):
+    """Đổi khung video và thời lượng đích của tập."""
+    try:
+        data = _load_project(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    body = request.get_json(silent=True) or {}
+    if "format" in body:
+        data["format"] = _norm_format(body.get("format"))
+    if "duration" in body:
+        data["duration"] = _norm_duration(body.get("duration"))
+    redrawn = _fit_scene_bgs(data, config.project_dir(pid))
+    _save_project(pid, data)
+    return jsonify({"ok": True, "format": data.get("format"),
+                    "duration": data.get("duration"), "redrawn": redrawn})
+
+
 @app.get("/api/project/<pid>")
 def api_project_get(pid):
     try:
@@ -745,9 +810,12 @@ def api_project_get(pid):
         return _err(str(e), 404)
     s = parse_script(data.get("script", ""))
     data["parse"] = {"errors": s.errors, "warnings": s.warnings,
-                     "cast": s.cast, "sides": s.sides, "scenes": s.scenes}
+                     "cast": s.cast, "sides": s.sides, "scenes": s.scenes,
+                     "scene_cast": s.scene_cast}
     data["estimate_duration"] = round(estimate_duration(s), 1)
     data["status"] = _status(pid)
+    data.setdefault("format", config.DEFAULT_FORMAT)
+    data.setdefault("duration", None)
     return jsonify(data)
 
 
@@ -779,10 +847,13 @@ def api_project_write(pid):
     language = body.get("language") or data.get("language") or "ko"
     kind = body.get("kind") or data.get("kind") or ""
     hints = body.get("hints") or ""
+    if "duration" in body:
+        data["duration"] = _norm_duration(body.get("duration"))
     if not title:
         return _err("Cần có tiêu đề để AI viết kịch bản.")
     try:
-        script = claude_cli.write_script(title, language, kind or None, hints)
+        script = claude_cli.write_script(title, language, kind or None, hints,
+                                         duration=data.get("duration"))
     except RuntimeError as e:
         return _err(str(e), 502)
     data.update({"title": title, "language": language, "kind": kind,
@@ -1105,6 +1176,9 @@ def api_project_render(pid):
             settings = config.load_settings()
             if not settings.get("title_text"):
                 settings["title_text"] = data.get("title", "")
+            settings["video_format"] = _norm_format(data.get("format"))
+            if _fit_scene_bgs(data, pdir):
+                _save_project(pid, data)
             bg = (data["assets"].get("background") or {}).get("image")
             voices = dict(data["assets"].get("voices") or {})
             # nhân vật chưa có giọng -> dùng mô tả, mỗi vai một giọng khác nhau

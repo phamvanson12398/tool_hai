@@ -89,6 +89,7 @@ def build_timeline(script: Script, segments: list[dict],
     VIDEO_END_HOLD giây, nên tổng thời lượng = nội dung + delay + hold.
     """
     tl = video.Timeline()
+    tl.scene_cast = [list(c) if c else None for c in getattr(script, "scene_cast", [])]
     t = config.VIDEO_START_DELAY
     for idx, seg in enumerate(segments):
         b = seg["beat"]
@@ -325,7 +326,7 @@ def render_episode(pdir: Path, script: Script, chars_cfg: list[dict],
     if not chars:
         raise RuntimeError("Chưa có ảnh nhân vật nào để dựng hình.")
 
-    stage = video.Stage()
+    stage = video.Stage(*config.frame_size(settings.get("video_format")))
     if bg_path and Path(bg_path).exists():
         stage.set_background(Path(bg_path))
     if scene_bgs:
@@ -349,7 +350,8 @@ def render_episode(pdir: Path, script: Script, chars_cfg: list[dict],
     _say(progress, 0.97, "đóng gói file rời")
     all_bgs = [Path(bg_path)] if bg_path else []
     all_bgs += [Path(p) for p in (scene_bgs or {}).values() if p]
-    pack = _make_pack(pdir, tl, chars, all_bgs, mp4, srt, script)
+    pack = _make_pack(pdir, tl, chars, all_bgs, mp4, srt, script,
+                      size=(stage.w, stage.h))
     _say(progress, 1.0, "xong")
 
     return {
@@ -363,7 +365,8 @@ def render_episode(pdir: Path, script: Script, chars_cfg: list[dict],
 
 
 def _make_pack(pdir: Path, tl: video.Timeline, chars: list[video.Character],
-               bg_paths: list[Path], mp4: Path, srt: Path, script: Script) -> Path:
+               bg_paths: list[Path], mp4: Path, srt: Path, script: Script,
+               size: tuple[int, int] = (config.WIDTH, config.HEIGHT)) -> Path:
     """Bộ file rời để chỉnh trong CapCut + xuất file đầy đủ ra thư mục out."""
     out_dir = pdir / "out"
 
@@ -375,6 +378,8 @@ def _make_pack(pdir: Path, tl: video.Timeline, chars: list[video.Character],
     timeline_json = out_dir / "timeline.json"
     tl_data = {
         "total": tl.total,
+        "width": size[0],
+        "height": size[1],
         "lines": [
             {
                 "idx": ln.idx,
@@ -407,6 +412,7 @@ def _make_pack(pdir: Path, tl: video.Timeline, chars: list[video.Character],
             for b in tl.beats
         ],
         "scenes": list(script.scenes),
+        "scene_cast": [list(c) if c else None for c in script.scene_cast],
     }
     timeline_json.write_text(json.dumps(tl_data, ensure_ascii=False, indent=2),
                             encoding="utf-8")

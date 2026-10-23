@@ -147,15 +147,25 @@ class Timeline:
     lines: list[Line] = field(default_factory=list)
     beats: list[Beat] = field(default_factory=list)
     total: float = 0.0
+    # ai có mặt ở từng bối cảnh (None = mọi nhân vật), theo chỉ số cảnh
+    scene_cast: list = field(default_factory=list)
+
+    def present(self, scene: int, names: list[str]) -> list[str]:
+        """Tên những người có mặt ở bối cảnh này (giữ thứ tự names)."""
+        who = self.scene_cast[scene] if 0 <= scene < len(self.scene_cast) else None
+        out = [n for n in names if who is None or n in who]
+        return out or list(names)
 
 
 # ---------------------------------------------------------------- khung hình
 
 class Stage:
-    """Khung 9:16: bối cảnh + nhân vật + phụ đề."""
+    """Khung hình (9:16, 16:9 hoặc 1:1): bối cảnh + nhân vật + phụ đề."""
 
     def __init__(self, width: int = config.WIDTH, height: int = config.HEIGHT):
         self.w, self.h = width, height
+        self.layout = config.stage_layout(width, height)
+        self.unit = min(width, height) / 1080     # cỡ chữ, viền... theo cạnh ngắn
         self.bg: Image.Image | None = None
         # nhiều bối cảnh: chỉ số cảnh -> ảnh nền (cảnh không có thì dùng self.bg)
         self.scene_bgs: dict[int, Image.Image] = {}
@@ -169,6 +179,19 @@ class Stage:
         self.font = find_font(bold=True)
         self.font_small = find_font(bold=False)
         self._char_cache: dict[tuple, Image.Image] = {}
+
+    # ------------------------------------------------------ bố cục theo khung
+    def slots(self, n: int) -> list[float]:
+        return self.layout["slots"].get(n) or [(i + 1) / (n + 1) for i in range(n)]
+
+    @property
+    def floor_y(self) -> int:
+        return int(self.h * self.layout["floor"])
+
+    def char_h(self, n: int, scale: float = 1.0) -> int:
+        """Chiều cao người (khung gốc nhân vật) trên khung hình."""
+        hi, lo = self.layout["height"]
+        return int(self.h * (hi if n < 3 else lo) * scale)
 
     def set_background(self, path: Path) -> None:
         self.bg = self._fit(path)
@@ -225,10 +248,10 @@ class Stage:
         out = {}
         if not n:
             return out
-        slots = layout_slots(n)
-        base_y = self.h * 0.80
+        slots = self.slots(n)
+        base_y = self.floor_y
         for i, ch in enumerate(chars):
-            target_h = self.h * (0.50 if n < 3 else 0.42) * ch.scale
+            target_h = self.char_h(n, ch.scale)
             ratio = 0.22
             anim = ch.rig_animator
             spec = getattr(getattr(anim, "rig", None), "spec", None)
@@ -269,7 +292,7 @@ class Stage:
             ch_other = next(c for c in chars if c.name == other)
             if getattr(ch_other.rig_animator, "back_head", None):
                 self.ots = (ch_other, left)
-                cx += (-1 if left else 1) * self.w * 0.14 / s   # chừa chỗ cho gáy người nghe
+                cx += (-1 if left else 1) * min(self.w, self.h) * 0.14 / s   # chừa chỗ cho gáy người nghe
             else:
                 s, dy = SHOTS["can"]
                 cy = head_y + dy * th
@@ -287,15 +310,17 @@ class Stage:
             head, shirt = ch.rig_animator.back_head()
         except Exception:  # noqa: BLE001
             return img
-        hw = int(self.w * 0.66)
+        m = min(self.w, self.h)
+        hw = int(m * 0.66)
         sc = hw / head.width
         head = head.resize((hw, max(1, int(head.height * sc))), Image.LANCZOS)
-        x0 = int(-self.w * 0.16) if left else int(self.w * 0.5)
-        top = int(self.h * 0.6)
+        x0 = int(-m * 0.16) if left else int(self.w - hw + m * 0.16)
+        top = int(self.h - m * 0.78)
         d = ImageDraw.Draw(img)
-        sx0, sx1 = x0 - int(self.w * 0.15), x0 + hw + int(self.w * 0.15)
+        sx0, sx1 = x0 - int(m * 0.15), x0 + hw + int(m * 0.15)
         d.rounded_rectangle([sx0, top + int(head.height * 0.8), sx1, self.h + 200],
-                            radius=int(self.w * 0.18), fill=shirt[:3], outline=(24, 22, 28), width=10)
+                            radius=int(m * 0.18), fill=shirt[:3], outline=(24, 22, 28),
+                            width=max(4, int(10 * self.unit)))
         img.paste(head, (x0, top), head)
         return img
 
@@ -309,8 +334,8 @@ class Stage:
         n = len(chars)
         if n == 0:
             return img
-        slots = layout_slots(n)
-        base_y = int(self.h * 0.80)
+        slots = self.slots(n)
+        base_y = self.floor_y
 
         for i, ch in enumerate(chars):
             cx = int(self.w * slots[i])
@@ -330,7 +355,7 @@ class Stage:
                     # ngoài) cao ~50% khung hình, chân đứng ở base_y.
                     fw, fh = getattr(anim, "frame_size", None) or im.size
                     ox, oy = getattr(anim, "frame_origin", None) or (0, 0)
-                    target_h = int(self.h * (0.50 if n < 3 else 0.42) * ch.scale)
+                    target_h = self.char_h(n, ch.scale)
                     sc = target_h / fh
                     cam_s = self.cam[0]
                     im = im.resize((max(1, int(im.width * sc * cam_s)),
@@ -405,7 +430,7 @@ class Stage:
 
     def _scaled(self, path: Path, n: int, scale: float) -> Image.Image:
         """Ảnh nhân vật đã resize — cache theo (file, kích thước)."""
-        target_h = int(self.h * (0.50 if n < 3 else 0.42) * scale)
+        target_h = self.char_h(n, scale)
         key = (str(path), target_h)
         hit = self._char_cache.get(key)
         if hit is not None:
@@ -431,7 +456,7 @@ class Stage:
         if not self.title:
             return img
         d = ImageDraw.Draw(img)
-        f = ImageFont.truetype(self.font, 64)
+        f = ImageFont.truetype(self.font, max(24, int(64 * self.unit)))
         txt = self.title
         bbox = d.textbbox((0, 0), txt, font=f)
         tw = bbox[2] - bbox[0]
@@ -454,9 +479,10 @@ class Stage:
             return
         d = ImageDraw.Draw(img)
         st = self.subtitle_style
-        f = ImageFont.truetype(self.font, st["size"])
-        # tự xuống dòng nếu dài
-        max_w = self.w - 120
+        size = max(24, int(st["size"] * self.unit))
+        f = ImageFont.truetype(self.font, size)
+        # tự xuống dòng nếu dài (khung ngang: không trải hết bề ngang)
+        max_w = min(self.w - 120, int(self.h * 1.25))
         words = text.split(" ")
         lines, cur = [], ""
         for wd in words:
@@ -469,7 +495,7 @@ class Stage:
                 cur = wd
         if cur:
             lines.append(cur)
-        lh = int(st["size"] * 1.25)
+        lh = int(size * 1.25)
         total_h = lh * len(lines)
         if self.subtitle_pos == "tren":
             # phía trên (như các kênh hoạt hình hài): dưới tiêu đề nếu có
@@ -481,7 +507,7 @@ class Stage:
             tw = bbox[2] - bbox[0]
             x = (self.w - tw) // 2
             d.text((x, y), ln, font=f, fill=st["fill"],
-                   stroke_width=5, stroke_fill=st["outline"])
+                   stroke_width=max(2, int(5 * self.unit)), stroke_fill=st["outline"])
             y += lh
 
 
@@ -516,22 +542,33 @@ _UPPER = {"vaytay", "chitay", "omdau", "khoanhtay", "giohaitay", "voratay", "nhu
 _STRONG = {"shocked", "scared", "angry", "crying", "surprised", "disgusted"}
 
 
-def plan_shots(timeline: "Timeline", n_chars: int, auto: bool = True) -> dict:
+def plan_shots(timeline: "Timeline", n_chars: int, auto: bool = True,
+               names: list[str] | None = None) -> dict:
     """Chọn góc máy cho từng câu / nhịp như phim hoạt hình hài ngắn.
 
     Kịch bản ghi goc=... thì theo kịch bản. Tự chọn: mở đầu toàn cảnh; cử chỉ
     cả người -> toàn cảnh; cử chỉ tay / cầm đồ -> nửa người; câu zoom hoặc
     phản ứng mạnh -> cận/siêu cận; hội thoại xen kẽ qua vai và cận mặt; cứ
-    vài câu lại về toàn cảnh cho khán giả định vị. Đổi cảnh -> toàn cảnh.
+    vài câu lại về toàn cảnh cho khán giả định vị. Vào cảnh mới -> toàn
+    cảnh; cắt qua lại giữa hai nơi (gọi điện) thì không bắt về toàn cảnh.
+    Cảnh chỉ có một số người: chỉ đếm và qua vai người có mặt ở đó.
     Trả về {("line"|"beat", idx): (góc, người được quay, người nghe)}.
     """
     events = sorted([(ln.start, "line", ln) for ln in timeline.lines] +
                     [(b.start, "beat", b) for b in timeline.beats], key=lambda e: e[0])
     out: dict = {}
-    prev_who, prev_scene, since_wide = None, None, 0
+    prev_scene, since_wide = None, 0
+    visited: set = set()
+    last_in: dict = {}          # cảnh -> người nói gần nhất ở cảnh đó
+    total_n = n_chars
     for i, (_, kind, ev) in enumerate(events):
         who = ev.speaker if kind == "line" else ev.actor
-        other = prev_who if prev_who and prev_who != who else None
+        here = timeline.present(ev.scene, names) if names else None
+        n_chars = len(here) if here is not None else total_n
+        prev_here = last_in.get(ev.scene)
+        other = prev_here if prev_here and prev_here != who else None
+        first_visit = ev.scene not in visited
+        visited.add(ev.scene)
         # chỉ cử chỉ MỚI cả người mới cần toàn cảnh; đang nằm/bò giữ nguyên thì
         # máy quay vẫn cận được (bám theo vị trí đầu thật)
         g = ev.gestures[0] if ev.gestures else ""
@@ -540,7 +577,7 @@ def plan_shots(timeline: "Timeline", n_chars: int, auto: bool = True) -> dict:
         if not shot and not auto:
             shot = "can" if ev.zoom else "toan"
         if not shot:
-            if i == 0 or ev.scene != prev_scene or n_chars == 0:
+            if i == 0 or n_chars == 0 or (ev.scene != prev_scene and first_visit):
                 shot = "toan"
             elif g in _FULL_BODY:
                 shot = "toan"
@@ -558,12 +595,13 @@ def plan_shots(timeline: "Timeline", n_chars: int, auto: bool = True) -> dict:
                 shot = "trung"
         since_wide = 0 if shot == "toan" else since_wide + 1
         out[(kind, ev.idx)] = (shot, who, other)
-        prev_who, prev_scene = who, ev.scene
+        prev_scene = ev.scene
+        last_in[ev.scene] = who
     return out
 
 def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
                  stage: Stage, settings: dict, progress=None) -> Path:
-    """Render timeline thành mp4 1080x1920, ghi thẳng RGB vào ffmpeg qua stdin."""
+    """Render timeline thành mp4 (kích thước theo stage), ghi thẳng RGB vào ffmpeg qua stdin."""
     out_path.parent.mkdir(parents=True, exist_ok=True)
     tmp = out_path.parent / "tmp"
     tmp.mkdir(parents=True, exist_ok=True)
@@ -598,12 +636,23 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
 
     # Cache khung hình theo trạng thái: (biểu cảm, miệng mở/ngậm, camera)
     # góc máy từng câu / nhịp
-    shots = plan_shots(timeline, len(chars), bool(settings.get("auto_camera", True)))
+    names = [c.name for c in chars]
+    shots = plan_shots(timeline, len(chars), bool(settings.get("auto_camera", True)),
+                       names)
+    # nhân vật có mặt ở từng cảnh (vd gọi điện: mỗi người một nơi)
+    _cast_cache: dict = {}
+
+    def chars_in(scene: int) -> list[Character]:
+        if scene not in _cast_cache:
+            here = set(timeline.present(scene, names))
+            _cast_cache[scene] = [c for c in chars if c.name in here]
+        return _cast_cache[scene]
 
     # bối cảnh đang hiện và cảnh trước đó (để chuyển mờ)
     cur_scene: int | None = None
     prev_scene: int | None = None
     scene_since = 0.0
+    seen_scenes: set = set()        # cảnh đã vào: quay lại thì cắt thẳng
 
     # --- CỬ ĐỘNG (Bước D): gom rig animator theo tên nhân vật để áp cử chỉ
     # theo từng câu trong kịch bản.
@@ -614,6 +663,7 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
 
     from .gestures import POSTURES as _POSTURES
     _last_scene = None
+    _entered: set = set()
 
     def _apply_gestures(ev) -> None:
         """Áp cử chỉ, hiệu ứng, đạo cụ của câu (hoặc nhịp '>') cho NGƯỜI ĐÓ.
@@ -626,15 +676,20 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
         if not rig_animators:
             return
         nonlocal _last_scene
-        if ev.scene != _last_scene:
-            # sang bối cảnh mới: mọi người đứng dậy (bỏ tư thế nằm/ngồi/bò cũ)
-            for anim in rig_animators.values():
+        if ev.scene != _last_scene and ev.scene not in _entered:
+            # vào bối cảnh mới lần đầu: người ở đó đứng dậy (bỏ tư thế cũ);
+            # cắt qua lại giữa hai nơi thì ai đang nằm/ngồi vẫn giữ nguyên
+            _entered.add(ev.scene)
+            here = set(timeline.present(ev.scene, list(rig_animators)))
+            for nm, anim in rig_animators.items():
+                if nm not in here:
+                    continue
                 try:
                     if getattr(anim, "current_gesture", None) is not None:
                         anim.set_gesture(None, None, ev.start)
                 except Exception:  # pragma: no cover
                     pass
-            _last_scene = ev.scene
+        _last_scene = ev.scene
         who = getattr(ev, "speaker", None) or getattr(ev, "actor", "")
         gesture = ev.gestures[0] if ev.gestures else None
         effect = ev.effects[0] if ev.effects else None
@@ -702,7 +757,11 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
             scene = getattr(events[0][2], "scene", 0) if events else 0
         if scene != cur_scene:
             prev_scene, cur_scene, scene_since = cur_scene, scene, t
+            if scene in seen_scenes:
+                prev_scene = None          # quay lại nơi cũ: cắt thẳng, không mờ
+            seen_scenes.add(scene)
         mix = min(1.0, (t - scene_since) / SCENE_FADE) if prev_scene is not None else 1.0
+        vis = chars_in(cur_scene)
 
         speaking = None
         mouth_open = False
@@ -757,9 +816,9 @@ def render_video(timeline: Timeline, chars: list[Character], out_path: Path,
             shot, who, other = shots.get(key, ("toan", None, None))
             if zoom_focus:
                 who = zoom_focus
-            stage.set_camera(shot, who, chars, other)
+            stage.set_camera(shot, who, vis, other)
         img = stage.blank(cur_scene, prev_scene, mix)
-        img = stage.place_characters(img, chars, held, speaking, mouth_open, t)
+        img = stage.place_characters(img, vis, held, speaking, mouth_open, t)
         img = stage.draw_ots(img)
 
         # Vẽ phụ đề và tiêu đề (không cache được vì text thay đổi mỗi khung)

@@ -101,6 +101,8 @@ class Script:
     beats: list[Beat] = field(default_factory=list)
     # mô tả từng bối cảnh theo thứ tự xuất hiện ("" = bối cảnh chung của tập)
     scenes: list[str] = field(default_factory=list)
+    # ai có mặt ở từng bối cảnh (None = mọi nhân vật), song song với scenes
+    scene_cast: list[list[str] | None] = field(default_factory=list)
     raw: str = ""
     errors: list[str] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
@@ -114,6 +116,16 @@ class Script:
     def scene_of(self, idx: int) -> str:
         """Mô tả bối cảnh theo chỉ số ("" nếu không có)."""
         return self.scenes[idx] if 0 <= idx < len(self.scenes) else ""
+
+    def cast_of(self, idx: int) -> list[str] | None:
+        """Nhân vật có mặt ở bối cảnh idx (None = tất cả)."""
+        if 0 <= idx < len(self.scene_cast):
+            return self.scene_cast[idx]
+        return None
+
+    def present(self, idx: int) -> list[str]:
+        c = self.cast_of(idx)
+        return [n for n in self.cast if c is None or n in c] or list(self.cast)
 
     def speakers_in_order(self) -> list[str]:
         seen: list[str] = []
@@ -288,12 +300,19 @@ def parse_script(text: str) -> Script:
     lines = text.splitlines()
     in_body = False
     cur_scene: int | None = None   # chưa có '## canh' nào
+    home: dict[str, int] = {}      # nhân vật -> nơi người đó được gắn ('| tên')
 
-    def scene_index() -> int:
+    def scene_index(speaker: str = "") -> int:
         nonlocal cur_scene
         if cur_scene is None:          # câu trước mọi '## canh': bối cảnh chung
             s.scenes.append("")
+            s.scene_cast.append(None)
             cur_scene = 0
+        # người nói không có mặt ở cảnh hiện tại nhưng đã được gắn vào nơi
+        # khác (vd gọi điện thoại) -> tự cắt sang nơi của người đó
+        here = s.scene_cast[cur_scene]
+        if speaker and here is not None and speaker not in here and speaker in home:
+            cur_scene = home[speaker]
         return cur_scene
 
     for i, raw_line in enumerate(lines, start=1):
@@ -318,13 +337,27 @@ def parse_script(text: str) -> Script:
             if not desc:
                 s.errors.append(f"Dòng {i}: '## canh:' cần mô tả bối cảnh (vd '## canh: bếp').")
                 continue
-            # cùng mô tả với cảnh đã có -> quay lại cảnh đó
-            norm = [x.strip().lower() for x in s.scenes]
-            if desc.lower() in norm:
-                cur_scene = norm.index(desc.lower())
+            # 'phòng khách | 민준, 수아': chỉ những người này có mặt
+            who: list[str] | None = None
+            if "|" in desc:
+                desc, _, names = desc.partition("|")
+                desc = desc.strip()
+                who = [n.strip() for n in re.split(r"[,&+]", names) if n.strip()] or None
+                if not desc:
+                    s.errors.append(f"Dòng {i}: '## canh:' cần mô tả bối cảnh trước dấu '|'.")
+                    continue
+            # cùng mô tả (và cùng người) với cảnh đã có -> quay lại cảnh đó
+            key = (desc.lower(), tuple(who) if who else None)
+            keys = [(x.strip().lower(), tuple(c) if c else None)
+                    for x, c in zip(s.scenes, s.scene_cast)]
+            if key in keys:
+                cur_scene = keys.index(key)
             else:
                 s.scenes.append(desc)
+                s.scene_cast.append(who)
                 cur_scene = len(s.scenes) - 1
+            for n in who or []:
+                home[n] = cur_scene
             continue
 
         m = HEADER_RE.match(line)
@@ -355,7 +388,7 @@ def parse_script(text: str) -> Script:
         in_body = True
 
         if line.lstrip().startswith(">"):
-            beat = Beat(kind="react", line_no=i, scene=scene_index())
+            beat = Beat(kind="react", line_no=i)
             rest = line.lstrip()[1:].strip()
 
             # tách phần trong ngoặc (biểu cảm, zoom, tiếng động)
@@ -377,6 +410,7 @@ def parse_script(text: str) -> Script:
                     pass
                 if not after and dm.start() > 0:
                     beat.speaker = before[: dm.start()].rstrip(":").strip()
+            beat.scene = scene_index(beat.speaker)
             if not dm:
                 s.errors.append(
                     f"Dòng {i}: nhịp phản ứng '>' phải kèm số giây "
@@ -389,8 +423,9 @@ def parse_script(text: str) -> Script:
 
         lm = LINE_RE.match(line)
         if lm:
-            beat = Beat(kind="line", line_no=i, scene=scene_index())
+            beat = Beat(kind="line", line_no=i)
             beat.speaker = lm.group("name").strip()
+            beat.scene = scene_index(beat.speaker)
             _parse_mods(lm.group("mods") or "", beat, s.errors, s.warnings, i)
             beat.text = lm.group("text").strip()
             if not beat.text:
@@ -405,6 +440,20 @@ def parse_script(text: str) -> Script:
         if b.speaker and b.speaker not in s.cast:
             s.warnings.append(
                 f"Dòng {b.line_no}: nhân vật '{b.speaker}' chưa có trong # nhan_vat."
+            )
+
+    for idx, who in enumerate(s.scene_cast):
+        for n in who or []:
+            if s.cast and n not in s.cast:
+                s.warnings.append(
+                    f"Bối cảnh '{s.scenes[idx]}': '{n}' chưa có trong # nhan_vat."
+                )
+    for b in s.beats:
+        who = s.cast_of(b.scene)
+        if who is not None and b.speaker and b.speaker not in who:
+            s.warnings.append(
+                f"Dòng {b.line_no}: '{b.speaker}' nói nhưng không có mặt ở "
+                f"bối cảnh '{s.scene_of(b.scene)}' (thêm vào sau dấu '|')."
             )
 
     if not s.cast and s.beats:
@@ -437,7 +486,9 @@ def serialize_script(s: Script) -> str:
     last_scene = 0 if (s.scenes and s.scenes[0] == "") else None
     for b in s.beats:
         if b.scene != last_scene and s.scene_of(b.scene):
-            out.append(f"## canh: {s.scene_of(b.scene)}")
+            who = s.cast_of(b.scene)
+            tail = (" | " + ", ".join(who)) if who else ""
+            out.append(f"## canh: {s.scene_of(b.scene)}{tail}")
         last_scene = b.scene
         mods = ", ".join(b.mods())
         if b.kind == "react":
