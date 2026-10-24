@@ -723,8 +723,14 @@ lúc giọng đọc tới câu đó.
   riêng, phụ đề thành track chữ sửa được (khi chưa bật phụ đề in sẵn lên hình). Cần
   chọn dự án CapCut mẫu ở Cài đặt như khi xuất phim hài. Đóng CapCut rồi mở lại để
   thấy dự án mới.
-- **Xoá truyện / phim**: nút **🗑 Xoá** cạnh "+ Truyện mới" xoá hẳn truyện đang mở
-  (kịch bản, giọng, ảnh, video); hỏi lại trước khi xoá, đang dựng thì không xoá được.
+- **Xoá truyện / phim**: nút **🗑 Xoá** cạnh "+ Truyện mới" chuyển truyện đang mở vào
+  **thùng rác** (data/thung_rac), khôi phục được trong **30 ngày**: chọn trong ô
+  "Thùng rác" rồi bấm **↩ Khôi phục**. Quá 30 ngày mới xoá hẳn. Đang dựng thì không xoá.
+- **Kiểu nhân vật đã lưu**: mỗi lần tải ảnh nhân vật mẫu, nét vẽ và ngoại hình Claude
+  rút ra được lưu riêng vào thư viện (data/library/kieu_nhan_vat), không nằm trong
+  truyện nữa — xoá truyện không mất. Ô **Kiểu nhân vật** của mọi truyện có thêm các
+  dòng **"Đã lưu: ..."** để chọn lại, khỏi tải ảnh và chờ Claude xem lại. Truyện cũ
+  có ảnh mẫu được tự lưu vào thư viện khi mở màn hình Truyện kể.
 - **Máy quay tự đổi góc**: toàn cảnh khi mở cảnh và khi người kể nói, hai người
   khi đối đáp, cận mặt người đang nói, lia theo người đi lại; đẩy máy rất chậm
   cho đỡ đơ.

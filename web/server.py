@@ -29,7 +29,7 @@ from flask import (Flask, jsonify, request, send_file,  # noqa: E402
                    send_from_directory)
 
 from core import assets, character_kit, claude_cli, config, pipeline  # noqa: E402
-from core import capcut_export, photo_rig, rig as core_rig, scene_art  # noqa: E402
+from core import capcut_export, photo_rig, rig as core_rig, scene_art, style_lib  # noqa: E402
 from core.comedy_lib import (COMEDY_KINDS, MARKETS, VALID_EXPRESSIONS,  # noqa: E402
                              VALID_SFX)
 from core.gestures import breathe_angles  # noqa: E402
@@ -1777,9 +1777,11 @@ def _story_view(pid: str, data: dict) -> dict:
     out["visual"] = st.get("visual", "tool")
     from core import doodle_parts, film as film_m, film_rig
     out["mode"] = st.get("mode", "story")
-    out["char_styles"] = [[k, v["label"]] for k, v in film_rig.CHAR_STYLES.items()]
+    out["char_styles"] = [[k, v["label"]] for k, v in film_rig.CHAR_STYLES.items()] + \
+        [["lib:" + it["id"], "Đã lưu: " + it["name"]] for it in style_lib.items()]
     smp = st.get("char_sample") or {}
-    out["char_sample"] = {"note": smp.get("note", ""), "has": bool(smp.get("image"))}
+    out["char_sample"] = {"note": smp.get("note", ""), "has": bool(smp.get("image")),
+                          "lib": smp.get("lib") or ""}
     from core import sync as sync_m
     out["sync_styles"] = [[k, v[0]] for k, v in sync_m.STYLES.items()]
     out["sync"] = {k: v for k, v in (st.get("sync") or {}).items() if k != "bible"}
@@ -1846,23 +1848,82 @@ def api_story_list():
         if d.get("mode") == "story":
             out.append({"id": d["id"], "title": d.get("title") or "(chưa đặt tên)",
                         "created_at": d.get("created_at")})
+            try:                       # lưu kiểu nhân vật theo ảnh mẫu ra thư viện (xoá truyện không mất)
+                if style_lib.backup(d.get("story") or {}, d.get("title") or ""):
+                    p.write_text(json.dumps(d, ensure_ascii=False, indent=2), encoding="utf-8")
+            except Exception:  # noqa: BLE001
+                pass
     return jsonify({"stories": out[:50]})
+
+
+TRASH = config.DATA / "thung_rac"
+TRASH_DAYS = 30
 
 
 @app.delete("/api/story/<pid>")
 def api_story_delete(pid):
-    """Xoá hẳn một truyện / phim (thư mục projects/<id>: kịch bản, giọng, ảnh, video)."""
+    """Xoá truyện / phim: chuyển thư mục projects/<id> vào thùng rác (data/thung_rac),
+    khôi phục được trong 30 ngày. Kiểu nhân vật theo ảnh mẫu đã lưu sẵn ở thư viện."""
     import shutil
+    import time as _time
     d = (config.PROJECTS / pid).resolve()
     if not re.fullmatch(r"[A-Za-z0-9_\-]+", pid or "") or d.parent != config.PROJECTS.resolve() \
             or not (d / "project.json").exists():
         return _err("Không tìm thấy truyện này.", 404)
     if _status(pid).get("state") in ("writing", "rendering", "drawing"):
         return _err("Truyện đang chạy (viết / vẽ / dựng), đợi xong rồi hãy xoá.")
-    shutil.rmtree(d, ignore_errors=True)
+    try:
+        data = json.loads((d / "project.json").read_text(encoding="utf-8"))
+        if style_lib.backup(data.get("story") or {}, data.get("title") or ""):
+            (d / "project.json").write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
+    except Exception:  # noqa: BLE001
+        pass
+    TRASH.mkdir(parents=True, exist_ok=True)
+    dest = TRASH / pid
+    if dest.exists():
+        shutil.rmtree(dest, ignore_errors=True)
+    shutil.move(str(d), str(dest))
+    (dest / ".deleted_at").write_text(str(int(_time.time())), encoding="utf-8")
     with JOBS_LOCK:
         JOBS.pop(pid, None)
     return jsonify({"ok": True})
+
+
+@app.get("/api/story/trash")
+def api_story_trash():
+    """Truyện trong thùng rác (quá 30 ngày thì xoá hẳn)."""
+    import shutil
+    import time as _time
+    out = []
+    for d in sorted(TRASH.glob("*"), reverse=True) if TRASH.is_dir() else []:
+        try:
+            at = int((d / ".deleted_at").read_text().strip())
+        except Exception:  # noqa: BLE001
+            at = int(d.stat().st_mtime)
+        if _time.time() - at > TRASH_DAYS * 86400:
+            shutil.rmtree(d, ignore_errors=True)
+            continue
+        try:
+            data = json.loads((d / "project.json").read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        out.append({"id": d.name, "title": data.get("title") or "(chưa đặt tên)",
+                    "deleted_at": _time.strftime("%d/%m %H:%M", _time.localtime(at))})
+    return jsonify({"items": out})
+
+
+@app.post("/api/story/trash/<pid>/restore")
+def api_story_restore(pid):
+    import shutil
+    src = TRASH / pid
+    if not re.fullmatch(r"[A-Za-z0-9_\-]+", pid or "") or not (src / "project.json").exists():
+        return _err("Không thấy truyện này trong thùng rác.", 404)
+    if (config.PROJECTS / pid / "project.json").exists():
+        return _err("Đã có truyện cùng mã, không khôi phục đè được.")
+    shutil.rmtree(config.PROJECTS / pid, ignore_errors=True)       # thư mục rỗng (nếu có)
+    shutil.move(str(src), str(config.PROJECTS / pid))
+    (config.PROJECTS / pid / ".deleted_at").unlink(missing_ok=True)
+    return jsonify({"ok": True, "id": pid})
 
 
 @app.get("/api/story/<pid>")
@@ -1897,6 +1958,11 @@ def api_story_save(pid):
     from core import film_rig as fr_m
     if body.get("char_style") in list(fr_m.CHAR_STYLES) + ["sample"]:
         st["char_style"] = body["char_style"]
+    elif str(body.get("char_style") or "").startswith("lib:"):          # kiểu nhân vật đã lưu
+        got = style_lib.get(body["char_style"][4:])
+        if got:
+            st["char_sample"] = got
+            st["char_style"] = "sample"
     if isinstance(body.get("sync_style"), str):
         from core import sync as sync_m
         if body["sync_style"] in sync_m.STYLES:
@@ -2199,6 +2265,7 @@ def api_story_char_sample(pid):
         return _err("Claude không phân tích được ảnh.")
     st["char_sample"] = dict(res, image=str(dest))
     st["char_style"] = "sample"
+    style_lib.backup(st, data.get("title") or "")       # lưu vào thư viện kiểu nhân vật
     _save_project(pid, data)
     return jsonify(_story_view(pid, data))
 
@@ -2206,7 +2273,13 @@ def api_story_char_sample(pid):
 @app.get("/api/story/<pid>/char_sample.png")
 def api_story_char_sample_png(pid):
     from core import story as story_mod
-    p = story_mod.image_dir(config.project_dir(pid)) / "char_sample.png"
+    try:
+        _data, st = _load_story(pid)
+        img = (st.get("char_sample") or {}).get("image")
+    except FileNotFoundError:
+        img = None
+    p = Path(img) if img and Path(img).exists() else \
+        story_mod.image_dir(config.project_dir(pid)) / "char_sample.png"
     if not p.exists():
         return _err("Chưa có ảnh mẫu.", 404)
     return send_file(str(p))

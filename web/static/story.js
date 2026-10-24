@@ -49,6 +49,16 @@
 
   /* ----------------------------------------------------------- tải / lưu */
 
+  function loadTrash() {
+    return api("/api/story/trash").then(function (d) {
+      var sel = $("st-trash"), items = d.items || [];
+      sel.innerHTML = "";
+      sel.appendChild(new Option("— Thùng rác (" + items.length + ") —", ""));
+      items.forEach(function (it) { sel.appendChild(new Option(it.title + " · xoá " + it.deleted_at, it.id)); });
+      $("st-trash-box").hidden = !items.length;
+    }).catch(function () {});
+  }
+
   function loadList(selectId) {
     return api("/api/story/list").then(function (d) {
       var sel = $("st-pick");
@@ -278,8 +288,9 @@
     cs.innerHTML = "";
     (d.char_styles || []).forEach(function (kv) { cs.appendChild(new Option(kv[1], kv[0])); });
     cs.appendChild(new Option("Chưa chọn kiểu — theo ảnh nhân vật mẫu (tải lên)", "sample"));
-    cs.value = s.char_style || "capsule";
     var smp = d.char_sample || {};
+    cs.value = (s.char_style === "sample" && smp.lib) ? "lib:" + smp.lib : (s.char_style || "capsule");
+    if (!cs.value) cs.value = "sample";
     if (smp.has) {
       $("st-sample-img").src = "/api/story/" + encodeURIComponent(d.id) + "/char_sample.png?v=" + Date.now();
       $("st-sample-img").hidden = false;
@@ -855,7 +866,7 @@
     var filmMode = $("st-mode").value === "film";
     if (scr) scr.classList.toggle("st-film", filmMode);
     if (scr) scr.classList.toggle("st-sync", isSync());
-    $("st-sample-box").hidden = !(tool || filmMode) || isSync() || $("st-charstyle").value !== "sample";
+    $("st-sample-box").hidden = !(tool || filmMode) || isSync() || !/^(sample|lib:)/.test($("st-charstyle").value);
     if (filmMode) tool = true;
     if (scr) scr.classList.toggle("st-tool", tool);
     if (scr) scr.classList.toggle("st-3d", tool && $("st-bgmode").value === "ai3d");
@@ -925,7 +936,7 @@
     $("st-delete").addEventListener("click", function () {
       if (!st.id) { toast("error", "Chưa mở truyện nào để xoá"); return; }
       var name = $("st-title").value.trim() || "truyện này";
-      if (!window.confirm("Xoá hẳn “" + name + "”? Kịch bản, giọng, ảnh và video của nó sẽ mất, không lấy lại được.")) return;
+      if (!window.confirm("Xoá “" + name + "”? Truyện được chuyển vào thùng rác, khôi phục được trong 30 ngày. Kiểu nhân vật theo ảnh mẫu vẫn giữ trong thư viện.")) return;
       api("/api/story/" + encodeURIComponent(st.id), { method: "DELETE" })
         .then(function () {
           try { localStorage.removeItem(LS_STORY); } catch (e) {}
@@ -935,12 +946,22 @@
           return api("/api/story/list");
         })
         .then(function (d) {
+          loadTrash();
           var left = (d && d.stories) || [];
           if (left.length) return loadList(left[0].id).then(function () { return open(left[0].id); });
           window.location.reload();
         })
         .catch(fail("Không xoá được"));
     });
+    $("st-restore").addEventListener("click", function () {
+      var id = $("st-trash").value;
+      if (!id) { toast("warn", "Chọn truyện trong thùng rác để khôi phục"); return; }
+      api("/api/story/trash/" + encodeURIComponent(id) + "/restore", { body: {} })
+        .then(function () { toast("ok", "Đã khôi phục"); loadTrash(); return loadList(id); })
+        .then(function () { return open(id); })
+        .catch(fail("Không khôi phục được"));
+    });
+    loadTrash();
     $("st-capcut").addEventListener("click", function () {
       var btn = this, msg = $("st-capcut-msg");
       btn.disabled = true;

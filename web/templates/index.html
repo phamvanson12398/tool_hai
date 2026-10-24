@@ -355,7 +355,9 @@
             <div class="row-actions" style="margin:0">
               <select id="st-pick" aria-label="Mở truyện đã làm"></select>
               <button class="btn btn-sm" id="st-new" type="button">+ Truyện mới</button>
-              <button class="btn btn-sm" id="st-delete" type="button" title="Xoá hẳn truyện / phim đang mở (kịch bản, giọng, ảnh, video)">🗑 Xoá</button>
+              <button class="btn btn-sm" id="st-delete" type="button" title="Chuyển truyện / phim đang mở vào thùng rác (khôi phục được trong 30 ngày)">🗑 Xoá</button>
+              <span id="st-trash-box" hidden><select id="st-trash" aria-label="Thùng rác"></select>
+                <button class="btn btn-sm" id="st-restore" type="button">↩ Khôi phục</button></span>
             </div>
           </div>
           <p class="hint">Video kể chuyện dài (vd Lão Hạc — Nam Cao): một giọng người kể; hình do
