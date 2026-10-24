@@ -165,6 +165,14 @@ def prop_image(name: str, size: int) -> tuple[Image.Image, tuple[float, float]] 
         pen.shape(doodle._ellipse_pts(c, c, s * 0.6, s * 0.5, 0, 180, 16), (130, 96, 74))
         pen.ell(c, c, s * 0.6, s * 0.14, (110, 80, 62))
         hold = (c, c - s * 0.05)
+    elif name == "basin":                                # chậu tắm: chậu nhôm, nước xanh, bọt xà phòng
+        pen.shape([(c - s * 1.0, c), (c + s * 1.0, c), (c + s * 0.85, c + s * 0.28),
+                   (c - s * 0.85, c + s * 0.28)], (176, 186, 196))       # chậu nông: chó đứng trong vẫn thấy rõ
+        pen.ell(c, c, s * 1.0, s * 0.1, (196, 206, 214))
+        for k in range(7):
+            bx = c + (k - 3) * s * 0.26
+            pen.ell(bx, c - s * 0.05 - (k % 2) * s * 0.05, s * 0.08, s * 0.07, (250, 252, 255))
+        hold = (c, c)
     elif name == "pole":                                 # vẽ riêng ở Rig._pole
         return None
     elif name == "book":
@@ -638,12 +646,13 @@ class AnimalRig:
     def draw(self, canvas, pose, cam, zoom, night=None):
         d = 1 if pose.get("dir", 1) >= 0 else -1
         expr = pose.get("expr", "neutral")
-        key = (expr, bool(pose.get("mouth")), bool(pose.get("blink")), d, round(zoom * 8) / 8)
+        tail = round(pose.get("tail", 0.0) / 7.0) * 7.0           # đuôi vẫy: 7 độ một nấc (cache)
+        key = (expr, bool(pose.get("mouth")), bool(pose.get("blink")), d, round(zoom * 8) / 8, tail)
         if key not in self._cache:
-            if len(self._cache) > 60:
+            if len(self._cache) > 200:
                 self._cache.clear()
             img, foot, eye = doodle.render(self.kit, expr, bool(pose.get("mouth")), bool(pose.get("blink")),
-                                           0.6 * d, height=int(self.T * zoom), seed=self.seed)
+                                           0.6 * d, height=int(self.T * zoom), seed=self.seed, tail=tail)
             self._cache[key] = (_premul(img), foot, eye)
         arr, foot, eye = self._cache[key]
         pv = -d * pose.get("pivot", 0.0) * self.T          # điểm xoay (vd chân sau khi cúi ăn)

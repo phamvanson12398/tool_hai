@@ -143,14 +143,16 @@ def _half(chars, cid, T):
     return T * (0.3 if kit.get("species", "human") == "human" else 0.42)
 
 
-def _target_x(to, tracks, who, t, W, T, chars=None):
+def _target_x(to, tracks, who, t, W, T, chars=None, close=False):
+    """Chỗ đứng cạnh `to`. close: đứng sát để chạm tay (xoa đầu, tắm, cho ăn, ôm, đưa đồ)."""
     if to in SPOTS:
         return SPOTS[to] * W
     if to in tracks and to != who:
         tx = tracks[to].x_at(t)
         me = tracks[who].x_at(t)
         side = -1 if me < tx else 1
-        gap = (_half(chars or {}, who, T) + _half(chars or {}, to, T) + T * 0.16) if chars else T * 0.78
+        extra = -T * 0.06 if close else T * 0.16
+        gap = (_half(chars or {}, who, T) + _half(chars or {}, to, T) + extra) if chars else T * 0.78
         return tx + side * gap
     return None
 
@@ -229,7 +231,7 @@ def norm_prop(name):
 
 # việc tay chân ngừng lại khi có người nói chuyện (đỡ vung cuốc vào người, đỡ nói khi
 # đang ngậm điếu / kề chén); ngồi, nằm, khóc, suy nghĩ... thì vẫn giữ
-PAUSE_TALK = {"work", "dig", "sweep", "chop", "reap", "cook", "feed", "eat", "drink", "smoke",
+PAUSE_TALK = {"work", "bathe", "dig", "sweep", "chop", "reap", "cook", "feed", "eat", "drink", "smoke",
               "carry", "fan", "read"}
 GAP_TURN = 0.45          # nghỉ giữa hai người nói khác nhau (biết ai nói câu nào)
 ANIMAL_LIKE = ("pat", "feed", "hug", "give")
@@ -462,10 +464,10 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
             else:
                 act = film_act.norm(act)
                 walk = 0.0
-                if act in ("give", "hug", "pat", "feed") and to in tracks:     # tới gần trước
+                if act in ("give", "hug", "pat", "feed", "bathe") and to in tracks:     # tới sát trước
                     x0 = tr.x_at(t)
-                    x1 = _target_x(to, tracks, who, t, W, T, chars)
-                    if x1 is not None and abs(x1 - x0) > T * 0.3:
+                    x1 = _target_x(to, tracks, who, t, W, T, chars, close=True)
+                    if x1 is not None and abs(x1 - x0) > T * 0.1:
                         pre = rise(who, t)
                         walk = max(0.6, abs(x1 - x0) / (T * WALK))
                         tr.moves.append((t + pre, t + pre + walk, x0, x1, False))
@@ -477,12 +479,17 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
                 if act in film_act.CONTINUOUS:
                     activity[who] = act
                 if act == "eat" and species.get(who) != "human" and \
-                        not any(abs(fx - tr.x_at(t + walk)) < T * 0.6 for _t0, fx, _n in floor):
+                        not any(abs(f[1] - tr.x_at(t + walk)) < T * 0.6 for f in floor):
                     ax = tr.x_at(t + walk)                       # chó tự ăn: có bát trước mõm
                     near = [o.x_at(t) for c, o in tracks.items() if c != who]
                     side = (1 if near and min(near, key=lambda v: abs(v - ax)) > ax else -1) if near else \
                         (1 if ax < W / 2 else -1)
-                    floor.append((t + walk, ax + side * T * 0.3, "bowl"))
+                    floor.append((t + walk, ax + side * T * 0.3, "bowl", 1e9))
+                if act == "bathe" and to in tracks and species.get(to) != "human":
+                    # tắm cho chó: chó đứng trong chậu nước, người cúi kỳ cọ
+                    tracks[to].acts.append((t + walk, t + d, "bathe", who))
+                    tracks[to].reacts.add(t + walk)
+                    floor.append((t + walk, tracks[to].x_at(t + walk), "basin", t + d + 0.6))
                 if act == "feed" and to in tracks and species.get(to) != "human":
                     # cho chó / mèo ăn: chìa bát, đặt xuống đất trước mõm, con vật mừng rồi cúi ăn
                     put = t + walk + 0.9
@@ -490,7 +497,7 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
                     tracks[to].acts.append((put, 1e9, "eat", who))
                     tracks[to].reacts.add(t + walk)
                     ax, hx = tracks[to].x_at(put), tracks[who].x_at(put)
-                    floor.append((put, ax + (T * 0.3 if hx > ax else -T * 0.3), "bowl"))
+                    floor.append((put, ax + (T * 0.3 if hx > ax else -T * 0.3), "bowl", 1e9))
                     tr.props.append((put, "none"))               # bát đã đặt xuống, tay không
                     auto_prop.pop(who, None)
                     sfx.append((put, "thud", 0.12))
@@ -922,8 +929,8 @@ class FilmShot:
             p = poses[cid]
             if p["_human"] and not floor_done:               # bát cơm dưới đất: trước người, mõm chó
                 floor_done = True                            # thì cắm vào bát
-                for t0, fx, name in self.plan.get("floor") or []:
-                    if t >= t0:
+                for t0, fx, name, t1 in self.plan.get("floor") or []:
+                    if t0 <= t < t1:
                         self._floor_item(frame, name, fx, cam, z)
             cxw = p["x"] - (0.5 * T if p["_lie"] else 0.0)
             if not (vx0 - 0.05 * T < cxw < vx1 + 0.05 * T):   # ở ngoài khung: cả người lẫn đồ cầm
@@ -932,6 +939,8 @@ class FilmShot:
             info = rig.draw(frame, p, cam, z, night)
             if p["_lie"] and p["_human"]:
                 self._blanket(frame, p, cam, z, rig)
+            if p["_act"] == "bathe" and not p["_human"]:
+                self._bubbles(frame, p, cam, z, t, cid)
             hx, hy = info["head"]
             film_rig.marks(frame, p["_act"], t, (hx, hy + 0.08 * info["r"], info["r"]), T * z,
                            p.get("dir", 1))
@@ -939,8 +948,8 @@ class FilmShot:
             if tag and tag[0] <= t < tag[1]:
                 self._tag(frame, cid, hx, hy - info["r"] * 1.25, t - tag[0], tag[1] - t)
         if not floor_done:
-            for t0, fx, name in self.plan.get("floor") or []:
-                if t >= t0:
+            for t0, fx, name, t1 in self.plan.get("floor") or []:
+                if t0 <= t < t1:
                     self._floor_item(frame, name, fx, cam, z)
         if self.rain:
             self._rain(frame, t)
@@ -968,10 +977,25 @@ class FilmShot:
             cv2.polylines(frame, [(fold * 4).astype(np.int32)], False, (150, 90, 84), max(1, lw // 2),
                           cv2.LINE_AA, shift=2)
 
+    def _bubbles(self, frame, p, cam, z, t, cid):
+        """Bọt xà phòng trên lưng con vật đang tắm, lăn tăn bay lên."""
+        cv2 = self.cv2
+        T = self.plan["T"] * z
+        cx, fy = cam[0, 0] * p["x"] + cam[0, 2], cam[1, 1] * p["y"] + cam[1, 2]
+        rng = np.random.default_rng(zlib.crc32(cid.encode()) % 1000)
+        for k in range(9):
+            ph = rng.uniform(0, 1)
+            u = (t * 0.5 + ph) % 1.0                     # bọt bay lên rồi tan
+            bx = cx + rng.uniform(-0.28, 0.28) * T + 0.03 * T * math.sin(t * 3 + k)
+            by = fy - T * (0.2 + rng.uniform(0.0, 0.12)) - u * T * 0.25
+            r = max(2, int(T * rng.uniform(0.018, 0.035) * (1 - 0.5 * u)))
+            cv2.circle(frame, (int(bx), int(by)), r, (252, 252, 255), -1, cv2.LINE_AA)
+            cv2.circle(frame, (int(bx), int(by)), r, (150, 170, 190), 1, cv2.LINE_AA)
+
     def _floor_item(self, frame, name, x, cam, z):
         key = ("floor", name, round(z * 8) / 8)
         if key not in self._furn:
-            got = film_rig.prop_image(name, self.plan["T"] * 0.16 * z)
+            got = film_rig.prop_image(name, self.plan["T"] * (0.3 if name == "basin" else 0.16) * z)
             if got:
                 img = got[0]
                 bb = img.getbbox() or (0, 0, img.width, img.height)

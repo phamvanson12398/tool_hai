@@ -43,7 +43,9 @@ ACTIONS: dict[str, tuple[str, str]] = {
     "jump": ("Nhảy cẫng lên mừng", "happy"),
     "tremble": ("Run sợ", "worried"),
     "sad": ("Buồn rũ, cúi đầu", "sad"),
-    "work": ("Làm việc chung chung", "neutral"),
+    "work": ("Làm việc bằng tay (không cầm dụng cụ)", "neutral"),
+    "bathe": ("Tắm cho chó / mèo (kỳ cọ trong chậu)", "happy"),
+    "wag": ("Vẫy đuôi (chó mèo)", "happy"),
     "dig": ("Cuốc đất (cầm cuốc)", "neutral"),
     "sweep": ("Quét sân (cầm chổi)", "neutral"),
     "chop": ("Bổ củi (cầm rìu)", "neutral"),
@@ -61,25 +63,26 @@ ACTIONS: dict[str, tuple[str, str]] = {
 
 # việc làm kéo dài: làm xong nhịp vẫn tiếp tục làm (cả lúc người khác nói) tới
 # khi nhân vật có hành động khác
-CONTINUOUS = {"work", "dig", "sweep", "chop", "reap", "carry", "smoke", "fan", "read", "cook",
+CONTINUOUS = {"work", "wag", "dig", "sweep", "chop", "reap", "carry", "smoke", "fan", "read", "cook",
               "feed", "eat", "drink", "sleep", "cry", "sad", "think", "cross_arms", "tremble",
               "lie"}
 
 # tiếng động theo nhịp động tác: hành động -> (tên tiếng, chu kỳ giây, lệch pha)
 SFX = {"dig": ("dig", 1.2, 0.85), "sweep": ("sweep", 1.0, 0.45), "chop": ("chop", 1.3, 0.9),
        "reap": ("swish", 1.1, 0.5), "clap": ("clap", 0.4, 0.1), "eat": ("nom", 1.4, 0.5),
-       "smoke": ("bubble", 4.0, 1.6), "cook": ("bubble", 2.5, 0.3), "work": ("dig", 1.2, 0.85)}
+       "smoke": ("bubble", 4.0, 1.6), "cook": ("bubble", 2.5, 0.3)}
 
 # đồ cầm tay đi kèm việc: cầm từ lúc làm việc đó và giữ luôn (không biến mất giữa chừng)
-ACT_PROP = {"dig": "hoe", "work": "hoe", "sweep": "broom", "chop": "axe", "reap": "sickle",
+ACT_PROP = {"dig": "hoe", "sweep": "broom", "chop": "axe", "reap": "sickle",
             "carry": "pole", "smoke": "pipe", "fan": "fan", "read": "book", "cook": "stick",
             "feed": "bowl", "eat": "bowl", "drink": "cup"}
 # dụng cụ cầm cán (vẽ theo góc tool_ang của tư thế, không theo cẳng tay)
-TOOL_ACTS = {"dig", "work", "chop", "sweep", "reap", "cook"}
+TOOL_ACTS = {"dig", "chop", "sweep", "reap", "cook"}
 
 # tên hành động cũ của chế độ Kể chuyện
 ALIASES = {"hop": "jump", "shocked": "hands_up", "worried": "scratch_head", "shake": "shake_head",
-           "sly": "cross_arms", "walk_in": "walk", "walk_out": "walk"}
+           "sly": "cross_arms", "walk_in": "walk", "walk_out": "walk", "wash": "bathe", "bath": "bathe",
+           "tam": "bathe", "tam_cho": "bathe", "scrub": "bathe", "wag_tail": "wag", "vay_duoi": "wag"}
 
 REST = [(8.0, 4.0), (8.0, 4.0)]
 STAND = [(0.0, 0.0), (0.0, 0.0)]
@@ -309,7 +312,18 @@ def pose(act: str, t: float, seed: int = 0, dur: float = 3.0, speaking: bool = F
         p["head"] = 9
         p["lean"] = 5
         p["sy"] = 0.985 + 0.006 * _s(w * t / 3.2)
-    elif act in ("work", "dig"):
+    elif act == "work":                         # làm bằng tay: hai tay thay nhau làm phía trước
+        k = _s(w * t / 1.1)
+        p["arms"] = [(55 + 20 * k, 40 - 10 * k), (55 - 20 * k, 40 + 10 * k)]
+        p["lean"] = 8
+        p["head"] = 7
+    elif act == "bathe":                        # cúi xuống kỳ cọ con vật trong chậu
+        k = _s(w * t * 1.6)
+        p["arms"] = [(62 + 14 * k, 18 + 10 * k), (58 - 14 * k, 22 - 10 * k)]
+        p["lean"] = 12
+        p["head"] = 10
+        p["legs"] = [(14, 18), (-6, 14)]
+    elif act == "dig":
         # nhấc cuốc lên trên vai (lưỡi ra sau lưng) rồi bổ xuống đất trước mặt
         k = (t % 1.3) / 1.3
         sw = _ease(k / 0.6) if k < 0.6 else 1 - _ease((k - 0.6) / 0.25) if k < 0.85 else 0.0
@@ -403,7 +417,12 @@ def animal_pose(act: str, t: float, seed: int = 0, moving: bool = False) -> dict
     """Chó mèo: nhún, nghiêng, nhảy."""
     act = norm(act)
     w = 2 * math.pi
-    p = {"bob": 0.0, "rot": 0.0, "sy": 1 + 0.015 * _s(w * t / 1.8 + seed), "expr": "neutral"}
+    p = {"bob": 0.0, "rot": 0.0, "sy": 1 + 0.015 * _s(w * t / 1.8 + seed), "expr": "neutral",
+         "tail": 10 * _s(w * t / 1.6 + seed)}                 # đứng yên: đuôi phe phẩy chậm
+    if act in ("happy", "jump", "wag", "eat", "laugh", "clap", "wave", "bathe") or moving:
+        p["tail"] = 12 + 24 * _s(w * t * (3.2 if not moving else 2.2))   # mừng: vẫy tít
+    if act in ("sad", "cry", "beg", "tremble", "hands_up"):
+        p["tail"] = -30                                            # buồn, sợ: cụp đuôi
     if moving:
         p["bob"] = 0.06 * abs(_s(w * t * 2.2))
         p["rot"] = 3 * _s(w * t * 2.2)
@@ -414,6 +433,15 @@ def animal_pose(act: str, t: float, seed: int = 0, moving: bool = False) -> dict
         p["sy"] = 0.96                          # chó buồn: cụp tai, mắt hiền (không cau có)
         p["rot"] = -2
         p["expr"] = "sad"
+    elif act == "wag":
+        p["bob"] = 0.02 * abs(_s(w * t * 1.6))
+        p["rot"] = -2 * _s(w * t * 3.2)                   # mông lắc theo đuôi
+        p["expr"] = "happy"
+    elif act == "bathe":                        # đứng trong chậu, lâu lâu rùng mình
+        shake = (t % 3.0) > 2.4
+        p["rot"] = 4 * _s(w * t * 9) if shake else 0.0
+        p["sy"] = 0.97
+        p["expr"] = "happy" if not shake else "sly"
     elif act == "eat":                          # cúi đầu xuống bát, nhai nhóp nhép
         p["rot"] = 22 + 3 * math.sin(w * t * 2.2)
         p["pivot"] = 0.32                       # xoay quanh chân sau: đầu cúi, đuôi vẫn trên đất

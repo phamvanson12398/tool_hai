@@ -764,10 +764,11 @@ def _custom_animal(kit, part, T, expr, mouth_open, blink, facing, seed):
 
 # ------------------------------------------------------------ chó, mèo
 
-def _animal(kit, T, expr, mouth_open, blink, facing, seed):
-    """Vẽ quay phải rồi lật nếu quay trái. T = chiều cao con vật."""
+def _animal(kit, T, expr, mouth_open, blink, facing, seed, tail=0.0):
+    """Vẽ quay phải rồi lật nếu quay trái. T = chiều cao con vật. tail = góc đuôi (độ,
+    dương = vểnh lên / vẫy ra sau, âm = cụp xuống)."""
     cat = kit["species"] == "cat"
-    W, H = int(T * 1.7), int(T * 1.35)
+    W, H = int(T * 2.0), int(T * 1.35)                 # rộng hơn thân: đuôi vẫy không bị cắt
     img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
     pen = _Pen(img, T * 1.6, seed)
     fur = FUR[kit["fur"]]
@@ -775,14 +776,20 @@ def _animal(kit, T, expr, mouth_open, blink, facing, seed):
     bottom = H - T * 0.03
     bx = W / 2 - T * 0.12
     body_top = bottom - T * 0.6
-    # đuôi
+    # đuôi (xoay quanh gốc đuôi để vẫy)
+    a = math.radians(tail)
+    ox, oy = bx - T * 0.48, bottom - T * 0.4
+
+    def turn(pts):
+        return [(ox + (x - ox) * math.cos(a) - (y - oy) * math.sin(a),
+                 oy + (x - ox) * math.sin(a) + (y - oy) * math.cos(a)) for x, y in pts]
     if cat:
-        pen.line([(bx - T * 0.5, bottom - T * 0.3), (bx - T * 0.72, bottom - T * 0.55),
-                  (bx - T * 0.68, bottom - T * 0.85)], width=int(pen.lw * 2.4), fill=OUT)
-        pen.line([(bx - T * 0.5, bottom - T * 0.3), (bx - T * 0.72, bottom - T * 0.55),
-                  (bx - T * 0.68, bottom - T * 0.85)], width=int(pen.lw * 1.4), fill=fur)
+        tl = turn([(bx - T * 0.5, bottom - T * 0.3), (bx - T * 0.72, bottom - T * 0.55),
+                   (bx - T * 0.68, bottom - T * 0.85)])
+        pen.line(tl, width=int(pen.lw * 2.4), fill=OUT)
+        pen.line(tl, width=int(pen.lw * 1.4), fill=fur)
     else:
-        pen.shape(_ellipse_pts(bx - T * 0.6, bottom - T * 0.55, T * 0.14, T * 0.2, 0, 360, 20),
+        pen.shape(turn(_ellipse_pts(bx - T * 0.6, bottom - T * 0.55, T * 0.14, T * 0.2, 0, 360, 20)),
                   fur)
     # chân ngắn
     for dx in (-0.36, -0.18, 0.2, 0.38):
@@ -876,7 +883,7 @@ def char_height(kit: dict, T: float) -> float:
 
 
 def render(kit: dict, expr: str = "neutral", mouth_open: bool = False, blink: bool = False,
-           facing: float = 0.0, height: int = 400, seed: int | None = None):
+           facing: float = 0.0, height: int = 400, seed: int | None = None, tail: float = 0.0):
     """Ảnh RGBA của nhân vật cao `height` px (người lớn; trẻ con, chó mèo nhỏ hơn).
     Trả về (ảnh, (x, y) điểm chân giữa, (x, y, r) vị trí mắt để vẽ nước mắt...)."""
     kit = clean_kit(kit)
@@ -891,7 +898,7 @@ def render(kit: dict, expr: str = "neutral", mouth_open: bool = False, blink: bo
         img, foot, eye = _custom_animal(kit, _part(kit["species"], "animal"), T, expr,
                                         mouth_open, blink, facing, seed)
     else:
-        img, foot, eye = _animal(kit, T, expr, mouth_open, blink, facing, seed)
+        img, foot, eye = _animal(kit, T, expr, mouth_open, blink, facing, seed, tail)
     w, h = img.size
     img = img.resize((max(1, w // SS), max(1, h // SS)), Image.LANCZOS)
     return img, (foot[0] / SS, foot[1] / SS), (eye[0] / SS, eye[1] / SS, eye[2] / SS)

@@ -760,6 +760,14 @@ lúc giọng đọc tới câu đó.
     chương nối liền mạch. Nhân vật lần đầu lên hình có **thẻ tên** nhỏ trên đầu 2,5 giây.
   - Uống trà: chén đưa kề đúng miệng; hút điếu cày: miệng kề đúng đầu ống điếu;
     ăn: tay và lên tận miệng.
+  - **Tắm cho chó / mèo** (hành động "bathe"): người đi lại sát con vật, cúi kỳ cọ;
+    con vật đứng trong chậu nước, bọt xà phòng bay lăn tăn, lâu lâu rùng mình. "Làm việc
+    bằng tay" (work) không còn tự cầm cuốc nữa — cuốc chỉ có khi cuốc đất.
+  - **Chó mèo vẫy đuôi**: đuôi vẫy tít khi vui, được vuốt ve, ăn, tắm hay đi lại; đứng
+    yên thì phe phẩy chậm; buồn, sợ thì cụp đuôi. Có thêm hành động "wag" (vẫy đuôi
+    mừng, mông lắc theo) cho AI hoặc chị chọn ở nhịp.
+  - Người xoa đầu, cho ăn, tắm, ôm, đưa đồ thì **đứng sát** con vật / người kia để tay
+    chạm tới (trước đây đứng xa quá).
   - **Cho chó / mèo ăn**: người chìa bát, đặt bát xuống đất trước mõm, con vật mừng
     rồi cúi đầu ăn, nhai nhóp nhép (ăn tới khi có việc khác, vuốt ve cũng không làm
     nó bỏ ăn). Nhịp "eat" cho chó mèo tự ăn thì tool tự đặt bát trước mõm.
