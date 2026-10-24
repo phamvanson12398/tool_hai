@@ -585,7 +585,9 @@ def write(st: dict, progress=None) -> dict:
     say(0.03, "AI nghĩ câu chuyện, nhân vật, địa điểm")
     plan_ = claude_cli._run_json(claude_cli._load_prompt(
         "webtoon_plan", minutes=f"{minutes:g}", part=str(part), lang_label=LANGS.get(lang, lang),
-        brief=st.get("brief") or "(tự nghĩ một chuyện hay theo thể loại)",
+        brief=(st.get("brief") or "(tự nghĩ một chuyện hay theo thể loại)") +
+              (f"\nTên tập đã chọn: \"{st['title']}\" — giữ đúng tên này, viết truyện khớp với tên."
+               if (st.get("title") or "").strip() else ""),
         genre=GENRES.get(st.get("genre"), st.get("genre") or ""),
         prev_block=(f"### Tóm tắt các phần trước (viết tiếp, giữ đúng nhân vật)\n{prev}" if prev else ""),
         ending_rule=("Đoạn cuối DỪNG ở cao trào / cú sốc, bỏ lửng cho người xem chờ phần sau."
