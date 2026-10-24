@@ -746,6 +746,22 @@ lúc giọng đọc tới câu đó.
     rổ, gậy, sách, hoa, tay nải, chai, dao, đèn dầu — thiếu thì "Vẽ thêm bằng AI"
     loại **Đồ vật cầm tay**).
   - **Người kể**: một câu nối cảnh.
+- **Kín thoại, ít khoảng trống**: AI được dặn khoảng 3/4 số nhịp là thoại, không để quá 2
+  hành động liền nhau mà không ai nói; vừa làm việc vừa nói, người nghe đáp lại ngắn,
+  vai phụ chen câu. Cử chỉ khi nói nằm ngay trong câu thoại. Hành động không lời (đi
+  vào, ngồi xuống, rít điếu...) diễn song song với câu sau, không bắt cả phim đứng chờ.
+  Riêng đưa đồ, ôm, cho ăn thì đợi gần xong mới tới câu sau, để người nhận cảm ơn sau khi
+  đã cầm đồ. Đo thử phim Lão Hạc 3 chương: thời gian không có tiếng còn khoảng 25%
+  (trước đây 50–60%), phần còn lại là khoảng nghỉ tự nhiên giữa hai người nói.
+- **Hài duyên, không xuyên tạc**: mỗi cảnh có 1–2 câu gây cười (tính lẩm cẩm, sĩ diện,
+  cãi vặt, con chó phá đám, tục ngữ nói chệch...), nêm chút cách nói hài đang thịnh trên
+  mạng (chủ yếu qua người kể và vai phụ), nhưng không đổi tình tiết, kết cục, tính cách;
+  cảnh bi, cảnh cao trào giữ nghiêm. Chương sau biết thoại chương trước nên không lặp câu.
+- **Rà soát hình khớp lời** (hai lớp): AI soát lại từng câu (cử chỉ đúng cảm xúc câu nói,
+  không mâu thuẫn tư thế, đúng người làm, đồ cầm hợp việc, đúng lúc), rồi tool tự soát
+  lời kể: lời kể nhắc ai (ở chỗ chủ ngữ) làm gì (khóc, gật gù, rít điếu, xoa đầu, đứng
+  dậy, bỏ đi...) mà AI quên thì tool tự thêm hành động đó cùng lúc với lời kể. Đi tới xoa
+  đầu / ôm / đưa đồ xong thì lùi ra, không đứng dính vào người kia.
 - **Việc đang làm** (cuốc đất, quét sân, bổ củi, gặt lúa, gánh hàng, hút điếu cày,
   phe phẩy quạt, đọc sách, nấu ăn, cho gà ăn...): nhân vật làm việc đó lúc không ai
   nói; **lúc có người nói chuyện thì mọi người ngừng tay** (chống cuốc xuống đất,

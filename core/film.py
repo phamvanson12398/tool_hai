@@ -267,6 +267,10 @@ def norm_prop(name):
 PAUSE_TALK = {"work", "bathe", "dig", "sweep", "chop", "reap", "cook", "feed", "eat", "drink", "smoke",
               "carry", "fan", "read"}
 GAP_TURN = 0.45          # nghỉ giữa hai người nói khác nhau (biết ai nói câu nào)
+OVERLAP = 1.3            # nhịp sau vào trước khi hành động không lời xong tối đa bấy nhiêu giây
+OVERLAP_HANDOFF = 0.4    # đưa đồ, ôm, cho ăn...: đợi gần xong mới tới nhịp sau (cảm ơn sau khi nhận)
+HANDOFF = {"give", "hug", "pat", "feed", "grab", "lift", "lift_upside", "bathe"}
+STEP_BACK = {"give", "hug", "pat"}
 ANIMAL_LIKE = ("pat", "feed", "hug", "give")
 
 
@@ -398,7 +402,9 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
             auto_prop[cid] = want
 
     t = lead
-    end = lead                       # lúc nhịp dài nhất đang chạy kết thúc
+    end = lead                       # lúc nhịp sau được bắt đầu
+    latest = lead                    # lúc nhịp dài nhất đang chạy kết thúc
+    busy: dict = {}                  # người -> lúc làm xong hành động không lời đang làm
     beats = []
     last_speaker = None
     names = {c: _name_keys(chars.get(c) or {}, c) for c in ids}
@@ -408,6 +414,8 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
         kind = b.get("t")
         who = b.get("who")
         t = end
+        if kind == "act" and who in busy:      # cùng một người: làm xong việc trước mới tới việc sau
+            t = max(t, busy[who])
         together = bool(b.get("with_prev")) and bool(beats)
         if kind == "act" and anchor and who in names and not b.get("text") and \
                 any(k in anchor[1] for k in names[who]):
@@ -523,6 +531,19 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
                         walk += pre
                 d = walk + (float(b.get("dur") or 0) or default_dur(act))
                 tr.acts.append((t + walk, t + d, act, to))
+                if act in STEP_BACK and to in tracks and walk > 0:
+                    # xoa đầu, ôm, đưa đồ xong thì lùi ra khoảng cách bình thường, không đứng dính
+                    # vào người kia suốt cảnh (đồ cầm tay khỏi vẽ đè lên mặt người khác)
+                    xa = tr.x_at(t + d)
+                    xt = tracks[to].x_at(t + d)
+                    gap = T * (0.62 if species.get(to, "human") == "human" else 0.5)
+                    if abs(xa - xt) < gap:
+                        xb = xt + (gap if xa >= xt else -gap)
+                        if not (T * 0.3 <= xb <= W - T * 0.3):          # sát mép: lùi sang phía kia
+                            xb = xt - (gap if xa >= xt else -gap)
+                        tr.moves.append((t + d, t + d + 0.6, xa, xb, False))
+                        tr.keys.append((t + d + 0.6, xb))
+                        d += 0.6
                 hold(who, t, act)
                 if act in film_act.CONTINUOUS:
                     activity[who] = act
@@ -573,8 +594,17 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
             continue
         bt["t1"] = t + d
         beats.append(bt)
-        end = max(end, t + d)
-    t = end
+        latest = max(latest, t + d)
+        if kind == "act" and not b.get("text") and who in tracks:
+            # hành động không lời không bắt cả phim đứng chờ: nhịp sau (câu thoại của người
+            # khác...) vào sớm, hành động vẫn diễn trọn
+            busy[who] = max(busy.get(who, 0.0), t + d)
+            act = film_act.norm(b.get("act") or "idle") if b.get("act") not in SPECIAL else b.get("act")
+            ov = OVERLAP_HANDOFF if act in HANDOFF else min(OVERLAP, d * 0.5)
+            end = max(end, t + max(0.5, d - ov))
+        else:
+            end = max(end, t + d)
+    t = max(end, latest)
     total = t + TAIL
     # việc làm dở kéo dài tới khi người đó có hành động / bước đi khác
     for cid, tr in tracks.items():

@@ -15,8 +15,11 @@ Bạn là biên kịch phim hoạt hình chuyển thể văn học cho kênh You
 {{structure_block}}
 {{source_block}}
 
-### Độ dài
-Chương dài khoảng {{minutes}} phút ≈ {{beats}} nhịp (mỗi câu thoại 2–5 giây, mỗi hành động 2–3 giây). Đừng viết thiếu.
+### Độ dài và mật độ thoại (quan trọng)
+Chương dài khoảng {{minutes}} phút ≈ {{beats}} nhịp, trong đó ÍT NHẤT {{lines}} câu thoại ("line"). Đừng viết thiếu.
+- Phim phải KÍN THOẠI, không để hình trống: khoảng 3/4 số nhịp là thoại. Không để quá 2 nhịp "act" liền nhau mà không có câu thoại nào; đang làm việc (cuốc, quét, nấu...) thì vừa làm vừa nói, vừa làm vừa lẩm bẩm, càu nhàu, đùa với con chó.
+- Cử chỉ khi nói ghi vào "act" của chính câu thoại (khóc, chỉ tay, vỗ đùi...), KHÔNG tách thành nhịp "act" riêng. Nhịp "act" riêng chỉ dành cho việc phải thấy rõ: đi lại, vào / ra, ngồi / nằm / đứng dậy, đưa đồ, ôm, cho ăn, bắt đầu một việc.
+- Người nghe đáp lại ngắn ("Thế à?", "Khổ thân!", "Ơ hay...") thay vì đứng im; người phụ, con nít, hàng xóm chen vào một câu cho cảnh có tiếng nói.
 
 ### Cách viết
 - Chia chương thành các CẢNH, mỗi cảnh ở MỘT địa điểm, thường 8–25 nhịp.
@@ -26,6 +29,11 @@ Chương dài khoảng {{minutes}} phút ≈ {{beats}} nhịp (mỗi câu thoạ
 - NGƯỜI KỂ ("narr") rất ít: chỉ để chuyển thời gian ("Mấy hôm sau..."), tả nhanh hoàn cảnh hoặc suy nghĩ thầm; tối đa 1–2 câu mỗi cảnh, mỗi câu dưới 35 chữ.
 - Nhân vật chưa có mặt lúc đầu cảnh: "start" ở "ngoai_trai"/"ngoai_phai" rồi có nhịp "enter". Rời đi thì nhịp "exit".
 - "chars" của cảnh: mọi nhân vật xuất hiện trong cảnh (tối đa 4).
+
+### Hài duyên, hợp thời nhưng KHÔNG xuyên tạc
+- Mỗi cảnh có ít nhất 1–2 câu làm người xem bật cười: tính cách lẩm cẩm, sĩ diện, nói một đằng làm một nẻo, cãi nhau vặt, con chó phá đám, câu ca dao / tục ngữ nói chệch, so sánh hóm hỉnh, phản ứng ngô nghê của trẻ con.
+- Được nêm chút hài kiểu mạng xã hội đang thịnh (cách nói hài hước, câu cửa miệng quen tai của người xem hôm nay) nhưng phải tiết chế, đặt đúng chỗ, hợp vai: ưu tiên qua người kể và các vai phụ hay đùa; nhân vật chính vẫn nói đúng giọng, đúng thời đại của mình.
+- KHÔNG xuyên tạc: không đổi tình tiết, kết cục, quan hệ, tính cách của nguyên tác; không bôi nhọ nhân vật hay tác giả; không chế giễu cái đói, cái chết. Cảnh bi, cảnh cao trào thì giữ nghiêm — tiếng cười chỉ ở chỗ lắng để cảnh buồn càng thấm.
 
 ### Cho HAY, không đơn điệu (quan trọng nhất)
 - Mỗi cảnh có MỘT mục đích rõ (một chuyện xảy ra / một điều được hé lộ / một cảm xúc đổi chiều) và có xung đột nhỏ: người muốn – người ngăn, giấu – lộ, mong – thất vọng. Cảnh không có gì thay đổi thì bỏ.

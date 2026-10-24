@@ -209,7 +209,8 @@ def write_story(st: dict, progress=None) -> dict:
             out_chapters.append(_write_film_chapter(
                 st, i, c, outline, chars_txt, places_txt, block, per_min,
                 structure_block(st, i, chapters, True),
-                say=lambda f, m, i=i: say(0.08 + 0.9 * (i + 0.6) / len(chapters), m)))
+                say=lambda f, m, i=i: say(0.08 + 0.9 * (i + 0.6) / len(chapters), m),
+                before=out_chapters))
             continue
         data = claude_cli._run_json(claude_cli._load_prompt(
             "story_chapter_analysis" if analysis else "story_chapter",
@@ -354,8 +355,18 @@ def _film_lists() -> tuple[str, str, str]:
     return acts, spots, ", ".join(f"{k} ({v})" for k, v in props.items())
 
 
+def _said_before(chapters: list, limit: int = 40) -> str:
+    """Câu thoại đã có ở các chương trước (để chương sau không lặp lại)."""
+    lines = [b.get("text", "") for ch in chapters for sc in ch.get("scenes") or []
+             for b in sc.get("beats") or [] if b.get("t") == "line" and b.get("text")]
+    if not lines:
+        return ""
+    return ("\n### Thoại ĐÃ CÓ ở các chương trước (không lặp lại câu hay ý này; chương này "
+            "kể tiếp chuyện mới)\n- " + "\n- ".join(lines[-limit:]) + "\n")
+
+
 def _write_film_chapter(st, i, c, outline, chars_txt, places_txt, block, per_min, structure="",
-                        say=None) -> dict:
+                        say=None, before: list | None = None) -> dict:
     """AI viết một chương dạng kịch bản phim (cảnh -> nhịp thoại / hành động), rồi AI
     kiểm tra lại cho hình khớp lời; đồ vật / đồ đạc còn thiếu thì AI vẽ thêm."""
     say = say or (lambda f, m: None)
@@ -364,8 +375,9 @@ def _write_film_chapter(st, i, c, outline, chars_txt, places_txt, block, per_min
         "film_chapter", title=st.get("title") or "", author=st.get("author") or "",
         outline=outline, characters=chars_txt, places=places_txt, index=str(i + 1),
         chapter_title=str(c.get("title") or ""), chapter_summary=str(c.get("summary") or ""),
-        source_block=block, structure_block=structure, minutes=f"{per_min:.1f}",
-        beats=str(int(per_min * 60 / 3.0)),
+        source_block=block + _said_before(before or []), structure_block=structure,
+        minutes=f"{per_min:.1f}",
+        beats=str(int(per_min * 60 / 2.8)), lines=str(int(per_min * 60 / 3.8)),
         actions=acts, spots=spots, props=props, furniture=_film_extra()[0],
         sfx=_film_extra()[1]), task="story", timeout=900)
     scenes = data.get("scenes") if isinstance(data, dict) else None
@@ -407,8 +419,114 @@ def _film_additions(st: dict, data: dict, say) -> None:
 def _cleaned(st: dict, scenes: list) -> list:
     known = {ch["id"] for ch in st.get("characters") or []}
     species = {ch["id"]: (ch.get("kit") or {}).get("species", "human") for ch in st.get("characters") or []}
-    return [s for s in (clean_film_scene(x, known, species) for x in scenes if isinstance(x, dict))
-            if s["beats"]]
+    out = [s for s in (clean_film_scene(x, known, species) for x in scenes if isinstance(x, dict))
+           if s["beats"]]
+    for s in out:
+        match_narration(s, st.get("characters") or [], species)
+    return out
+
+
+# lời kể tả việc gì -> hành động (xét theo thứ tự, lấy động từ đứng gần tên nhất)
+_NARR_VERBS = [
+    (r"khóc|nức nở|mếu máo|rơm rớm", "cry"),
+    (r"cười", "laugh"),
+    (r"gật đầu|gật gù", "nod"),
+    (r"lắc đầu", "shake_head"),
+    (r"vẫy tay|vẫy", "wave"),
+    (r"cúi chào|vái", "bow"),
+    (r"gãi đầu", "scratch_head"),
+    (r"đập trán|vỗ trán", "facepalm"),
+    (r"vỗ tay", "clap"),
+    (r"giật mình|sững sờ|sững người|chết lặng", "hands_up"),
+    (r"quát|nổi giận|giận dữ|tức tối", "angry"),
+    (r"thở dài|buồn rầu|cúi gằm|rầu rĩ", "sad"),
+    (r"nghĩ ngợi|suy nghĩ|ngẫm nghĩ|trầm ngâm", "think"),
+    (r"rít điếu|điếu cày|thuốc lào|hút thuốc", "smoke"),
+    (r"nhấp ngụm|uống", "drink"),
+    (r"(?<!\w)ăn(?! năn)(?!\w)", "eat"),
+    (r"phe phẩy|quạt", "fan"),
+    (r"quét", "sweep"),
+    (r"cuốc", "dig"),
+    (r"bổ củi|chẻ củi", "chop"),
+    (r"nấu|thổi cơm", "cook"),
+    (r"đọc", "read"),
+    (r"xoa đầu|vuốt ve|vuốt lưng", "pat"),
+    (r"ôm", "hug"),
+    (r"ngồi xuống|ngồi phịch", "sit"),
+    (r"nằm xuống|nằm vật|ngả lưng", "lie"),
+    (r"đứng dậy|đứng lên|bật dậy", "stand"),
+    (r"bỏ đi|đi ra|ra về|đi khỏi|bỏ về", "exit"),
+]
+_NEEDS_TO = {"pat", "hug"}
+
+
+def match_narration(scene: dict, characters: list, species: dict | None = None) -> dict:
+    """Lời kể "lão Hạc gật gù, rít một hơi điếu cày" mà ngay sau không có nhịp hành động
+    của lão thì thêm hành động đó, diễn cùng lúc với lời kể (lưới an toàn khi AI quên)."""
+    species = species or {}
+    ids = scene.get("chars") or []
+    names = {}
+    for c in characters:
+        if c.get("id") in ids:
+            nm = (c.get("name") or c["id"].replace("_", " ")).lower().strip()
+            keys = {nm} | ({nm.split()[-1]} if len(nm.split()) > 1 and len(nm.split()[-1]) > 1 else set())
+            names[c["id"]] = sorted(keys, key=len, reverse=True)
+    beats = scene.get("beats") or []
+    out = []
+    for k, b in enumerate(beats):
+        out.append(b)
+        if b.get("t") != "narr" or not b.get("text"):
+            continue
+        text = b["text"].lower()
+        # ai được nhắc, theo thứ tự xuất hiện trong câu
+        found = []
+        for cid, keys in names.items():
+            pos = min((m.start() for kk in keys for m in re.finditer(r"(?<!\w)" + re.escape(kk) + r"(?!\w)", text)),
+                      default=None)
+            if pos is not None:
+                found.append((pos, cid))
+        # chỉ nhận người đứng ở chỗ chủ ngữ ("Lão Hạc rít điếu...", ", còn ông giáo gật gù"),
+        # không nhận người là bổ ngữ ("sang nhà ông giáo với nụ cười...")
+        subj = re.compile(r"(^|[.,;:!?…\-–]\s*|\b(còn|rồi|thì|và|nhưng|khi|lúc|bỗng|chợt)\s+)$")
+        mentioned = sorted(found)
+        found = [(pos, cid) for pos, cid in found if subj.search(text[max(0, pos - 12):pos])]
+        found.sort()
+        if not found:
+            continue
+        # các nhịp hành động ngay sau lời kể (tới câu nói / lời kể kế tiếp)
+        nxt = []
+        for b2 in beats[k + 1:]:
+            if b2.get("t") != "act":
+                break
+            nxt.append(b2)
+        done = {b2.get("who") for b2 in nxt}
+        for n, (pos, cid) in enumerate(found):
+            if cid in done or species.get(cid, "human") != "human":
+                continue
+            end = next((p2 for p2, _c in mentioned if p2 > pos and _c in dict((c, 1) for _p, c in found)),
+                       len(text))
+            part = text[pos:end]                   # đoạn câu nói về người này
+            hits = sorted({(m.start(), a) for rx, a in _NARR_VERBS for m in re.finditer(rx, part)})
+            seq = []
+            for _p, a in hits:                     # theo thứ tự trong câu, tối đa 2 việc
+                if a not in seq:
+                    seq.append(a)
+            # việc thấy rõ (rít điếu, xoa đầu...) hơn cảm xúc thoáng qua (thở dài) khi câu có nhiều việc
+            if len(seq) > 2:
+                seq = [a for a in seq if a not in ("sad", "think")] or seq
+            for j, act in enumerate(seq[:2]):
+                nb = {"t": "act", "who": cid, "act": act, "auto": True}
+                if j == 0:
+                    nb["with_prev"] = True             # việc đầu diễn ngay lúc kể, việc sau nối tiếp
+                if act in _NEEDS_TO:
+                    other = next((c2 for p2, c2 in mentioned if c2 != cid and p2 > pos), None)
+                    if not other:
+                        continue
+                    nb["to"] = other
+                out.append(nb)
+            done.add(cid)
+    scene["beats"] = out
+    return scene
 
 
 _CUES = [  # (từ trong câu nói, cử chỉ) — xét theo thứ tự
