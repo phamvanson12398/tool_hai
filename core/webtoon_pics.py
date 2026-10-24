@@ -319,7 +319,7 @@ class Pic:
         if bottom is not None and oy + im.height < bottom:
             oy = bottom - im.height
         ox, oy = int(round(ox)), int(round(oy))
-        canvas.alpha_composite(im, (ox, oy)) if ox >= 0 and oy >= 0 else _paste(canvas, im, ox, oy)
+        _paste(canvas, im, ox, oy)
         P = lambda x, y: (ox + x * k, oy + y * k)                # noqa: E731
         dd = self.d * k
         if st.blink > 0.5:
@@ -379,11 +379,13 @@ class Pic:
 
 
 def _paste(canvas: Image.Image, im: Image.Image, ox: int, oy: int) -> None:
-    """alpha_composite cho phép ảnh thò ra ngoài khung (toạ độ âm)."""
-    sx, sy = max(0, -ox), max(0, -oy)
-    crop = im.crop((sx, sy, min(im.width, canvas.width - ox), min(im.height, canvas.height - oy)))
-    if crop.width > 0 and crop.height > 0:
-        canvas.alpha_composite(crop, (max(0, ox), max(0, oy)))
+    """alpha_composite chỉ phần ảnh nằm trong khung: ảnh thò ra ngoài (toạ độ âm, quá mép
+    phải / dưới) hoặc còn nằm hẳn ngoài khung (nhân vật đang đi vào) đều không lỗi."""
+    x0, y0 = max(0, -ox), max(0, -oy)
+    x1, y1 = min(im.width, canvas.width - ox), min(im.height, canvas.height - oy)
+    if x1 <= x0 or y1 <= y0:
+        return
+    canvas.alpha_composite(im.crop((x0, y0, x1, y1)), (ox + x0, oy + y0))
 
 
 def _drop(canvas, x, y, r, lw):
