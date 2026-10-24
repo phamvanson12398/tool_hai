@@ -647,12 +647,14 @@ class AnimalRig:
         d = 1 if pose.get("dir", 1) >= 0 else -1
         expr = pose.get("expr", "neutral")
         tail = round(pose.get("tail", 0.0) / 7.0) * 7.0           # đuôi vẫy: 7 độ một nấc (cache)
-        key = (expr, bool(pose.get("mouth")), bool(pose.get("blink")), d, round(zoom * 8) / 8, tail)
+        dip = round(pose.get("dip", 0.0), 2)
+        key = (expr, bool(pose.get("mouth")), bool(pose.get("blink")), d, round(zoom * 8) / 8, tail, dip)
         if key not in self._cache:
             if len(self._cache) > 200:
                 self._cache.clear()
             img, foot, eye = doodle.render(self.kit, expr, bool(pose.get("mouth")), bool(pose.get("blink")),
-                                           0.6 * d, height=int(self.T * zoom), seed=self.seed, tail=tail)
+                                           0.6 * d, height=int(self.T * zoom), seed=self.seed, tail=tail,
+                                           dip=dip)
             self._cache[key] = (_premul(img), foot, eye)
         arr, foot, eye = self._cache[key]
         pv = -d * pose.get("pivot", 0.0) * self.T          # điểm xoay (vd chân sau khi cúi ăn)

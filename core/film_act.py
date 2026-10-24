@@ -283,8 +283,10 @@ def pose(act: str, t: float, seed: int = 0, dur: float = 3.0, speaking: bool = F
         p["to_mouth"] = (1, lift)               # tay kia và lên miệng
         p["prop_default"] = ("bowl", 0)
     elif act == "drink":
-        k = t % 3.0                             # nâng chén, nhấp, hạ xuống, nghỉ
-        lift = _ease(min(1.0, k / 0.5)) if k < 2.0 else _ease(max(0.0, (2.5 - k) / 0.5))
+        per = 7.0 + (seed % 3)                  # nhấp một ngụm rồi hạ chén, lát sau mới nhấp tiếp
+        k = t % per
+        lift = _ease(min(1.0, k / 0.5)) if k < 1.8 else _ease(max(0.0, (2.3 - k) / 0.5))
+        lift = lift if k < 2.3 else 0.0
         p["arms"] = [(45, 50), (10, 6)]
         p["head"] = -6 * lift
         p["to_mouth"] = (0, lift)               # chén kề đúng miệng
@@ -358,9 +360,11 @@ def pose(act: str, t: float, seed: int = 0, dur: float = 3.0, speaking: bool = F
         p["bob"] = 0.012 * abs(_s(w * t))
         p["prop_default"] = ("pole", 0)
     elif act == "smoke":
-        k = (t % 4.0)
-        up = _ease(min(1.0, (k - 0.8) / 0.4)) if k < 2.2 else _ease(max(0.0, (2.6 - k) / 0.4))
-        up = up if k > 0.8 else 0.0
+        # rít một hơi (~2 giây) rồi bỏ điếu xuống ngồi nhả khói, 9–13 giây sau mới rít tiếp
+        per = 9.0 + (seed % 5)
+        k = (t + per - 1.0) % per                  # hơi đầu tiên ngay khi bắt đầu
+        up = _ease(min(1.0, k / 0.4)) if k < 1.8 else _ease(max(0.0, (2.2 - k) / 0.4))
+        up = up if k < 2.2 else 0.0
         p["arms"] = [(45, 60), (10, 6)]
         p["head"] = -4 * up
         p["to_mouth"] = (0, up)                 # rít điếu: miệng kề đúng đầu ống điếu
@@ -442,10 +446,10 @@ def animal_pose(act: str, t: float, seed: int = 0, moving: bool = False) -> dict
         p["rot"] = 4 * _s(w * t * 9) if shake else 0.0
         p["sy"] = 0.97
         p["expr"] = "happy" if not shake else "sly"
-    elif act == "eat":                          # cúi đầu xuống bát, nhai nhóp nhép
-        p["rot"] = 22 + 3 * math.sin(w * t * 2.2)
-        p["pivot"] = 0.32                       # xoay quanh chân sau: đầu cúi, đuôi vẫn trên đất
-        p["chew"] = (t % 0.45) < 0.22
+    elif act == "eat":                          # thân đứng yên, chỉ cúi đầu xuống bát, nhai nhóp nhép
+        chew = (t % 0.45) < 0.22
+        p["dip"] = 1.0 if chew else 0.88
+        p["chew"] = chew
         p["expr"] = "happy"
     elif act in ("lie", "sleep"):
         p["sy"] = 0.85 + 0.02 * _s(w * t / 3)

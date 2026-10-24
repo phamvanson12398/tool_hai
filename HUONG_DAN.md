@@ -768,8 +768,11 @@ lúc giọng đọc tới câu đó.
     mừng, mông lắc theo) cho AI hoặc chị chọn ở nhịp.
   - Người xoa đầu, cho ăn, tắm, ôm, đưa đồ thì **đứng sát** con vật / người kia để tay
     chạm tới (trước đây đứng xa quá).
+  - **Hút thuốc lào**: rít một hơi khoảng 2 giây rồi hạ điếu, 9–13 giây sau mới rít
+    tiếp (không rít liên tục). **Uống trà**: nhấp một ngụm rồi hạ chén, 7–9 giây sau
+    mới nhấp tiếp.
   - **Cho chó / mèo ăn**: người chìa bát, đặt bát xuống đất trước mõm, con vật mừng
-    rồi cúi đầu ăn, nhai nhóp nhép (ăn tới khi có việc khác, vuốt ve cũng không làm
+    rồi cúi đầu ăn (thân đứng yên, chỉ đầu cúi xuống bát), nhai nhóp nhép (ăn tới khi có việc khác, vuốt ve cũng không làm
     nó bỏ ăn). Nhịp "eat" cho chó mèo tự ăn thì tool tự đặt bát trước mõm.
   - Tên chương có "đêm / tối" thì cảnh là ban đêm (trừ lời kể nói rõ sáng, trưa).
   - Cảnh không bao giờ trống: ai cũng đến sau thì người đầu tiên đi vào ngay.

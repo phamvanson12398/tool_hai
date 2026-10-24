@@ -764,7 +764,7 @@ def _custom_animal(kit, part, T, expr, mouth_open, blink, facing, seed):
 
 # ------------------------------------------------------------ chó, mèo
 
-def _animal(kit, T, expr, mouth_open, blink, facing, seed, tail=0.0):
+def _animal(kit, T, expr, mouth_open, blink, facing, seed, tail=0.0, dip=0.0):
     """Vẽ quay phải rồi lật nếu quay trái. T = chiều cao con vật. tail = góc đuôi (độ,
     dương = vểnh lên / vẫy ra sau, âm = cụp xuống)."""
     cat = kit["species"] == "cat"
@@ -802,6 +802,8 @@ def _animal(kit, T, expr, mouth_open, blink, facing, seed, tail=0.0):
         pen.ell(bx - T * 0.2, bottom - T * 0.38, T * 0.13, T * 0.09, (90, 74, 64), outline=False)
     # đầu
     hx, hy, r = bx + T * 0.5, bottom - T * 0.66, T * 0.3
+    if dip:                                    # cúi đầu (ăn): đầu hạ xuống sát đất trước chân
+        hx, hy = hx + T * 0.1 * dip, hy + T * 0.34 * dip
     if cat:
         for sx in (-1, 1):
             ex = hx + sx * r * 0.62
@@ -883,7 +885,8 @@ def char_height(kit: dict, T: float) -> float:
 
 
 def render(kit: dict, expr: str = "neutral", mouth_open: bool = False, blink: bool = False,
-           facing: float = 0.0, height: int = 400, seed: int | None = None, tail: float = 0.0):
+           facing: float = 0.0, height: int = 400, seed: int | None = None, tail: float = 0.0,
+           dip: float = 0.0):
     """Ảnh RGBA của nhân vật cao `height` px (người lớn; trẻ con, chó mèo nhỏ hơn).
     Trả về (ảnh, (x, y) điểm chân giữa, (x, y, r) vị trí mắt để vẽ nước mắt...)."""
     kit = clean_kit(kit)
@@ -898,7 +901,7 @@ def render(kit: dict, expr: str = "neutral", mouth_open: bool = False, blink: bo
         img, foot, eye = _custom_animal(kit, _part(kit["species"], "animal"), T, expr,
                                         mouth_open, blink, facing, seed)
     else:
-        img, foot, eye = _animal(kit, T, expr, mouth_open, blink, facing, seed, tail)
+        img, foot, eye = _animal(kit, T, expr, mouth_open, blink, facing, seed, tail, dip)
     w, h = img.size
     img = img.resize((max(1, w // SS), max(1, h // SS)), Image.LANCZOS)
     return img, (foot[0] / SS, foot[1] / SS), (eye[0] / SS, eye[1] / SS, eye[2] / SS)
