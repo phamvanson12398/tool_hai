@@ -580,6 +580,55 @@
     }).catch(function (e) { toast("error", "Dựng video thất bại", e.message); });
   }
 
+  /* ---------------------------- ý tưởng tham khảo ---------------------------- */
+  var LS_IDEAS = "tool_hai_webtoon_ideas_seen";
+  var GENRE_VI = {};
+
+  function seenIdeas() {
+    try { return JSON.parse(localStorage.getItem(LS_IDEAS) || "[]"); } catch (e) { return []; }
+  }
+  function moreIdeas() {
+    var btn = $("wt-ideas-btn");
+    btn.disabled = true; btn.textContent = "AI đang nghĩ...";
+    $("wt-ideas-state").textContent = "Khoảng 20–60 giây.";
+    api("/api/webtoon/ideas", { method: "POST", body: {
+      genre: $("wt-idea-genre").value, language: $("wt-lang").value || "ko", avoid: seenIdeas() } })
+      .then(function (d) {
+        var list = d.ideas || [];
+        try {
+          localStorage.setItem(LS_IDEAS, JSON.stringify(seenIdeas().concat(list.map(function (x) { return x.title; })).slice(-60)));
+        } catch (e) {}
+        var box = $("wt-ideas");
+        box.innerHTML = "";
+        list.forEach(function (it) {
+          var card = el("div", "wt-idea");
+          card.appendChild(el("div", "t", it.title));
+          card.appendChild(el("div", "g", GENRE_VI[it.genre] || it.genre));
+          if (it.hook) card.appendChild(el("div", "h", "“" + it.hook + "”"));
+          card.appendChild(el("div", null, it.brief));
+          if (it.why) card.appendChild(el("div", "w", it.why));
+          var use = el("button", "btn btn-sm btn-primary", "Dùng ý này");
+          use.type = "button";
+          use.addEventListener("click", function () {
+            $("wt-brief").value = it.brief;
+            if (it.genre) $("wt-genre").value = it.genre;
+            if (!$("wt-title").value.trim()) $("wt-title").value = it.title;
+            if (W.id) save(true);
+            toast("ok", "Đã điền ý tưởng", "Bấm 'AI viết truyện & phân cảnh' để viết.");
+            $("wt-brief").scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+          card.appendChild(use);
+          box.appendChild(card);
+        });
+        $("wt-ideas-state").textContent = "Bấm lại để có loạt khác.";
+      })
+      .catch(function (e) {
+        $("wt-ideas-state").textContent = "";
+        toast("error", "Chưa gợi ý được", e.message);
+      })
+      .then(function () { btn.disabled = false; btn.textContent = "Gợi ý ý tưởng mới"; });
+  }
+
   function addShot() {
     var w = wt();
     w.shots = w.shots || [];
@@ -607,6 +656,9 @@
              ["family", "Gia đình"], ["revenge", "Trả thù thoả mãn"], ["office", "Công sở"],
              ["school", "Học đường"], ["mystery", "Bí ẩn"]];
     fillSelect("wt-genre", g, "thriller");
+    g.forEach(function (kv) { GENRE_VI[kv[0]] = kv[1]; });
+    fillSelect("wt-idea-genre", [["", "Mọi thể loại"]].concat(g), "");
+    $("wt-ideas-btn").addEventListener("click", moreIdeas);
     fillSelect("wt-lang", [["ko", "Tiếng Hàn"], ["vi", "Tiếng Việt"], ["en", "Tiếng Anh"]], "ko");
     var last = null;
     try { last = localStorage.getItem(LS); } catch (e) {}

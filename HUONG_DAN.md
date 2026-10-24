@@ -1001,6 +1001,10 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
    cảm, gia đình, trả thù thoả mãn, công sở, học đường, bí ẩn), **Ngôn ngữ thoại** (mặc định
    **tiếng Hàn**: tên tập, thoại, tin nhắn trên điện thoại đều bằng tiếng Hàn; chọn được Việt, Anh), **Thời lượng**, **Phần số**. **Cuối phần**: *bỏ lửng ở cao trào* để làm
    series (phần 2 thì dán tóm tắt các phần trước vào ô dưới), hoặc *kết trọn vẹn*.
+   - **Ý tưởng tham khảo** (ngay dưới ô Yêu cầu): chọn thể loại (hoặc Mọi thể loại), bấm
+     **Gợi ý ý tưởng mới** — AI nghĩ 6 ý tưởng khác nhau (tên tập, câu móc, diễn biến, cú lật).
+     Mỗi lần bấm là một loạt mới, tool nhớ các ý đã gợi ý để không lặp lại. Bấm **Dùng ý này**
+     để điền vào ô Yêu cầu.
 2. Bấm **AI viết truyện & phân cảnh**. AI:
    - nghĩ câu chuyện, tên tập, móc câu mở đầu;
    - tạo nhân vật (ngoại hình cố định, mỗi người một vẻ) và địa điểm (người gọi điện ở chỗ

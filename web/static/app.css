@@ -968,3 +968,15 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 .wt-mark[hidden] { display: none; }
 .wt-mark-box { background: var(--surface, #fff); border-radius: var(--radius-sm); padding: 12px; max-width: 100%; max-height: 100%; overflow: auto; }
 .wt-mark-box canvas { display: block; max-width: 100%; cursor: crosshair; background: repeating-conic-gradient(#ddd 0 25%, #f4f4f4 0 50%) 0 0 / 16px 16px; }
+
+/* ý tưởng tham khảo (webtoon) */
+.wt-ideas { border: 1px dashed var(--line-soft); border-radius: var(--radius-sm); padding: 8px; margin-bottom: 10px; }
+.wt-ideas-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; }
+.wt-ideas-head select { width: auto; font-size: 12px; padding: 3px 5px; }
+.wt-ideas-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 8px; margin-top: 8px; }
+.wt-idea { border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 8px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
+.wt-idea .t { font-weight: 700; font-size: 13px; }
+.wt-idea .g { color: var(--text-faint); }
+.wt-idea .h { font-style: italic; }
+.wt-idea .w { color: var(--text-faint); }
+.wt-idea .btn { align-self: flex-start; margin-top: auto; }

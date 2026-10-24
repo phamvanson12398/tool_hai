@@ -2699,6 +2699,20 @@ def api_webtoon_new():
     return jsonify(_webtoon_view(pid, data))
 
 
+@app.post("/api/webtoon/ideas")
+def api_webtoon_ideas():
+    """Gợi ý ý tưởng truyện (mỗi lần một loạt mới, không lặp các ý đã gợi ý)."""
+    from core import webtoon_film as wf
+    body = request.get_json(silent=True) or {}
+    try:
+        items = wf.ideas(str(body.get("genre") or ""), str(body.get("language") or "ko"),
+                         body.get("avoid") if isinstance(body.get("avoid"), list) else [])
+    except Exception as e:  # noqa: BLE001
+        traceback.print_exc()
+        return _err(f"AI gợi ý lỗi: {_short_err(e, 300)}")
+    return jsonify({"ideas": items})
+
+
 @app.get("/api/webtoon/list")
 def api_webtoon_list():
     out = []

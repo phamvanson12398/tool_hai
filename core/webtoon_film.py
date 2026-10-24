@@ -535,6 +535,44 @@ def _catalog() -> dict:
             "exprs": ", ".join(wa.EXPRS), "poses": ", ".join(wa.POSES)}
 
 
+IDEA_ANGLES = (
+    "ứng dụng hẹn hò", "shipper giao hàng", "chung cư / hàng xóm", "camera an ninh", "chatbot AI",
+    "nhóm chat lớp / công ty", "đám cưới", "mẹ chồng nàng dâu", "livestream bán hàng", "taxi đêm",
+    "bệnh viện", "nhập ngũ / đi lính", "du học", "tiền ảo / đầu tư", "thẻ ngân hàng bị khoá",
+    "tin nhắn nhầm người", "tài khoản mạng xã hội bị hack", "phòng trọ giá rẻ", "đồ cũ mua trên mạng",
+    "người yêu cũ", "con cái giấu bố mẹ", "bố mẹ giấu con cái", "phỏng vấn xin việc", "sếp mới",
+    "kỳ thi đại học", "chuyến du lịch", "xe công nghệ", "bảo hiểm", "tiệm bánh / quán ăn nhỏ",
+    "hội phụ huynh", "thú cưng", "người lạ tốt bụng", "trúng thưởng", "nhà vệ sinh công cộng",
+    "thang máy", "cửa hàng tiện lợi ca đêm", "đi xem mắt", "bạn thân", "di chúc / tài sản",
+    "điện thoại nhặt được", "định vị GPS", "tin nhắn lúc 3 giờ sáng", "đơn đặt hàng lạ",
+)
+
+
+def ideas(genre: str = "", lang: str = "ko", avoid: list | None = None, count: int = 6) -> list[dict]:
+    """AI nghĩ một loạt ý tưởng truyện để tham khảo; mỗi lần một góc nhìn ngẫu nhiên khác,
+    tránh lặp các ý đã gợi ý (avoid = tên các ý trước)."""
+    import random
+    from . import claude_cli
+    rnd = random.SystemRandom()
+    angles = rnd.sample(IDEA_ANGLES, 5)
+    g = GENRES.get(genre) or "Mọi thể loại: " + "; ".join(GENRES.values())
+    avoid = [str(a)[:120] for a in (avoid or []) if a][-40:]
+    data = claude_cli._run_json(claude_cli._load_prompt(
+        "webtoon_ideas", lang_label=LANGS.get(lang, lang), genre=g, count=str(max(3, min(10, count))),
+        angles="\n".join(f"- {a}" for a in angles), avoid="\n".join(f"- {a}" for a in avoid) or "(chưa có)",
+        genre_ids=" | ".join(GENRES)), task="story", timeout=300)
+    out = []
+    for it in (data.get("ideas") if isinstance(data, dict) else None) or []:
+        if not isinstance(it, dict) or not it.get("brief"):
+            continue
+        out.append({"title": str(it.get("title") or "")[:160], "hook": str(it.get("hook") or "")[:300],
+                    "brief": str(it.get("brief") or "")[:900], "why": str(it.get("why") or "")[:300],
+                    "genre": it.get("genre") if it.get("genre") in GENRES else (genre if genre in GENRES else "thriller")})
+    if not out:
+        raise RuntimeError("AI chưa nghĩ được ý tưởng nào, bấm lại thử.")
+    return out
+
+
 def write(st: dict, progress=None) -> dict:
     """AI viết truyện: dàn ý + nhân vật + địa điểm, rồi phân cảnh từng đoạn."""
     from . import claude_cli
