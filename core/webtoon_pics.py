@@ -332,7 +332,20 @@ def _features(rgb, alpha):
     if eyes2:
         best = eyes2
     if not best:
-        return None
+        # mắt nhắm (cười híp...): tìm miệng mở to giữa nửa dưới mặt rồi suy ra chỗ mắt
+        cx_f = fx + fw / 2
+        big = [bl for bl in blobs if bl['bw'] >= fw * 0.16 and abs(bl['x'] - cx_f) < fw * 0.14
+               and fy + fh * 0.4 < bl['y'] < fy + fh * 0.92 and bl['bw'] >= bl['bh'] * 1.05 and bl['dark'] > 0.2]
+        if not big:
+            return None
+        mb = max(big, key=lambda bl: bl['bw'] * bl['bh'])
+        d = fw * 0.45
+        x, y, bw, bh = mb['box']
+        mxy = [float(x + bw / 2), float(y + bh * 0.5)]
+        ey = mxy[1] - 0.85 * d
+        return dict(eyes=[[mxy[0] - d / 2, ey], [mxy[0] + d / 2, ey]], eye_w=float(d * 0.21), d=float(d),
+                    face=(int(fx), int(fy), int(fw), int(fh)), mouth=mxy, mouth_w=float(bw), mouth_h=float(bh),
+                    eyes_guess=True)
     L, R = best
     eyes = [[float(L['x']), float(L['y'])], [float(R['x']), float(R['y'])]]
     d = math.hypot(R['x'] - L['x'], R['y'] - L['y'])
@@ -352,6 +365,7 @@ def _features(rgb, alpha):
         x, y, bw, bh = mouth['box']
         out['mouth'] = [float(x + bw / 2), float(y + bh * 0.5)]
         out['mouth_w'] = float(bw)
+        out['mouth_h'] = float(bh)
     return out
 
 
@@ -375,13 +389,14 @@ def marks(rgb: np.ndarray, alpha: np.ndarray, eyes: list | None, mouth: list | N
     """Điểm mắt / miệng: lấy theo chị đánh dấu, thiếu thì tool tự tìm. "sure" = False khi tool
     không chắc (khi đó không vẽ miệng nhép, báo chị bấm đánh dấu)."""
     h, w = alpha.shape
-    auto, sure, mouth_w = True, True, None
+    auto, sure, mouth_w, mouth_h, eyes_guess = True, True, None, None, False
     got = None if (eyes and len(eyes) == 2 and mouth and len(mouth) == 2) else _features(rgb, alpha)
     if eyes and len(eyes) == 2:
         auto = False
         eyes = sorted([[float(x), float(y)] for x, y in eyes])
     elif got:
         eyes = got["eyes"]
+        eyes_guess = bool(got.get("eyes_guess"))
     else:
         old = _find_eyes(rgb, alpha)
         if old:
@@ -399,15 +414,15 @@ def marks(rgb: np.ndarray, alpha: np.ndarray, eyes: list | None, mouth: list | N
         ex, ey = (eyes[0][0] + eyes[1][0]) / 2, (eyes[0][1] + eyes[1][1]) / 2
         gm = got.get("mouth") if got else None
         if gm and ey + 0.45 * d < gm[1] < ey + 1.4 * d and abs(gm[0] - ex) < 0.4 * d:
-            mouth, mouth_w = gm, got.get("mouth_w")
+            mouth, mouth_w, mouth_h = gm, got.get("mouth_w"), got.get("mouth_h")
         else:
             mouth, sure = [ex, ey + d * 0.8], False
     if not auto:
         sure = True
     skin = _skin(rgb, alpha, eyes, d)
     return {"eyes": eyes, "mouth": mouth, "eye_w": float(d * 0.21), "d": float(d),
-            "mouth_w": float(mouth_w or d * 0.5), "skin": skin, "skin_m": _skin_near(rgb, alpha, mouth, d, skin),
-            "auto": auto, "sure": sure}
+            "mouth_w": float(mouth_w or d * 0.5), "mouth_h": float(mouth_h or d * 0.06), "skin": skin, "skin_m": _skin_near(rgb, alpha, mouth, d, skin),
+            "auto": auto, "sure": sure, **({"eyes_guess": True} if eyes_guess and auto else {})}
 
 
 def _skin_near(rgb, alpha, mouth, d, skin) -> list:
@@ -517,6 +532,10 @@ class Pic:
         self.eye_w = float(meta.get("eye_w") or self.d * 0.22)
         self.skin = tuple(meta.get("skin") or (240, 216, 196)) + (255,)
         self.mouth_w = float(meta.get("mouth_w") or self.d * 0.5)
+        self.mouth_h = float(meta.get("mouth_h") or self.d * 0.06)
+        # tranh vẽ sẵn miệng mở (cười to, sốc...): miệng cao rõ so với mắt và so với bề ngang miệng
+        self.open_orig = self.mouth_h > self.d * 0.13 and self.mouth_h > self.mouth_w * 0.28
+        self.no_blink = bool(meta.get("eyes_guess"))      # mắt nhắm sẵn (cười híp): không vẽ chớp mắt
         self.skin_m = tuple(meta.get("skin_m") or meta.get("skin") or (240, 216, 196)) + (255,)
         self.sure = meta.get("sure", True) is not False
         self._cache: dict = {}
@@ -546,13 +565,15 @@ class Pic:
         _paste(canvas, im, ox, oy)
         P = lambda x, y: (ox + x * k, oy + y * k)                # noqa: E731
         dd = self.d * k
-        if st.blink > 0.5:
+        if st.blink > 0.5 and not self.no_blink:
             for e in self.eyes:
                 self._blink(canvas, *P(*e), self.eye_w * k, lw)
         if st.mouth > 0.08 and self.open_img is not None:
             self._open_mouth(canvas, k, ox, oy, st.mouth)
+        elif st.mouth > 0.08 and self.sure and self.open_orig:
+            self._jaw(canvas, k, ox, oy, st.mouth)  # miệng vẽ sẵn đã mở: giữ miệng thật, chỉ hạ hàm theo giọng
         elif st.mouth > 0.08 and self.sure:          # tool không chắc chỗ miệng: thà không vẽ còn hơn vẽ sai
-            self._mouth(canvas, *P(*self.mouth), dd, st.mouth, st.expr, lw, self.mouth_w * k)
+            self._mouth(canvas, *P(*self.mouth), dd, st.mouth, st.expr, lw, self.mouth_w * k, self.mouth_h * k)
         if "sweat" in st.extras or st.expr == "scared":
             x, y = P(self.eyes[1][0] + self.d * 0.75, self.eyes[1][1] - self.d * 0.45)
             _drop(canvas, x, y, dd * 0.09, lw)
@@ -611,21 +632,45 @@ class Pic:
         piece.putalpha(Image.fromarray(np.minimum(np.asarray(crop.getchannel("A")), np.asarray(m))))
         _paste(canvas, piece, int(round(ox + bx)), int(round(oy + by)))
 
-    def _mouth(self, canvas, x, y, dd, o, expr, lw, mouth_px=None):
+    def _jaw(self, canvas, k, ox, oy, o):
+        """Tranh đã vẽ miệng mở: kéo dãn vùng miệng xuống một chút theo giọng (hàm hạ xuống,
+        miệng mở rộng thêm) — vẫn là nét vẽ gốc, không vẽ miệng mới đè lên."""
+        from PIL import ImageFilter
+        d = self.d
+        mx, my = self.mouth
+        rx = max(self.mouth_w * 0.62, d * 0.2)
+        top, bot = my - self.mouth_h * 0.55, my + self.mouth_h * 0.62 + d * 0.04   # chỉ vùng miệng, không lấn cằm
+        box = [int(mx - rx), int(top), int(mx + rx), int(bot)]
+        box = [max(0, box[0]), max(0, box[1]), min(self.img.width, box[2]), min(self.img.height, box[3])]
+        if box[2] - box[0] < 4 or box[3] - box[1] < 4:
+            return
+        f = 1.0 + 0.2 * min(1.0, o)
+        crop = self.img.crop(box)
+        W_, H_ = max(1, int(crop.width * k)), max(1, int(crop.height * k * f))
+        piece = crop.resize((W_, H_), Image.LANCZOS)
+        mk = Image.new("L", (W_, H_), 0)
+        ImageDraw.Draw(mk).ellipse([W_ * 0.04, H_ * 0.06, W_ * 0.96, H_ * 0.97], fill=255)
+        mk = mk.filter(ImageFilter.GaussianBlur(max(1.0, d * k * 0.05)))
+        piece.putalpha(Image.fromarray(np.minimum(np.asarray(piece.getchannel("A")), np.asarray(mk))))
+        _paste(canvas, piece, int(round(ox + box[0] * k)), int(round(oy + box[1] * k)))
+
+    def _mouth(self, canvas, x, y, dd, o, expr, lw, mouth_px=None, mouth_hpx=None):
         """Miệng mở theo giọng, cùng kiểu nét với nhân vật vẽ (môi mỏng, khoang tối, răng trên);
-        rộng theo miệng thật trong ảnh."""
-        mw = min(dd * 0.3, max(dd * 0.15, (mouth_px or dd * 0.5) * 0.42))
-        h = dd * (0.07 + 0.3 * min(1.0, o))
-        curve = {"happy": 0.08, "laughing": 0.1, "sad": -0.06, "crying": -0.07, "worried": -0.03,
-                 "angry": -0.04}.get(expr, 0.0) * dd
+        rộng theo miệng thật trong ảnh, mở vừa phải như người nói (không há to)."""
+        mw = min(dd * 0.26, max(dd * 0.14, (mouth_px or dd * 0.5) * 0.4))
+        h = dd * (0.035 + 0.15 * min(1.0, o))
+        curve = {"happy": 0.04, "laughing": 0.05, "sad": -0.03, "crying": -0.035, "worried": -0.015,
+                 "angry": -0.02}.get(expr, 0.0) * dd
 
         # che miệng gốc bằng màu da quanh miệng, mép mờ dần cho khỏi lộ viền
-        cw = max(dd * 0.3, (mouth_px or dd * 0.5) * 0.58)
+        cw = max(dd * 0.24, (mouth_px or dd * 0.5) * 0.56)
+        mh = max(dd * 0.05, mouth_hpx or 0.0)
         from PIL import ImageFilter
-        bx0, by0 = int(x - cw - dd * 0.12), int(y - dd * 0.2)
-        bw_, bh_ = int(2 * cw + dd * 0.24) + 1, int(dd * 0.6) + 1
+        bx0, by0 = int(x - cw - dd * 0.12), int(y - mh - dd * 0.12)
+        bw_, bh_ = int(2 * cw + dd * 0.24) + 1, int(mh * 2 + dd * 0.5) + 1
         mk = Image.new("L", (bw_, bh_), 0)
-        ImageDraw.Draw(mk).ellipse([x - cw - bx0, y - dd * 0.07 - by0, x + cw - bx0, y + dd * 0.27 - by0], fill=255)
+        ImageDraw.Draw(mk).ellipse([x - cw - bx0, y - mh * 0.75 - dd * 0.03 - by0, x + cw - bx0,
+                                    y + mh * 0.8 + dd * 0.24 - by0], fill=255)
         mk = mk.filter(ImageFilter.GaussianBlur(max(1.0, dd * 0.035)))
         cover = Image.new("RGBA", (bw_, bh_), self.skin_m)
         cover.putalpha(mk)
@@ -638,14 +683,14 @@ class Pic:
                            (x - mw * 0.6, y + h * 0.7 + curve)], 6)
             q = [P(*p) for p in pts]
             d.polygon(q, fill=(88, 40, 44, 255))
-            if o > 0.35:
-                d.polygon([P(x - mw * 0.55, top + dd * 0.012), P(x + mw * 0.55, top + dd * 0.012),
-                           P(x + mw * 0.45, top + dd * 0.07), P(x - mw * 0.45, top + dd * 0.07)],
+            if o > 0.45:
+                th = h * 0.28
+                d.polygon([P(x - mw * 0.55, top + th * 0.15), P(x + mw * 0.55, top + th * 0.15),
+                           P(x + mw * 0.45, top + th), P(x - mw * 0.45, top + th)],
                           fill=(250, 250, 248, 255))
-                d.ellipse([*P(x - mw * 0.42, y + h * 0.35), *P(x + mw * 0.42, y + h * 0.75)],
+                d.ellipse([*P(x - mw * 0.4, y + h * 0.4), *P(x + mw * 0.4, y + h * 0.72)],
                           fill=(200, 100, 104, 255))
-            d.line(q + [q[0]], fill=INK, width=max(1, int(lw * S)), joint="curve")
-        cw = max(dd * 0.3, (mouth_px or dd * 0.5) * 0.58)
+            d.line(q + [q[0]], fill=INK, width=max(1, int(lw * 0.85 * S)), joint="curve")
         self._patch(canvas, (x - cw - dd * 0.05, y - dd * 0.15, x + cw + dd * 0.05, y + dd * 0.5), fn)
 
 
@@ -707,7 +752,7 @@ def refresh(st: dict, pdir: Path) -> bool:
     changed = False
     for cid, items in (st.get("pics") or {}).items():
         for key, meta in list((items or {}).items()):
-            if "sure" in meta or not meta.get("auto", True):
+            if ("sure" in meta and "mouth_h" in meta) or not meta.get("auto", True):
                 continue
             p = Path(pdir) / PICS_DIR / cid / f"{key}.png"
             if not p.exists():
