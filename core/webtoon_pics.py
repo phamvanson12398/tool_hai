@@ -417,3 +417,10 @@ def pick(pics: dict, pose: str, expr: str) -> Pic | None:
         if k in pics:
             return pics[k]
     return next(iter(pics.values()))
+
+
+def prompts_text(st: dict, cid: str | None = None, missing: bool = True) -> str:
+    """File câu lệnh vẽ: mỗi dòng một câu lệnh (để tạo hàng loạt), theo đúng thứ tự các ô;
+    missing=True chỉ lấy những ảnh còn thiếu."""
+    rows = [n for n in needed(st) if (cid is None or n["cid"] == cid) and not (missing and n["have"])]
+    return "\n".join(" ".join(n["prompt"].split()) for n in rows) + ("\n" if rows else "")

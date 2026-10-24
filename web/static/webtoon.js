@@ -264,19 +264,44 @@
     if (!box) return;
     box.innerHTML = "";
     var w = wt(), need = (W.data && W.data.pics_needed) || [], have = w.pics || {};
+    if (need.some(function (n) { return !n.have; })) {
+      var top = el("div", "row-actions");
+      var all = el("a", "btn btn-sm", "Tải file câu lệnh — tất cả nhân vật");
+      all.href = promptsUrl(null);
+      top.appendChild(all);
+      top.appendChild(el("span", "muted", "Mỗi dòng một câu lệnh (chỉ những ảnh còn thiếu), đúng thứ tự các ô."));
+      box.appendChild(top);
+    }
     (w.characters || []).forEach(function (c) {
       var items = need.filter(function (n) { return n.cid === c.id; });
       if (!items.length) return;
       var wrap = el("div");
       var done = items.filter(function (n) { return n.have; }).length;
-      wrap.appendChild(el("h3", null, (c.name || c.id) + " — " + done + "/" + items.length + " ảnh"));
+      var miss = items.filter(function (n) { return !n.have; });
+      var head = el("div", "wt-pics-head");
+      head.appendChild(el("h3", null, (c.name || c.id) + " — " + done + "/" + items.length + " ảnh"));
+      if (miss.length) {
+        var dl = el("a", "btn btn-sm", "Tải file câu lệnh (" + miss.length + " dòng)");
+        dl.href = promptsUrl(c.id);
+        head.appendChild(dl);
+        var many = document.createElement("input");
+        many.type = "file"; many.accept = "image/*"; many.multiple = true; many.hidden = true;
+        var mb = el("button", "btn btn-sm btn-primary", "Tải nhiều ảnh cùng lúc");
+        mb.type = "button";
+        mb.title = "Chọn cùng lúc các ảnh đã tạo theo file câu lệnh: ảnh tải về trước điền vào dòng trước";
+        mb.addEventListener("click", function () { many.click(); });
+        many.addEventListener("change", function () { bulkUpload(c, miss, many.files, mb); });
+        head.appendChild(many); head.appendChild(mb);
+      }
+      wrap.appendChild(head);
       var row = el("div", "wt-pic-row");
       items.forEach(function (n) {
         var meta = (have[c.id] || {})[n.key];
         var card = el("div", "wt-pic" + (n.have ? "" : " missing") + (n.required ? " req" : ""));
         card.appendChild(el("div", "lb", picLabel(n)));
-        card.appendChild(el("div", "sub", (n.shots ? n.shots + " cảnh" : "ảnh gốc") +
-          (n.required ? "" : " · nên có")));
+        var line = miss.indexOf(n);
+        card.appendChild(el("div", "sub", (line >= 0 ? "Dòng " + (line + 1) + " · " : "") +
+          (n.shots ? n.shots + " cảnh" : "ảnh gốc") + (n.required ? "" : " · nên có")));
         if (n.have && meta) {
           var img = document.createElement("img");
           img.src = picUrl(c.id, n.key) + ".png?v=" + Date.now() % 1000000;
@@ -329,6 +354,45 @@
       box.appendChild(wrap);
     });
     if (!box.childNodes.length) box.appendChild(el("p", "hint", "Bấm 'AI viết truyện & phân cảnh' trước — tool sẽ liệt kê những ảnh cần vẽ."));
+  }
+
+  function promptsUrl(cid) {
+    return "/api/webtoon/" + encodeURIComponent(W.id) + "/pics_prompts.txt" + (cid ? "?cid=" + encodeURIComponent(cid) : "");
+  }
+
+  // nhiều ảnh một lần: xếp theo lúc tải về (cũ trước), cùng lúc thì theo tên -> điền lần lượt
+  // vào các ô còn thiếu, đúng thứ tự dòng trong file câu lệnh
+  function bulkUpload(c, miss, fileList, btn) {
+    var files = Array.prototype.slice.call(fileList || []);
+    if (!files.length) return;
+    files.sort(function (a, b) {
+      return (a.lastModified - b.lastModified) ||
+        a.name.localeCompare(b.name, undefined, { numeric: true });
+    });
+    var n = Math.min(files.length, miss.length);
+    if (files.length > miss.length) {
+      toast("warn", "Thừa ảnh", "Chọn " + files.length + " ảnh nhưng chỉ còn " + miss.length +
+        " ô trống — bỏ qua " + (files.length - miss.length) + " ảnh cuối.");
+    }
+    btn.disabled = true;
+    var k = 0, bad = 0;
+    function next() {
+      if (k >= n) {
+        btn.disabled = false;
+        renderPics(); renderChars(); refreshThumbs();
+        toast(bad ? "warn" : "ok", "Đã tải " + (n - bad) + "/" + n + " ảnh cho " + (c.name || c.id),
+          "Kiểm tra từng ô xem ảnh có đúng tư thế không; sai thì bấm 'Thay ảnh'.");
+        return;
+      }
+      btn.textContent = "Đang xử lý " + (k + 1) + "/" + n + "...";
+      var fd = new FormData();
+      fd.append("file", files[k]);
+      api(picUrl(c.id, miss[k].key), { method: "POST", body: fd })
+        .then(function (d) { W.data = d; })
+        .catch(function (e) { bad += 1; toast("error", "Ảnh " + files[k].name + " lỗi", e.message); })
+        .then(function () { k += 1; next(); });
+    }
+    next();
   }
 
   function refreshThumbs() {

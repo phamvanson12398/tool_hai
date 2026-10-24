@@ -2887,6 +2887,24 @@ def api_webtoon_pic_upload(pid, cid, key):
     return jsonify(_webtoon_view(pid, data))
 
 
+@app.get("/api/webtoon/<pid>/pics_prompts.txt")
+def api_webtoon_pics_prompts(pid):
+    """Tải file câu lệnh vẽ: mỗi dòng một câu lệnh (?cid= một nhân vật, ?all=1 lấy cả ảnh đã có)."""
+    import io
+    from core import webtoon_pics as wpic
+    try:
+        _, wt = _load_webtoon(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    cid = request.args.get("cid") or None
+    text = wpic.prompts_text(wt, cid, missing=request.args.get("all") != "1")
+    if not text:
+        return _err("Không còn ảnh nào cần vẽ.", 404)
+    buf = io.BytesIO(text.encode("utf-8"))
+    name = f"cau_lenh_ve_{cid or 'tat_ca'}.txt"
+    return send_file(buf, mimetype="text/plain; charset=utf-8", as_attachment=True, download_name=name)
+
+
 @app.get("/api/webtoon/<pid>/pic/<cid>/<key>.png")
 def api_webtoon_pic_get(pid, cid, key):
     try:

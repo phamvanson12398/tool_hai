@@ -954,7 +954,8 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 
 /* ảnh AI nhân vật webtoon */
 .wt-pics { display: flex; flex-direction: column; gap: 12px; }
-.wt-pics h3 { font-size: 14px; margin: 0 0 6px; }
+.wt-pics h3 { font-size: 14px; margin: 0; }
+.wt-pics-head { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 6px; }
 .wt-pic-row { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
 .wt-pic { border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 6px; font-size: 12px; display: flex; flex-direction: column; gap: 4px; }
 .wt-pic.missing.req { border-style: dashed; border-color: var(--warn, #c90); }
