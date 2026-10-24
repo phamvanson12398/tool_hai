@@ -351,9 +351,11 @@ class Rig:
         wb = Rb * (0.98 if self.kit["top"] == "dress" else (0.84 if female else 0.86))
         if child:
             wt, wb = wt * 0.92, wb * 0.92
-        wb *= 1 + 0.3 * sty.get("belly", 0.0)            # bụng tròn: hông rộng ra
+        wb *= 1 + 0.3 * sty.get("belly", 0.0)            # bụng tròn: hông rộng ra, vai hẹp lại
+        wt *= 1 - 0.18 * sty.get("belly", 0.0)
         self.wt, self.wb = wt, wb
-        self.shoulder = (wt * 0.86, self.body_top + 0.36 * min(R, Rb))
+        # bụng phệ: tay mọc ở mép vai ngoài, buông ra ngoài bụng
+        self.shoulder = (wt * (0.86 + 0.3 * sty.get("belly", 0.0)), self.body_top + 0.36 * min(R, Rb))
         self.hipx = wb * 0.42
         a, lm = sty["arm"], sty["limb"]
         self.arm = (T * 0.12 * a, T * 0.11 * a, T * 0.062 * lm, T * 0.036 * max(0.8, lm))
@@ -468,7 +470,8 @@ class Rig:
         arms = pose.get("arms") or [(8, 0), (8, 0)]
         sp = self.sty.get("spread", 0.0)
         if sp:                                   # tay buông dang ra hai bên (kiểu nhân vật)
-            arms = [(a + sp, e) if (i == 0 and a < 35) else (a - sp, e) if (i == 1 and a < 35) else (a, e)
+            # tay buông thì đối xứng hai bên như nhìn thẳng (tay sau lật ra phía sau)
+            arms = [(a + sp, e) if (i == 0 and a < 35) else (-a - sp, -e) if (i == 1 and a < 35) else (a, e)
                     for i, (a, e) in enumerate(arms)]
         Lm = _aff(G, _tr(0, drop))           # chân: không nghiêng theo thân, đứng trên đất
         prop = pose.get("prop")
@@ -502,7 +505,8 @@ class Rig:
             for i, (a, g) in enumerate(legs):
                 sx = (1 if i == 0 else -1) * d * self.hipx
                 self._limb(canvas, Lm, (sx, -self.hip_h + 0.0), a, g, d, self.legd[0], self.legd[1],
-                           self.legd[2], self.pants, zoom, foot=True, cover=0.4 if self.shorts else 1.0)
+                           self.legd[2], self.pants, zoom, foot=True, cover=0.6 if self.shorts else 1.0,
+                           puff=0.0 if self.shorts else 1.0)
         if sit <= 0.5:
             draw_legs()                      # đứng: chân sau thân
         if tool_behind:                        # cuốc / rìu vác sau vai: sau lưng người
@@ -520,7 +524,7 @@ class Rig:
                 sx = (1 if i == 0 else -1) * d * self.shoulder[0]
                 hands.append(self._limb(canvas, Bl, (sx, self.shoulder[1]), a, e, d,
                                         self.arm[0], self.arm[1], self.arm[2], self.sleeve, zoom,
-                                        hand=True, cover=0.45 if self.short_sleeve else 1.0, puff=1.7))
+                                        hand=True, cover=0.4 if self.short_sleeve else 1.0, puff=1.4))
                 elbows.append(self._last_elbow)
         if tool_behind:
             draw_arms()
@@ -587,7 +591,7 @@ class Rig:
                 cv2.circle(canvas, tuple(int(v) for v in p), wz * 2, self.skin, -1, cv2.LINE_AA, shift=2)
             mid = P[0] + (P[1] - P[0]) * cover
             Q = np.array([P[0], mid.astype(np.int32)], np.int32)
-            cw = int(wz * puff) + max(2, lw)                       # tay áo phồng / ống quần
+            cw = int(wz * (puff if puff > 0 else 1.9)) + max(2, lw)  # tay áo phồng / ống quần soóc rộng
             cv2.polylines(canvas, [Q], False, OUT, cw + 2 * lw, cv2.LINE_AA, shift=2)
             cv2.circle(canvas, tuple(int(v) for v in P[0]), (cw + 2 * lw) * 2, OUT, -1, cv2.LINE_AA, shift=2)
             cv2.polylines(canvas, [Q], False, color, cw, cv2.LINE_AA, shift=2)
@@ -600,9 +604,9 @@ class Rig:
             if puff > 1.0:                                          # tay áo: mép thẳng
                 zz = [m2 + (nx * hw, ny * hw), m2 - (nx * hw, ny * hw)]
             else:                                                   # ống quần soóc: gấu tua rua
-                zz = [m2 + (nx * hw * (1 - 2 * k / 6), ny * hw * (1 - 2 * k / 6))
-                      + ((vx / vn) * cw * (1.2 if k % 2 else 0.0), (vy / vn) * cw * (1.2 if k % 2 else 0.0))
-                      for k in range(7)]
+                zz = [m2 + (nx * hw * (1 - 2 * k / 8), ny * hw * (1 - 2 * k / 8))
+                      + ((vx / vn) * cw * (0.45 if k % 2 else 0.0), (vy / vn) * cw * (0.45 if k % 2 else 0.0))
+                      for k in range(9)]
             Z = np.array(zz, np.int32)
             cv2.polylines(canvas, [Z], False, OUT, max(1, lw), cv2.LINE_AA, shift=2)
         end = pts[-1]

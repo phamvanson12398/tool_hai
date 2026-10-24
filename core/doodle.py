@@ -315,8 +315,8 @@ def _belly_pts(cx, top, bottom, wt, wm, R, belly):
     for k in range(1, 13):
         u = k / 12
         y = top + 0.42 * R + (h - 0.42 * R) * u
-        w = wt + (wm - wt) * math.sin(math.pi * min(1.0, u / 0.68) / 2) if u < 0.68 else \
-            wm - (wm * (0.16 + 0.12 * belly)) * ((u - 0.68) / 0.32) ** 2
+        w = wt + (wm - wt) * math.sin(math.pi * min(1.0, u / 0.72) / 2) ** 0.6 if u < 0.72 else \
+            wm - (wm * (0.2 + 0.18 * belly)) * ((u - 0.72) / 0.28) ** 2
         right.append((cx + w, y))
     pts += right
     pts += [(cx - x + cx, y) for x, y in reversed(right)]
@@ -345,25 +345,33 @@ def _draw_body(img, pen: _Pen, kit, cx, top, bottom, R, seed):
     if kit["age"] == "child":
         wt, wb = wt * 0.92, wb * 0.92
     belly = float((kit.get("_sty") or {}).get("belly", 0.0) or 0.0)
-    if belly > 0.05:                                # bụng tròn: phình ở giữa, thu lại ở dưới
+    if belly > 0.05:                                # bụng tròn: vai hẹp, phình ở dưới, thu lại ở đáy
+        wt *= 1 - 0.18 * belly
         pts = _belly_pts(cx, top, bottom, wt, wb * (1 + 0.42 * belly), R, belly)
         wb = wb * (1 + 0.42 * belly)
     else:
         pts = _body_pts(cx, top, bottom, wt, wb, R)
     top_c = CLOTH[kit["top_color"]]
     bot_c = CLOTH[kit["bottom_color"]]
+    t_ = kit["top"]
     h = bottom - top
     split = {"dress": 0.46, "robe": 1.2, "ao_dai": 0.86, "jacket": 0.62, "sweater": 0.6,
              "ao_ba_ba": 0.62, "ao_cach": 0.5, "tshirt": 0.74}.get(kit["top"], 0.64)
     if kit["top"] == "tshirt" and kit.get("bottom") == "shorts":
-        split = 0.84                                # áo phông trùm bụng, quần soóc chỉ là dải dưới
+        split = 0.78                                # áo phông trùm bụng, quần soóc chỉ là dải dưới
     # lớp thân: tô áo, phần dưới tô quần/váy, cắt theo hình thân
     layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
     ld = ImageDraw.Draw(layer)
     wp = _wob(pts, pen.amp, seed + 7)
     ld.polygon(wp, fill=top_c)
     ys = top + h * split
-    if split < 1:
+    if split < 1 and belly > 0.5 and t_ == "tshirt":
+        # vạt áo phông cong theo bụng phệ: giữa võng xuống, quần soóc lộ hai bên
+        arc = [(x, ys + 0.07 * R * (1 - ((x - cx) / (wb * 1.5)) ** 2)) for x in
+               [cx - wb * 1.5 + wb * 3.0 * k / 20 for k in range(21)]]
+        ld.polygon(arc + [(cx + wb * 1.6, bottom + 10), (cx - wb * 1.6, bottom + 10)], fill=bot_c)
+        ld.line(arc, fill=OUT, width=max(1, int(pen.lw * 0.8)))
+    elif split < 1:
         ld.rectangle([0, ys, img.size[0], bottom + 10], fill=bot_c)
         ld.line([(0, ys), (img.size[0], ys)], fill=OUT, width=max(1, int(pen.lw * 0.55)))
     mask = Image.new("L", img.size, 0)
@@ -375,6 +383,9 @@ def _draw_body(img, pen: _Pen, kit, cx, top, bottom, R, seed):
     neck_y = top + 0.14 * R
     if t in ("ao_nau", "ao_ba_ba", "ao_cach", "sweater", "tshirt"):
         pen.line(_ellipse_pts(cx, neck_y, 0.26 * R, 0.16 * R, 20, 160, 10), width=thin)
+    if t == "tshirt":                               # cổ áo khoét chữ U thấy da
+        skin = SKINS[kit["skin"]]
+        pen.shape(_ellipse_pts(cx, neck_y + 0.08 * R, 0.32 * R, 0.42 * R, 0, 180, 14), skin, width=thin)
     if belly > 0.5:                                  # nếp bụng phệ dưới vạt áo
         pen.line(_ellipse_pts(cx, ys - 0.1 * R, wb * 0.55, 0.12 * R, 20, 160, 10), width=thin)
     if t == "sweater":
@@ -517,9 +528,12 @@ def _draw_hair_front(pen: _Pen, kit, cx, hy, R, face_dir):
             pen.ell(cx + sx * 0.9 * R, hy - 0.12 * R, 0.2 * R, 0.3 * R, col)
         return
     if h == "curl_top":                                       # đầu trọc, một chỏm tóc xoăn
-        for k, dx in enumerate((-0.12, 0.0, 0.12)):
-            pen.line(_ellipse_pts(cx + dx * R, hy - 1.06 * R, 0.07 * R, 0.07 * R, 180, 520, 12),
-                     width=int(pen.lw * 1.3), fill=col)
+        pts = []                                      # 3 lọn lượn sóng trên đỉnh đầu
+        for k in range(25):
+            u = k / 24
+            pts.append((cx + (u - 0.5) * 0.62 * R,
+                        hy - 1.07 * R - 0.06 * R * math.sin(u * math.pi * 6) - 0.04 * R * math.sin(u * math.pi)))
+        pen.line(pts, width=int(pen.lw * 2.2), fill=col)
         return
     if h == "curly":                                          # tóc xoăn bồng: nhiều lọn tròn
         for k in range(11):
@@ -608,7 +622,7 @@ def _draw_face(pen: _Pen, kit, cx, hy, R, f, expr, mouth_open, blink):
     for sx in (-1, 1):
         ex = fx + sx * sep
         if eye_style == "ring" and not closed:         # mắt tròn viền trắng, con ngươi chấm giữa
-            rr = 0.13 * R * (1.25 if expr == "shocked" else 1.0)
+            rr = 0.14 * R * (1.25 if expr == "shocked" else 1.0)
             pen.ell(ex, ey, rr, rr, (255, 255, 255), width=thin)
             pen.dot(ex + f * 0.03 * R, ey + (0.02 * R if expr in ("sad", "worried") else 0.0),
                     0.055 * R * (0.8 if expr == "shocked" else 1.0))
@@ -662,7 +676,11 @@ def _draw_face(pen: _Pen, kit, cx, hy, R, f, expr, mouth_open, blink):
         elif expr == "shocked":
             dy_in = dy_out = -0.08 * R
         brow = HAIR_COLORS["gray"] if old else OUT
-        pen.line([(inner, by + dy_in), (outer, by + dy_out)], width=lw, fill=brow)
+        if eye_style == "ring":                          # mắt tròn: lông mày ngắn, mảnh
+            inner, outer = ex - sx * 0.07 * R, ex + sx * 0.07 * R
+            pen.line([(inner, by - 0.02 * R + dy_in), (outer, by - 0.02 * R + dy_out)], width=thin, fill=brow)
+        else:
+            pen.line([(inner, by + dy_in), (outer, by + dy_out)], width=lw, fill=brow)
         if old and not closed:                                 # nếp nhăn đuôi mắt
             ox = ex + sx * 0.24 * R
             pen.line([(ox, ey - 0.06 * R), (ox + sx * 0.05 * R, ey + 0.02 * R)], width=thin)
@@ -724,9 +742,11 @@ def _draw_face(pen: _Pen, kit, cx, hy, R, f, expr, mouth_open, blink):
     if lips:                                                   # môi hồng dày
         lip, dark = (238, 150, 156), (140, 44, 56)
         if mouth_open or expr in ("shocked", "cry"):
-            ry = 0.13 * R if expr in ("shocked", "cry") else 0.09 * R
-            pen.ell(fx, my + 0.03 * R, mw * 1.25, ry + 0.035 * R, lip, width=thin)
-            pen.ell(fx, my + 0.03 * R, mw * 0.85, ry * 0.75, dark, outline=False, wob=False)
+            big = expr in ("shocked", "cry")
+            ry = 0.15 * R if big else 0.09 * R
+            mx2 = mw * (1.55 if big else 1.25)
+            pen.ell(fx, my + 0.03 * R, mx2, ry + 0.04 * R, lip, width=thin)
+            pen.ell(fx, my + 0.03 * R, mx2 * 0.68, ry * 0.78, dark, outline=False, wob=False)
             pen.ell(fx, my + 0.03 * R + ry * 0.4, mw * 0.5, ry * 0.3, (226, 110, 120),
                     outline=False, wob=False)
         elif expr in ("happy", "sly"):
