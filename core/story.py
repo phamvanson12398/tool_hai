@@ -185,8 +185,10 @@ def write_story(st: dict, progress=None) -> dict:
             block = brief + ("\n\n" + block if block else "")
         chars_txt = "\n".join(f"- {c['id']}: {c['name']}" for c in st["characters"]) or "(không có)"
         if film_mode:
-            out_chapters.append(_write_film_chapter(st, i, c, outline, chars_txt, places_txt,
-                                                    block, per_min, structure_block(st, i, chapters, True)))
+            out_chapters.append(_write_film_chapter(
+                st, i, c, outline, chars_txt, places_txt, block, per_min,
+                structure_block(st, i, chapters, True),
+                say=lambda f, m, i=i: say(0.08 + 0.9 * (i + 0.6) / len(chapters), m)))
             continue
         data = claude_cli._run_json(claude_cli._load_prompt(
             "story_chapter", title=st.get("title") or "", author=st.get("author") or "",
@@ -258,8 +260,9 @@ def _slug(v) -> str:
 
 
 def _film_extra() -> str:
-    from . import film, film_sfx
-    furn = ", ".join(f"{k} ({v[0]})" for k, v in film.FURNITURE.items())
+    from . import doodle_parts, film, film_sfx
+    furn = ", ".join([f"{k} ({v[0]})" for k, v in film.FURNITURE.items()] +
+                     [f"{k} ({v['name']})" for k, v in doodle_parts.load().items() if v.get("kind") == "furniture"])
     sfx = ", ".join(f"{k} ({v})" for k, v in film_sfx.LABELS.items() if k not in film_sfx.AMBIENT)
     return furn, sfx
 
@@ -273,8 +276,11 @@ def _film_lists() -> tuple[str, str, str]:
     return acts, spots, ", ".join(f"{k} ({v})" for k, v in props.items())
 
 
-def _write_film_chapter(st, i, c, outline, chars_txt, places_txt, block, per_min, structure="") -> dict:
-    """AI viết một chương dạng kịch bản phim (cảnh -> nhịp thoại / hành động)."""
+def _write_film_chapter(st, i, c, outline, chars_txt, places_txt, block, per_min, structure="",
+                        say=None) -> dict:
+    """AI viết một chương dạng kịch bản phim (cảnh -> nhịp thoại / hành động), rồi AI
+    kiểm tra lại cho hình khớp lời; đồ vật / đồ đạc còn thiếu thì AI vẽ thêm."""
+    say = say or (lambda f, m: None)
     acts, spots, props = _film_lists()
     data = claude_cli._run_json(claude_cli._load_prompt(
         "film_chapter", title=st.get("title") or "", author=st.get("author") or "",
@@ -287,6 +293,28 @@ def _write_film_chapter(st, i, c, outline, chars_txt, places_txt, block, per_min
     scenes = data.get("scenes") if isinstance(data, dict) else None
     if not scenes:
         raise RuntimeError(f"AI không viết được chương {i + 1}.")
+    _film_additions(st, data, say)
+    scenes = _cleaned(st, scenes)
+    # kiểm tra lại: câu nói / lời kể tả việc gì thì trên hình phải có việc đó, đồ đó, người đó
+    say(None, f"AI kiểm tra hình khớp lời — chương {i + 1}")
+    try:
+        chars_now = "\n".join(f"- {ch['id']}: {ch['name']}" for ch in st.get("characters") or [])
+        fixed = claude_cli._run_json(claude_cli._load_prompt(
+            "film_check", title=st.get("title") or "", characters=chars_now,
+            scenes=json.dumps(scenes, ensure_ascii=False), actions=acts, props=_film_lists()[2],
+            furniture=_film_extra()[0]), task="story", timeout=900)
+        if isinstance(fixed, dict) and isinstance(fixed.get("scenes"), list) and fixed["scenes"]:
+            _film_additions(st, fixed, say)
+            again = _cleaned(st, fixed["scenes"])
+            if sum(len(s["beats"]) for s in again) >= 0.8 * sum(len(s["beats"]) for s in scenes):
+                scenes = again                       # không để bước kiểm tra làm mất nhịp
+    except Exception as e:  # noqa: BLE001 — kiểm tra lỗi thì dùng bản viết đầu
+        logger.warning("Không kiểm tra được chương %s: %s", i + 1, e)
+    return {"title": str(c.get("title") or f"Chương {i + 1}"), "scenes": scenes}
+
+
+def _film_additions(st: dict, data: dict, say) -> None:
+    """Nhân vật phụ và đồ vật / đồ đạc AI khai còn thiếu: thêm nhân vật, AI vẽ thêm đồ."""
     have = {ch["id"] for ch in st.get("characters") or []}
     for c in (data.get("new_characters") or [])[:6]:     # vai phụ AI cần thêm để diễn đúng lời kể
         if isinstance(c, dict) and c.get("name"):
@@ -294,11 +322,15 @@ def _write_film_chapter(st, i, c, outline, chars_txt, places_txt, block, per_min
             if nc["id"] not in have:
                 st.setdefault("characters", []).append(nc)
                 have.add(nc["id"])
+    if data.get("new_parts"):                          # bối cảnh thiếu đồ gì thì vẽ thêm
+        _make_parts(data["new_parts"], lambda f, m: say(f, m))
+
+
+def _cleaned(st: dict, scenes: list) -> list:
     known = {ch["id"] for ch in st.get("characters") or []}
     species = {ch["id"]: (ch.get("kit") or {}).get("species", "human") for ch in st.get("characters") or []}
-    return {"title": str(c.get("title") or f"Chương {i + 1}"),
-            "scenes": [s for s in (clean_film_scene(x, known, species) for x in scenes if isinstance(x, dict))
-                       if s["beats"]]}
+    return [s for s in (clean_film_scene(x, known, species) for x in scenes if isinstance(x, dict))
+            if s["beats"]]
 
 
 _CUES = [  # (từ trong câu nói, cử chỉ) — xét theo thứ tự
@@ -410,7 +442,11 @@ def clean_film_scene(s: dict, known: set | None = None, species: dict | None = N
     if s.get("time") in ("ngay", "dem"):
         out["time"] = s["time"]
     furn = [{"item": f.get("item"), "at": f.get("at") if f.get("at") in film.SPOTS else "giua"}
-            for f in (s.get("furniture") or []) if isinstance(f, dict) and f.get("item") in film.FURNITURE]
+            for f in (s.get("furniture") or []) if isinstance(f, dict) and f.get("item")
+            and film.furn_info(_slug(f["item"]) if f["item"] not in film.FURNITURE else f["item"])]
+    for f in furn:
+        if f["item"] not in film.FURNITURE:
+            f["item"] = _slug(f["item"])
     if furn:
         out["furniture"] = furn[:5]
     if s.get("weather") == "rain":

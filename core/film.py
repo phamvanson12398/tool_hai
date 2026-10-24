@@ -176,16 +176,30 @@ def _target_x(to, tracks, who, t, W, T, chars=None, close=False):
     return None
 
 
+def furn_info(item: str):
+    """(nhãn, rộng theo T, cao mặt ngồi theo T, ngồi được, nằm được) của đồ đạc có sẵn
+    hoặc đồ AI vẽ thêm (doodle_parts loại "furniture"); không có thì None."""
+    if item in FURNITURE:
+        return FURNITURE[item]
+    from . import doodle_parts
+    p = doodle_parts.get(item)
+    if not p or p.get("kind") != "furniture":
+        return None
+    size = p.get("size", 0.5)
+    seat = p.get("seat", 0.0)
+    return (p.get("name") or item, p.get("width", 1.0) * size, seat * size, seat > 0, bool(p.get("lie")))
+
+
 def furniture_layout(scene: dict, W: float, T: float) -> list[dict]:
     """[{item, x, w, h}] theo toạ độ thế giới."""
     out = []
     for f in scene.get("furniture") or []:
         it = f.get("item")
-        if it not in FURNITURE:
+        if furn_info(it) is None:
             continue
         at = f.get("at")
         x = SPOTS[at] * W if at in SPOTS else (float(f["x"]) * W if "x" in f else W / 2)
-        _lab, w, h, _s, _l = FURNITURE[it]
+        _lab, w, h, _s, _l = furn_info(it)
         out.append({"item": it, "x": x, "w": w * T, "h": h * T})
     return out
 
@@ -196,8 +210,8 @@ def _arrange(furn, xs, W, T):
     m = 0.03 * W
     for f in furn:
         f["x"] = min(max(f["x"], m + f["w"] / 2), W - m - f["w"] / 2)
-    for f in sorted(furn, key=lambda g: FURNITURE[g["item"]][3]) * 2:
-        seat = FURNITURE[f["item"]][3]
+    for f in sorted(furn, key=lambda g: furn_info(g["item"])[3]) * 2:
+        seat = furn_info(f["item"])[3]
 
         def clear(x, f=f, seat=seat):
             gaps = [] if seat else [abs(x - cx) - (f["w"] / 2 + T * 0.45) for cx in xs]
@@ -223,7 +237,7 @@ def _seat_for(furn, x, T, lie=False):
     """Đồ ngồi / nằm gần chỗ x nhất (trong khoảng 1.2T)."""
     best = None
     for f in furn:
-        ok = FURNITURE[f["item"]][4] if lie else FURNITURE[f["item"]][3]
+        ok = furn_info(f["item"])[4] if lie else furn_info(f["item"])[3]
         if ok and abs(f["x"] - x) < T * 1.2 + f["w"] / 2:
             if best is None or abs(f["x"] - x) < abs(best["x"] - x):
                 best = f
@@ -289,7 +303,7 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
     # nằm / ngồi mà cảnh chưa có giường, chõng: tự kê
     need_lie = [b.get("who") for b in src if b.get("act") == "lie"] + \
         [c for c, p in (scene.get("posture") or {}).items() if p == "lie"]
-    if need_lie and not any(FURNITURE[f["item"]][4] for f in furn):
+    if need_lie and not any(furn_info(f["item"])[4] for f in furn):
         it = "bed" if indoor else "mat"
         lx = xs0.get(need_lie[0], SPOTS["phai"] * W)
         furn.append({"item": it, "x": lx, "w": FURNITURE[it][1] * T, "h": FURNITURE[it][2] * T,
@@ -307,7 +321,7 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
         free_seat(cid)
         best = None
         for fi, f in enumerate(furn):
-            if not FURNITURE[f["item"]][4 if lie else 3] or (fi, "lie") in occ:
+            if not furn_info(f["item"])[4 if lie else 3] or (fi, "lie") in occ:
                 continue
             if lie:
                 if any(k[0] == fi for k in occ):
@@ -1159,7 +1173,7 @@ def furniture_image(item: str, wpx: float):
     """Ảnh đồ đạc (đã nhân alpha) + điểm đặt (giữa chân đồ vật). wpx = T màn hình."""
     from PIL import Image
     if item not in FURNITURE:
-        return None
+        return _custom_furniture(item, wpx)
     T = wpx * doodle.SS
     _lab, wk, hk, _s, _l = FURNITURE[item]
     w, h = wk * T, max(hk, 0.05) * T
@@ -1218,6 +1232,25 @@ def furniture_image(item: str, wpx: float):
     elif item == "jar":
         pen.ell(cx, gy - T * 0.15, T * 0.15, T * 0.15, (120, 84, 60))
         pen.ell(cx, gy - T * 0.29, T * 0.09, T * 0.025, (90, 64, 48))
+    img = img.resize((max(1, W // doodle.SS), max(1, H // doodle.SS)), Image.LANCZOS)
+    return film_rig._premul(img), (cx / doodle.SS, gy / doodle.SS)
+
+
+def _custom_furniture(item: str, wpx: float):
+    """Đồ đạc AI vẽ thêm: vẽ theo khối hình, đáy đặt trên mặt đất."""
+    from PIL import Image
+    from . import doodle_parts
+    p = doodle_parts.get(item)
+    if not p or p.get("kind") != "furniture":
+        return None
+    hpx = p.get("size", 0.5) * wpx * doodle.SS           # chiều cao vật (px, đã nhân SS)
+    wv = p.get("width", 1.0) * hpx
+    W, H = int(wv + hpx * 0.3) + 8, int(hpx * 1.1) + 8
+    img = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    pen = doodle._Pen(img, wpx * doodle.SS, zlib.crc32(item.encode()) % 1000)
+    cx, gy = W / 2, H - 4
+    ox = cx - p.get("cx", 0.0) * hpx
+    doodle_parts.draw_shapes(pen, p["shapes"], lambda x, y: (ox + x * hpx, gy - hpx + y * hpx), hpx)
     img = img.resize((max(1, W // doodle.SS), max(1, H // doodle.SS)), Image.LANCZOS)
     return film_rig._premul(img), (cx / doodle.SS, gy / doodle.SS)
 

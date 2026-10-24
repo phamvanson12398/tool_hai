@@ -35,8 +35,9 @@ KINDS = {
     "animal": "Con vật",
     "scene": "Bối cảnh",
     "prop": "Đồ vật cầm tay",
+    "furniture": "Đồ đạc, vật dựng trong cảnh",
 }
-MAX_SHAPES = {"head": 60, "body": 60, "animal": 90, "scene": 220, "prop": 40}
+MAX_SHAPES = {"head": 60, "body": 60, "animal": 90, "scene": 220, "prop": 40, "furniture": 80}
 _LOCK = threading.Lock()
 
 
@@ -157,6 +158,18 @@ def clean_shapes(shapes, limit: int) -> list[dict]:
     return out
 
 
+def _xs(s: dict) -> list[float]:
+    """Hoành độ hai mép của một khối (để biết bề ngang đồ vật)."""
+    t = s.get("t")
+    if t == "rect":
+        return [s["x"], s["x"] + s["w"]]
+    if t == "ellipse":
+        return [s["x"] - s["rx"], s["x"] + s["rx"]]
+    if t in ("poly", "line"):
+        return [p[0] for p in s.get("pts") or []]
+    return []
+
+
 def clean_part(d: dict, kind: str, name: str, desc: str) -> dict:
     if not isinstance(d, dict):
         raise RuntimeError("AI không trả về hình vẽ.")
@@ -178,6 +191,14 @@ def clean_part(d: dict, kind: str, name: str, desc: str) -> dict:
         h = d.get("hold") or [0, 0]
         part["hold"] = (_num(h[0]), _num(h[1])) if isinstance(h, (list, tuple)) and len(h) >= 2 \
             else (0.0, 0.0)
+    if kind == "furniture":
+        part["size"] = _num(d.get("size"), 0.05, 3.0, 0.5)          # cao so với người lớn
+        xs = [x for s in shapes for x in _xs(s)]
+        part["width"] = max(0.1, (max(xs) - min(xs)) if xs else 1.0)  # bề ngang / chiều cao vật
+        part["cx"] = (max(xs) + min(xs)) / 2 if xs else 0.0
+        seat = d.get("seat")
+        part["seat"] = _num(seat, 0.0, 1.0, 0.0) if seat not in (None, False) else 0.0
+        part["lie"] = bool(d.get("lie")) and part["seat"] > 0
     if kind == "scene":
         part["indoor"] = bool(d.get("indoor", True))
         part["sky"] = _color(d.get("sky")) or (230, 214, 176)
@@ -266,6 +287,11 @@ _EXAMPLES = {
                '{"t":"ellipse","x":0.3,"y":0.07,"rx":0.09,"ry":0.07,"fill":"#d0483e"},'
                '{"t":"line","pts":[[-0.05,0.86],[-0.05,1.0]],"w":0.04,"fill":"#e8b04a"},'
                '{"t":"line","pts":[[0.12,0.86],[0.12,1.0]],"w":0.04,"fill":"#e8b04a"}]}'),
+    "furniture": ('Cái chuồng chó bằng tre (cao 1, đáy y=1): {"size":0.36,"seat":0,"shapes":['
+                  '{"t":"poly","pts":[[-0.75,0.25],[0,-0.3],[0.75,0.25]],"fill":"#a8483c"},'
+                  '{"t":"rect","x":-0.65,"y":0.22,"w":1.3,"h":0.78,"fill":"#c9a46a"},'
+                  '{"t":"ellipse","x":0,"y":0.72,"rx":0.28,"ry":0.3,"fill":"#5a3e2a"},'
+                  '{"t":"line","pts":[[-0.65,0.5],[0.65,0.5]],"w":0.02,"fill":"#8a6a3a"}]}'),
     "scene": ('Ngôi chùa làng (khung 16:9): {"indoor":false,"sky":"#bcdcef","shapes":['
               '{"t":"band","y0":0.83,"y1":1,"fill":"#cbb58a"},'
               '{"t":"rect","x":0.3,"y":0.45,"w":0.4,"h":0.38,"fill":"#d9c6a0"},'
@@ -290,6 +316,12 @@ _RULES = {
               "cao 1 đơn vị, y=0 đỉnh, y=1 mặt đất (chân chạm y=1), x từ -1 tới 1. KHÔNG vẽ mắt và "
               "miệng (tool tự vẽ để có biểu cảm) — chỉ cho vị trí \"eyes\" (1-2 điểm) và \"mouth\". "
               "\"size\": chiều cao so với người lớn (gà 0.25, chó 0.42, trâu 0.75, voi 1.3).",
+    "furniture": "Vật đặt trên mặt đất trong cảnh (chuồng chó, bàn thờ, giếng, cối giã gạo, cây "
+                 "khế, đống rơm, xe đạp...), nhìn ngang, kiểu hoạt hình đơn giản. Khung: chiều cao "
+                 "vật 1 đơn vị, y=0 đỉnh, y=1 mặt đất (đáy chạm y=1), x quanh 0 (bề ngang tuỳ vật). "
+                 "\"size\": chiều cao so với người lớn (ghế đẩu 0.2, bàn thờ 0.55, chuồng chó 0.36, "
+                 "giếng 0.4, cửa 1.05, cây 1.6). \"seat\": độ cao mặt ngồi được (0..1 theo chiều cao "
+                 "vật, 0 = không ngồi được); \"lie\": true nếu nằm lên được (phản, sập).",
     "scene": "Khung 16:9: x 0..1, y 0..1. Dùng \"band\" (dải ngang hết khung, y0..y1) cho trời, tường, "
              "đất. Chân tường / đường chân trời gần ở y≈0.83 (trong nhà) hoặc 0.55–0.8 (ngoài trời); "
              "nhân vật đứng ở y=0.9 cao ≈0.47 nên cửa cao ≈0.5, bàn ≈0.17. Để trống khoảng "
@@ -325,6 +357,18 @@ def preview(part: dict, size=(360, 360)) -> Image.Image:
         if got:
             img = got[0]
             bg.alpha_composite(img, ((300 - img.width) // 2, (300 - img.height) // 2))
+        return bg.convert("RGB")
+    if part["kind"] == "furniture":                  # đồ đạc: đặt cạnh một người để thấy cỡ
+        from . import film
+        got = film._custom_furniture(part["id"], 240)
+        bg = Image.new("RGBA", (420, 300), (246, 238, 222, 255))
+        if got:
+            import numpy as np
+            arr, (ax, ay) = got
+            img = Image.fromarray(arr)
+            bg.alpha_composite(img, (int(260 - ax), int(280 - ay)))
+            man, (fx, fy), _e = doodle.render(doodle.default_kit(), "neutral", facing=0.3, height=240)
+            bg.alpha_composite(man, (int(90 - fx), int(280 - fy)))
         return bg.convert("RGB")
     kit = doodle.default_kit()
     if part["kind"] == "head":

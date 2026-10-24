@@ -783,6 +783,16 @@ lúc giọng đọc tới câu đó.
     chương nối liền mạch. Nhân vật lần đầu lên hình có **thẻ tên** nhỏ trên đầu 2,5 giây.
   - Uống trà: chén đưa kề đúng miệng; hút điếu cày: miệng kề đúng đầu ống điếu;
     ăn: tay và lên tận miệng.
+  - **AI kiểm tra hình khớp lời**: viết xong mỗi chương, AI đọc lại từng câu thoại và
+    lời kể: câu nào tả ai làm gì thì phải có đúng hành động đó của đúng người đó (diễn cùng
+    lúc nếu cần), người được nhắc phải có mặt, đồ vật được nhắc phải có (đồ cầm tay / đồ
+    đạc trong cảnh). Thiếu thì AI tự thêm nhịp hành động, thêm nhân vật. Bước này chỉ thêm
+    / sửa hành động, đồ vật — không đổi lời thoại, lời kể.
+  - **Bối cảnh thiếu gì thì tool vẽ thêm**: cảnh cần đồ chưa có (bàn thờ, chuồng chó, giếng
+    nước, cối giã gạo, cây khế, xe đạp, bát hương...) thì AI tự vẽ thêm đồ đó (loại **Đồ đạc,
+    vật dựng trong cảnh** hoặc **Đồ vật cầm tay**), đặt vào cảnh và lưu vào thư viện cho
+    truyện sau dùng lại. Tự vẽ thêm bằng tay ở mục "Vẽ thêm bằng AI" cũng được; đồ đạc AI
+    vẽ có trong danh sách "+ Đồ đạc" của từng cảnh (đánh dấu "AI vẽ").
   - **Hành động khớp lời**: lời kể nhắc tên ai (vd "Thằng Mục với thằng Xiên xông ra
     túm lấy cậu Vàng...") thì nhịp hành động ngay sau của đúng người đó được diễn
     **cùng lúc** với lời kể, không đợi kể xong. AI được dặn: lời kể / thoại nói ai làm

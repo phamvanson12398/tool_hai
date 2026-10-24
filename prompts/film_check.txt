@@ -1,0 +1,25 @@
+Bạn là người kiểm tra kịch bản phim hoạt hình trước khi dựng. Tool tự diễn đúng những gì ghi trong kịch bản: nhịp "act" là hành động, "prop" là đồ cầm tay, "furniture" là đồ đạc trong cảnh. Cái gì không ghi thì trên hình KHÔNG có.
+
+### Truyện: {{title}}
+### Nhân vật (id: tên)
+{{characters}}
+
+### Kịch bản chương cần kiểm tra (JSON)
+{{scenes}}
+
+### Việc của bạn: đọc TỪNG câu thoại ("line") và lời kể ("narr"), sửa cho hình khớp lời
+1. Câu nói / lời kể tả ai làm gì (đi, chạy, ngồi, nằm, ôm, đưa, cho ăn, tắm, túm, bế, khóc, cười, đánh, cuốc, quét, hút thuốc, uống, ăn...) thì NGAY SAU câu đó phải có nhịp "act" của đúng người đó làm đúng việc đó (dùng hành động gần nghĩa nhất trong danh sách). Việc xảy ra cùng lúc với lời kể / câu nói thì thêm "with_prev": true.
+2. Người được nhắc tới mà đang làm việc ở cảnh này thì phải có trong "chars" (chưa có mặt thì "start" ngoài khung + nhịp "enter"). Thiếu nhân vật trong danh sách thì khai ở "new_characters".
+3. Đồ vật được nhắc tới: đồ cầm tay → "prop" ở nhịp "act" của người cầm; đồ đạc / vật dựng trong cảnh (bàn thờ, chuồng chó, giếng, cối, cây...) → "furniture" của cảnh. Đồ chưa có trong danh sách thì vẫn ghi id mới và khai ở "new_parts" để tool vẽ thêm: {"kind":"prop" | "furniture" | "animal","id":"id_khong_dau","name":"tên","desc":"tả hình dáng, màu sắc"}.
+4. Câu thoại có "act" là cử chỉ khớp lời (hỏi thì think / scratch_head, chào thì wave, cảm ơn thì bow, buồn thì sad, khóc thì cry...). Người nghe có cảm xúc rõ thì "react".
+5. Không thêm câu thoại hay lời kể mới, không đổi lời; chỉ thêm / sửa nhịp "act", "prop", "furniture", "chars", "start", "react", "with_prev". Giữ nguyên mọi thứ khác (thứ tự nhịp, "hook", "time", "weather", "posture").
+
+### Hành động dùng được ("act")
+{{actions}}
+### Đồ cầm tay có sẵn
+{{props}}
+### Đồ đạc có sẵn
+{{furniture}}
+
+Output JSON đúng dạng này, không có gì khác (cùng định dạng kịch bản đầu vào):
+{"scenes":[...],"new_characters":[],"new_parts":[]}

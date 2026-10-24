@@ -433,7 +433,7 @@ class LiveShot:
                 arr, (ax, ay) = self._shadows[key]
                 bx = p["x"] - 0.5 * self.T * a["k"]
                 film_rig.paste(canvas, arr, film_rig._tr(bx - ax, a["y"] - ay), night)
-                p["y"] = a["y"] - film.FURNITURE[item][2] * self.T * a["k"]
+                p["y"] = a["y"] - (film.furn_info(item) or (0, 0, 0))[2] * self.T * a["k"]
                 p["dir"] = 1                          # đầu về phía gối
             info = a["rig"].draw(canvas, p, self.cam, 1.0, night)
             hx, hy = info["head"]

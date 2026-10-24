@@ -52,6 +52,7 @@ Chương dài khoảng {{minutes}} phút ≈ {{beats}} nhịp (mỗi câu thoạ
   Vd: {"t":"narr","text":"Thằng Mục với thằng Xiên nấp sẵn, xông ra túm lấy hai cẳng sau, dốc ngược cậu Vàng lên."} rồi {"t":"act","who":"muc","act":"grab","to":"cau_vang"}, {"t":"act","who":"xien","act":"lift_upside","to":"cau_vang"}.
 - Thoại cũng vậy: câu nói nhắc tới việc đang làm (đưa tiền, ôm, đánh, chạy, bắt...) thì có "act" tương ứng của đúng người đó.
 - Muốn một việc diễn CÙNG LÚC với nhịp ngay trước (vd hai người cùng xông vào) thì thêm "with_prev": true vào nhịp đó.
+- Đồ vật / đồ đạc cần cho cảnh mà chưa có trong danh sách (bàn thờ, chuồng chó, giếng nước, cối giã gạo, cây khế, chiếc xe đạp, bát hương...) thì vẫn ghi vào "prop" / "furniture" bằng id mới và khai ở "new_parts": [{"kind":"furniture" | "prop" | "animal","id":"ban_tho","name":"Bàn thờ","desc":"bàn thờ gỗ nâu, bát hương, đĩa quả"}] — tool tự vẽ thêm.
 - Nhân vật cần cho cảnh mà chưa có trong danh sách (kể cả vai phụ chỉ ra một lần như thằng Mục, thằng Xiên) thì khai thêm ở "new_characters": [{"id":"muc","name":"Thằng Mục","look":"English description"}].
 
 ### Cho hợp lý, không lỗi hình
@@ -75,7 +76,7 @@ Hành động đặc biệt: walk / run (đi / chạy tới "to": id nhân vật
 {{props}}
 
 Output JSON đúng dạng này, không có gì khác ("new_characters" chỉ ghi khi cần):
-{"new_characters":[],"scenes":[{"place":"nha","time":"ngay","chars":["lao_hac","cau_vang","ong_giao"],"start":{"lao_hac":"trai","cau_vang":"giua","ong_giao":"ngoai_phai"},"posture":{"lao_hac":"sit"},
+{"new_characters":[],"new_parts":[],"scenes":[{"place":"nha","time":"ngay","chars":["lao_hac","cau_vang","ong_giao"],"start":{"lao_hac":"trai","cau_vang":"giua","ong_giao":"ngoai_phai"},"posture":{"lao_hac":"sit"},
 "furniture":[{"item":"bench","at":"trai"},{"item":"jar","at":"xa_phai"}],
 "beats":[{"t":"sfx","name":"rooster"},
 {"t":"act","who":"lao_hac","act":"smoke"},{"t":"narr","text":"Chiều hôm ấy, lão Hạc ngồi lặng bên hiên."},
