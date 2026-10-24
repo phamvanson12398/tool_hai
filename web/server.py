@@ -1777,8 +1777,7 @@ def _story_view(pid: str, data: dict) -> dict:
     out["visual"] = st.get("visual", "tool")
     from core import doodle_parts, film as film_m, film_rig
     out["mode"] = st.get("mode", "story")
-    out["char_styles"] = [[k, v["label"]] for k, v in film_rig.CHAR_STYLES.items()] + \
-        [["lib:" + it["id"], "Đã lưu: " + it["name"]] for it in style_lib.items()]
+    out["char_styles"] = _char_style_options()
     smp = st.get("char_sample") or {}
     out["char_sample"] = {"note": smp.get("note", ""), "has": bool(smp.get("image")),
                           "lib": smp.get("lib") or ""}
@@ -1887,6 +1886,19 @@ def api_story_delete(pid):
     with JOBS_LOCK:
         JOBS.pop(pid, None)
     return jsonify({"ok": True})
+
+
+def _char_style_options() -> list:
+    """Kiểu nhân vật: kiểu vẽ sẵn + kiểu theo ảnh mẫu đã lưu trong thư viện."""
+    from core import film_rig
+    return [[k, v["label"]] for k, v in film_rig.CHAR_STYLES.items()] + \
+        [["lib:" + it["id"], "Đã lưu: " + it["name"]] for it in style_lib.items()]
+
+
+@app.get("/api/story/options")
+def api_story_options():
+    """Lựa chọn dùng khi chưa mở truyện nào (ô Kiểu nhân vật)."""
+    return jsonify({"char_styles": _char_style_options()})
 
 
 @app.get("/api/story/trash")

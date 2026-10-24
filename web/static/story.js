@@ -290,7 +290,7 @@
     cs.appendChild(new Option("Chưa chọn kiểu — theo ảnh nhân vật mẫu (tải lên)", "sample"));
     var smp = d.char_sample || {};
     cs.value = (s.char_style === "sample" && smp.lib) ? "lib:" + smp.lib : (s.char_style || "capsule");
-    if (!cs.value) cs.value = "sample";
+    if (!cs.value) cs.value = s.char_style === "sample" ? "sample" : "capsule";
     if (smp.has) {
       $("st-sample-img").src = "/api/story/" + encodeURIComponent(d.id) + "/char_sample.png?v=" + Date.now();
       $("st-sample-img").hidden = false;
@@ -926,9 +926,17 @@
 
   function wire() {
     $("st-new").addEventListener("click", function () {
+      var keep = { char_style: $("st-charstyle").value, mode: $("st-mode").value,
+                   bg_mode: $("st-bgmode").value, visual: $("st-visual").value };   // giữ lựa chọn đang chọn
       api("/api/story", { body: { title: $("st-title").value.trim(), author: $("st-author").value.trim(),
                                    format: $("st-format").value || "16:9" } })
-        .then(function (d) { st.id = d.id; render(d); watch(); return loadList(d.id); })
+        .then(function (d) {
+          st.id = d.id;
+          var body = {};
+          Object.keys(keep).forEach(function (k) { if (keep[k]) body[k] = keep[k]; });
+          return api("/api/story/" + encodeURIComponent(d.id) + "/save", { body: body });
+        })
+        .then(function (d) { render(d); watch(); return loadList(d.id); })
         .then(function () { toast("ok", "Đã tạo truyện mới"); })
         .catch(fail("Không tạo được truyện"));
     });
@@ -1117,8 +1125,18 @@
      ["book", "Tranh minh hoạ sách"]].forEach(function (o) { sty.appendChild(new Option(o[1], o[0])); });
     var last = null;
     try { last = localStorage.getItem(LS_STORY); } catch (e) {}
+    // ô Kiểu nhân vật có sẵn lựa chọn cả khi chưa mở truyện nào (kể cả kiểu đã lưu)
+    api("/api/story/options").then(function (d) {
+      var cs = $("st-charstyle");
+      if (cs.options.length) return;
+      (d.char_styles || []).forEach(function (kv) { cs.appendChild(new Option(kv[1], kv[0])); });
+      cs.appendChild(new Option("Chưa chọn kiểu — theo ảnh nhân vật mẫu (tải lên)", "sample"));
+      cs.value = "capsule";
+      applyVisual();
+    }).catch(function () {});
     loadVoices().then(function () { return loadList(last); }).then(function () {
-      if (last) open(last);
+      var ids = Array.prototype.map.call($("st-pick").options, function (o) { return o.value; });
+      if (last && ids.indexOf(last) >= 0) open(last);       // truyện đã xoá thì thôi, khỏi báo lỗi
     });
   });
 })();
