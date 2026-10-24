@@ -183,6 +183,7 @@ def write_story(st: dict, progress=None) -> dict:
         block = f"### Nguyên văn đoạn tương ứng\n{parts[i]}" if parts[i] else ""
         if brief:
             block = brief + ("\n\n" + block if block else "")
+        chars_txt = "\n".join(f"- {c['id']}: {c['name']}" for c in st["characters"]) or "(không có)"
         if film_mode:
             out_chapters.append(_write_film_chapter(st, i, c, outline, chars_txt, places_txt,
                                                     block, per_min, structure_block(st, i, chapters, True)))
@@ -286,6 +287,13 @@ def _write_film_chapter(st, i, c, outline, chars_txt, places_txt, block, per_min
     scenes = data.get("scenes") if isinstance(data, dict) else None
     if not scenes:
         raise RuntimeError(f"AI không viết được chương {i + 1}.")
+    have = {ch["id"] for ch in st.get("characters") or []}
+    for c in (data.get("new_characters") or [])[:6]:     # vai phụ AI cần thêm để diễn đúng lời kể
+        if isinstance(c, dict) and c.get("name"):
+            nc = _clean_char(c)
+            if nc["id"] not in have:
+                st.setdefault("characters", []).append(nc)
+                have.add(nc["id"])
     known = {ch["id"] for ch in st.get("characters") or []}
     species = {ch["id"]: (ch.get("kit") or {}).get("species", "human") for ch in st.get("characters") or []}
     return {"title": str(c.get("title") or f"Chương {i + 1}"),
@@ -374,6 +382,8 @@ def clean_film_scene(s: dict, known: set | None = None, species: dict | None = N
         if act not in acts:
             act = "talk" if t == "line" else "idle"
         nb = {"t": t, "who": who, "act": act}
+        if b.get("with_prev") is True:
+            nb["with_prev"] = True
         to = b.get("to")
         if to:
             nb["to"] = to if to in film.SPOTS else _slug(to)

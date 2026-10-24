@@ -137,6 +137,17 @@ class Track:
         return None
 
 
+def _name_keys(c: dict, cid: str) -> list[str]:
+    """Các cách gọi nhân vật trong lời kể: "Thằng Mục" -> "thằng mục", "mục"; "Lão Hạc" ->
+    "lão hạc", "hạc"... (để biết lời kể đang nói tới ai)."""
+    name = (c.get("name") or cid.replace("_", " ")).lower().strip()
+    keys = {name}
+    words = name.split()
+    if len(words) > 1 and len(words[-1]) > 1:
+        keys.add(words[-1])
+    return [k for k in keys if len(k) >= 2]
+
+
 def _half(chars, cid, T):
     """Nửa bề ngang nhân vật (người / con vật) theo T."""
     kit = (chars.get(cid) or {}).get("kit") or {}
@@ -153,6 +164,14 @@ def _target_x(to, tracks, who, t, W, T, chars=None, close=False):
         side = -1 if me < tx else 1
         extra = -T * 0.06 if close else T * 0.16
         gap = (_half(chars or {}, who, T) + _half(chars or {}, to, T) + extra) if chars else T * 0.78
+        # chỗ đó đã có người đứng: sang phía bên kia, không thì đứng lùi ra ngoài
+        others = [o.x_at(t) for c, o in tracks.items() if c not in (who, to)] + \
+            [m[3] for c, o in tracks.items() if c not in (who, to) for m in o.moves
+             if m[0] <= t + 0.01 <= m[1] + 0.01]                 # cả chỗ người khác đang đi tới
+        for sd, more in ((side, 0.0), (-side, 0.0), (side, T * 0.65), (-side, T * 0.65), (side, T * 1.3)):
+            x = tx + sd * (gap + more)
+            if all(abs(x - ox) > T * 0.55 for ox in others) and T * 0.2 < x < W - T * 0.2:
+                return x
         return tx + side * gap
     return None
 
@@ -365,17 +384,31 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
             auto_prop[cid] = want
 
     t = lead
+    end = lead                       # lúc nhịp dài nhất đang chạy kết thúc
     beats = []
     last_speaker = None
+    names = {c: _name_keys(chars.get(c) or {}, c) for c in ids}
+    anchor = None                    # (t0, chữ) lời kể vừa rồi: ai được kể thì diễn NGAY lúc kể
+    holds: list = []                 # [con vật, người bế, lúc bắt đầu, dốc ngược?]
     for i, b in enumerate(src):
         kind = b.get("t")
         who = b.get("who")
+        t = end
+        together = bool(b.get("with_prev")) and bool(beats)
+        if kind == "act" and anchor and who in names and not b.get("text") and \
+                any(k in anchor[1] for k in names[who]):
+            together = True          # lời kể "thằng Mục xông ra túm..." -> Mục làm ngay lúc kể
+        elif kind != "act" or not anchor:
+            anchor = None
+        if together:
+            t = anchor[0] if anchor else beats[-1]["t0"]
         if kind == "line" and who in tracks and last_speaker and last_speaker != who:
             t += GAP_TURN
         bt = dict(b, t0=t)
         if kind == "narr":
             d = durs.get(bt["i"], 2.5) + 0.4
             last_speaker = "_narr"
+            anchor = (t, (b.get("text") or "").lower())
         elif kind == "line" and who in tracks:
             a = durs.get(bt["i"], 2.0)
             d = a + 0.35
@@ -464,7 +497,8 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
             else:
                 act = film_act.norm(act)
                 walk = 0.0
-                if act in ("give", "hug", "pat", "feed", "bathe") and to in tracks:     # tới sát trước
+                if act in ("give", "hug", "pat", "feed", "bathe", "grab", "lift", "lift_upside") \
+                        and to in tracks:                                    # tới sát trước
                     x0 = tr.x_at(t)
                     x1 = _target_x(to, tracks, who, t, W, T, chars, close=True)
                     if x1 is not None and abs(x1 - x0) > T * 0.1:
@@ -485,6 +519,13 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
                     side = (1 if near and min(near, key=lambda v: abs(v - ax)) > ax else -1) if near else \
                         (1 if ax < W / 2 else -1)
                     floor.append((t + walk, ax + side * T * 0.3, "bowl", 1e9))
+                if act in ("grab", "lift", "lift_upside") and to in tracks:
+                    # bị túm / bị bế: con vật giãy giụa, người thì run sợ; bế thì dính theo tay người bế
+                    tracks[to].acts.append((t + walk, 1e9 if act != "grab" else t + d,
+                                            "struggle" if species.get(to) != "human" else "tremble", who))
+                    tracks[to].reacts.add(t + walk)
+                    if act != "grab" and species.get(to) != "human":
+                        holds.append([to, who, t + walk, act == "lift_upside"])
                 if act == "bathe" and to in tracks and species.get(to) != "human":
                     # tắm cho chó: chó đứng trong chậu nước, người cúi kỳ cọ
                     tracks[to].acts.append((t + walk, t + d, "bathe", who))
@@ -518,7 +559,8 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
             continue
         bt["t1"] = t + d
         beats.append(bt)
-        t += d
+        end = max(end, t + d)
+    t = end
     total = t + TAIL
     # việc làm dở kéo dài tới khi người đó có hành động / bước đi khác
     for cid, tr in tracks.items():
@@ -534,12 +576,23 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
                 # (act_at chọn cái bắt đầu muộn nhất, xong phản ứng thì làm tiếp)
                 nxt = [x[0] for x in acts[k + 1:] if x[0] >= t1 - 1e-6 and x[2] != "talk"
                        and x[0] not in tr.reacts]
-                stops = [m[0] for m in tr.moves if m[0] >= t1 - 1e-6] + \
-                        [p[0] for p in tr.postures if p[0] >= t1 - 1e-6]
+                stops = ([m[0] for m in tr.moves if m[0] >= t1 - 1e-6]
+                         if a not in ("lift", "lift_upside") else []) + \
+                        [p[0] for p in tr.postures if p[0] >= t1 - 1e-6]     # bế thì vẫn bế khi đi
                 ends = nxt + stops
                 t1 = min(ends) if ends else total
             new.append((t0, t1, a, to))
         tr.acts = new
+    # con vật được bế: theo tay người bế tới khi người đó thôi bế, rồi ở lại chỗ đó
+    plan_holds = []
+    for animal, holder, h0, upside in holds:
+        h1 = next((a[1] for a in tracks[holder].acts if a[0] == h0 and a[2] in ("lift", "lift_upside")), total)
+        h1 = min(h1, total)
+        ta = tracks[animal]
+        ta.acts = [(a0, h1 if (a1 >= 1e8 and a0 == h0) else a1, a, to) for a0, a1, a, to in ta.acts]
+        hx = tracks[holder].x_at(h1)
+        ta.keys.append((h1, hx + (T * 0.3 if hx < W / 2 else -T * 0.3)))
+        plan_holds.append((animal, holder, h0, h1, upside))
     # lúc có người nói: tiếng làm việc nhỏ hẳn và thưa ra để nghe rõ lời
     talk_spans = sorted((s[0] - 0.2, s[1] + 0.2) for tr in tracks.values() for s in tr.speak)
     talk_spans += [(b["t0"], b["t1"]) for b in beats if b.get("t") == "narr"]
@@ -612,7 +665,7 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
                 sfx.append((b["t0"], "door", 0.25))
     sfx.sort()
     return {"tracks": tracks, "beats": beats, "dur": total, "W": W, "T": T, "furniture": furn,
-            "sfx": sfx, "floor": floor}
+            "sfx": sfx, "floor": floor, "holds": plan_holds}
 
 
 # ---------------------------------------------------------------- máy quay
@@ -841,6 +894,8 @@ class FilmShot:
             dist = abs(x - m[2]) / self.plan["T"]
             p = film_act.walk_cycle(dist, t, run=m[4])
             p["expr"] = "neutral"
+            if cur and cur[0] in ("lift", "lift_upside"):               # bế con vật mà đi: tay vẫn giữ
+                p["arms"] = film_act.pose(cur[0], 1.0, seed)["arms"]
         else:
             p = film_act.pose(act, lt if cur else t, seed, dur, speaking,
                               posture="sit" if posture == "sit" else "stand")
@@ -895,6 +950,24 @@ class FilmShot:
             p["arms"] = arms
             p["tool_ang"] = 28.0 if m else 6.0
         p["_act"] = act
+        p["_held"] = False
+        for animal, holder, h0, h1, upside in self.plan.get("holds") or []:
+            if animal == cid and h0 <= t < h1:                   # đang bị bế / dốc ngược: theo tay
+                hd, _lk = self._face(holder, t)
+                hx = self.plan["tracks"][holder].x_at(t)
+                rise = min(1.0, (t - h0) / 0.5)
+                T = self.plan["T"]
+                if upside:                                       # túm hai chân sau: treo đầu chúc xuống
+                    hand = hx + hd * T * 0.3                     # tay đưa chếch lên phía trước
+                    p["pivot"] = 0.22                            # xoay quanh mông (chỗ bị túm)
+                    p["x"] = hand + hd * T * 0.22 * rise
+                    p["y"] = self.floor - rise * T * 0.72
+                    p["rot"] = 90.0 * rise + p.get("rot", 0.0)
+                else:                                            # bế trước ngực
+                    p["x"] = hx + hd * T * 0.32
+                    p["y"] = self.floor - rise * T * 0.36
+                p["dir"] = hd
+                p["_held"] = True
         p["_lie"] = posture == "lie" and u >= 1.0 and not m
         p["_human"] = human
         return p
@@ -912,12 +985,14 @@ class FilmShot:
             self._furniture(frame, f, cam, z, t)
         poses = {cid: self.pose(cid, t) for cid in self.plan["tracks"]}
         # người nằm vẽ trước, rồi con vật, rồi người (bát, điếu luôn ở trước con chó)
-        order = sorted(poses, key=lambda c: (not poses[c]["_lie"], poses[c]["_human"], poses[c]["x"]))
+        order = sorted(poses, key=lambda c: (not poses[c]["_lie"],
+                                             2 if poses[c]["_held"] else int(poses[c]["_human"]),
+                                             poses[c]["x"]))      # con vật đang bị bế: trước người bế
         T = self.plan["T"]
         vx0, vx1 = cx - W / (2 * z), cx + W / (2 * z)        # vùng thế giới đang thấy
         for cid in order:                                    # bóng chân
             p = poses[cid]
-            if p["_act"] == "lie" or not (-0.2 * W < p["x"] < 1.2 * W):
+            if p["_act"] == "lie" or p["_held"] or not (-0.2 * W < p["x"] < 1.2 * W):
                 continue
             kit = self.rigs[cid][1]
             w = T * (0.42 if kit["species"] == "human" else 0.5 * doodle.char_height(kit, 1.0)) * z

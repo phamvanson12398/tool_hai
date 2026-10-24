@@ -618,6 +618,7 @@
     rm.title = "Bỏ nhịp này";
     rm.addEventListener("click", function () { row.remove(); });
     row._react = b.react;
+    row._with = !!b.with_prev;                 // diễn cùng lúc với nhịp trước (giữ khi lưu)
     function sync() {
       var t = type.value;
       who.hidden = act.hidden = to.hidden = t === "narr" || t === "sfx";
@@ -671,6 +672,7 @@
           if (pr) b.prop = pr;
         }
         if (b.who && chars.indexOf(b.who) < 0) chars.push(b.who);
+        if (row._with) b.with_prev = true;
       }
       out.beats.push(b);
     });

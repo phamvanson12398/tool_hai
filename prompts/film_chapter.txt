@@ -47,6 +47,13 @@ Chương dài khoảng {{minutes}} phút ≈ {{beats}} nhịp (mỗi câu thoạ
 - Đồ đạc dùng được: {{furniture}}
 - Tiếng động dùng được: {{sfx}}
 
+### Hành động PHẢI khớp lời (quan trọng)
+- Lời người kể ("narr") chỉ kể điều ĐANG thấy trên hình hoặc chuyển thời gian. Lời kể nói ai làm gì thì người đó phải có trong "chars" (chưa có mặt thì "start" ngoài khung) và NGAY SAU nhịp "narr" phải có các nhịp "act" của đúng người đó làm đúng việc đó — tool cho họ diễn cùng lúc với lời kể.
+  Vd: {"t":"narr","text":"Thằng Mục với thằng Xiên nấp sẵn, xông ra túm lấy hai cẳng sau, dốc ngược cậu Vàng lên."} rồi {"t":"act","who":"muc","act":"grab","to":"cau_vang"}, {"t":"act","who":"xien","act":"lift_upside","to":"cau_vang"}.
+- Thoại cũng vậy: câu nói nhắc tới việc đang làm (đưa tiền, ôm, đánh, chạy, bắt...) thì có "act" tương ứng của đúng người đó.
+- Muốn một việc diễn CÙNG LÚC với nhịp ngay trước (vd hai người cùng xông vào) thì thêm "with_prev": true vào nhịp đó.
+- Nhân vật cần cho cảnh mà chưa có trong danh sách (kể cả vai phụ chỉ ra một lần như thằng Mục, thằng Xiên) thì khai thêm ở "new_characters": [{"id":"muc","name":"Thằng Mục","look":"English description"}].
+
 ### Cho hợp lý, không lỗi hình
 - Việc làm phải hợp VAI và NƠI CHỐN: chủ nhà mới quét nhà, nấu cơm, cho chó ăn trong nhà mình; khách / hàng xóm sang chơi thì ngồi, uống nước, hút thuốc, nói chuyện — không quét nhà hay nấu cơm nhà người khác.
 - Mỗi "line" là lời của ĐÚNG MỘT người ("who"); không gộp lời hai người vào một câu, không ghi tên người nói trong "text". Hai người nói qua lại thì mỗi lượt một "line" riêng.
@@ -67,8 +74,8 @@ Hành động đặc biệt: walk / run (đi / chạy tới "to": id nhân vật
 ### Đồ vật cầm tay ("prop", ghi ở nhịp "act" để nhân vật cầm từ lúc đó; "none" để bỏ xuống)
 {{props}}
 
-Output JSON đúng dạng này, không có gì khác:
-{"scenes":[{"place":"nha","time":"ngay","chars":["lao_hac","cau_vang","ong_giao"],"start":{"lao_hac":"trai","cau_vang":"giua","ong_giao":"ngoai_phai"},"posture":{"lao_hac":"sit"},
+Output JSON đúng dạng này, không có gì khác ("new_characters" chỉ ghi khi cần):
+{"new_characters":[],"scenes":[{"place":"nha","time":"ngay","chars":["lao_hac","cau_vang","ong_giao"],"start":{"lao_hac":"trai","cau_vang":"giua","ong_giao":"ngoai_phai"},"posture":{"lao_hac":"sit"},
 "furniture":[{"item":"bench","at":"trai"},{"item":"jar","at":"xa_phai"}],
 "beats":[{"t":"sfx","name":"rooster"},
 {"t":"act","who":"lao_hac","act":"smoke"},{"t":"narr","text":"Chiều hôm ấy, lão Hạc ngồi lặng bên hiên."},

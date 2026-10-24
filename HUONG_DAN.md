@@ -760,6 +760,15 @@ lúc giọng đọc tới câu đó.
     chương nối liền mạch. Nhân vật lần đầu lên hình có **thẻ tên** nhỏ trên đầu 2,5 giây.
   - Uống trà: chén đưa kề đúng miệng; hút điếu cày: miệng kề đúng đầu ống điếu;
     ăn: tay và lên tận miệng.
+  - **Hành động khớp lời**: lời kể nhắc tên ai (vd "Thằng Mục với thằng Xiên xông ra
+    túm lấy cậu Vàng...") thì nhịp hành động ngay sau của đúng người đó được diễn
+    **cùng lúc** với lời kể, không đợi kể xong. AI được dặn: lời kể / thoại nói ai làm
+    gì thì phải có người đó trong cảnh và có hành động đúng việc đó; thiếu vai phụ (thằng
+    Mục, thằng Xiên...) thì AI tự thêm nhân vật. Nhịp có "with_prev" diễn cùng lúc nhịp trước.
+  - Động tác bắt / bế: **túm lấy** (grab: xông tới chồm túm, con vật giãy giụa, người bị
+    túm thì run), **bế lên** (lift: con vật nằm trước ngực, đi đâu bế theo đó), **dốc
+    ngược** (lift_upside: túm hai chân sau, con vật treo đầu chúc xuống, giãy giụa).
+    Nhiều người cùng xông tới một chỗ thì tự đứng tách ra, không chồng lên nhau.
   - **Tắm cho chó / mèo** (hành động "bathe"): người đi lại sát con vật, cúi kỳ cọ;
     con vật đứng trong chậu nước, bọt xà phòng bay lăn tăn, lâu lâu rùng mình. "Làm việc
     bằng tay" (work) không còn tự cầm cuốc nữa — cuốc chỉ có khi cuốc đất.

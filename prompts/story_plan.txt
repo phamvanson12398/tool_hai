@@ -14,7 +14,7 @@ Tác giả: {{author}}
    Ít chương thì một chương có thể gánh nhiều vai, nhưng vẫn phải đủ đầu – thân – kết, không kết lửng.
    - "hook": 1–2 câu tả MÓC CÂU mở video (15–30 giây đầu) để người xem tò mò ở lại: hé lộ trước khoảnh khắc gay cấn / xúc động nhất (vd lão Hạc oà khóc "Cậu Vàng đi đời rồi ông giáo ạ!") hoặc một câu hỏi bí ẩn, KHÔNG nói ra kết cục, rồi quay về đầu câu chuyện ("Mọi chuyện bắt đầu từ...").
 2. Lập "kinh thánh hình ảnh" để mọi tranh vẽ nhất quán:
-   - Mọi nhân vật xuất hiện (kể cả con vật như con chó). Mỗi nhân vật: id ngắn không dấu (vd "lao_hac"), tên tiếng Việt, và mô tả ngoại hình CỐ ĐỊNH bằng tiếng Anh cho AI vẽ tranh: tuổi, dáng người, khuôn mặt, tóc/râu, quần áo đúng thời đại và vùng miền, đặc điểm dễ nhận. Viết cụ thể để vẽ ở cảnh nào cũng ra cùng một người.
+   - Mọi nhân vật xuất hiện (kể cả con vật như con chó, và cả vai phụ chỉ ra một lần như thằng Mục, thằng Xiên — có trong lời kể là phải có nhân vật để diễn). Mỗi nhân vật: id ngắn không dấu (vd "lao_hac"), tên tiếng Việt, và mô tả ngoại hình CỐ ĐỊNH bằng tiếng Anh cho AI vẽ tranh: tuổi, dáng người, khuôn mặt, tóc/râu, quần áo đúng thời đại và vùng miền, đặc điểm dễ nhận. Viết cụ thể để vẽ ở cảnh nào cũng ra cùng một người.
    {{look_hint}}
    - Mọi địa điểm chính: id, tên tiếng Việt, mô tả bằng tiếng Anh (kiến trúc, đồ vật, cây cối, ánh sáng) đúng thời đại, vùng miền của truyện.
    - "era": một câu tiếng Anh về thời đại, vùng miền (vd "rural northern Vietnam village in the 1940s").
