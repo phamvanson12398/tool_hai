@@ -1,0 +1,29 @@
+{
+ "name": "Kể chuyện Hàn (theo ảnh mẫu đã gửi)",
+ "note": "nét vẽ tay kiểu kể chuyện Hàn: đầu tròn to, thân con nhộng gần như không thấy tay chân, viền đen dày, mắt chấm hơi khép, màu dịu; mẫu có bà giáo búi tóc áo cánh váy đỏ, cậu con trai tóc đen áo len xanh thắt lưng, ông giáo tóc muối tiêu kính vuông ria mép áo khoác kaki",
+ "style": {
+  "head": 0.25,
+  "body": 1.0,
+  "leg": 0.08,
+  "arm": 0.85,
+  "limb": 0.9,
+  "eyes": "dot",
+  "outline": 1.05,
+  "wobble": 0.9
+ },
+ "kit": {
+  "species": "human",
+  "age": "old",
+  "sex": "male",
+  "skin": "fair",
+  "hair": "short",
+  "hair_color": "salt",
+  "glasses": "square",
+  "facial": "mustache",
+  "top": "jacket",
+  "top_color": "beige",
+  "bottom_color": "darkgray"
+ },
+ "hash": "builtin",
+ "created": "có sẵn"
+}

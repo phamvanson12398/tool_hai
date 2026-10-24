@@ -18,6 +18,7 @@ from pathlib import Path
 from . import config
 
 DIR = config.LIBRARY / "kieu_nhan_vat"
+BUILTIN = config.LIBRARY / "kieu_co_san"      # kiểu có sẵn đi kèm tool (không xoá được)
 
 
 def _slug(s: str) -> str:
@@ -57,7 +58,7 @@ def save(sample: dict, image: str | Path, name: str = "") -> str | None:
 
 def items() -> list[dict]:
     out = []
-    for meta in sorted(DIR.glob("*/meta.json")):
+    for meta in sorted(BUILTIN.glob("*/meta.json")) + sorted(DIR.glob("*/meta.json")):
         try:
             m = json.loads(meta.read_text("utf-8"))
         except Exception:  # noqa: BLE001
@@ -71,12 +72,12 @@ def get(sid: str) -> dict | None:
     """{note, style, kit, image, lib} để gán vào st["char_sample"]."""
     if not re.fullmatch(r"[a-z0-9_]+", sid or ""):
         return None
-    meta = DIR / sid / "meta.json"
-    if not meta.exists():
+    base = next((b for b in (DIR, BUILTIN) if (b / sid / "meta.json").exists()), None)
+    if base is None:
         return None
-    m = json.loads(meta.read_text("utf-8"))
+    m = json.loads((base / sid / "meta.json").read_text("utf-8"))
     return {"note": m.get("note", ""), "style": m.get("style"), "kit": m.get("kit"),
-            "image": str(DIR / sid / "sample.png"), "lib": sid}
+            "image": str(base / sid / "sample.png"), "lib": sid}
 
 
 def backup(st: dict, title: str = "") -> bool:
