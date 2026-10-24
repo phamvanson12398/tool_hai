@@ -1895,6 +1895,90 @@ def _char_style_options() -> list:
         [["lib:" + it["id"], "Đã lưu: " + it["name"]] for it in style_lib.items()]
 
 
+# ---------------------------------------------- kiểu nhân vật (tab riêng)
+
+@app.get("/api/styles")
+def api_styles():
+    from core import style_preview
+    return jsonify({"items": style_preview.items()})
+
+
+@app.get("/api/styles/<sid>/<what>")
+def api_style_file(sid, what):
+    """Ảnh động hành động (anim.webp), dàn nhân vật (cast.png), ảnh mẫu gốc (sample.png)."""
+    from core import style_preview
+    try:
+        if what == "anim.webp":
+            p = style_preview.anim(sid)
+        elif what == "cast.png":
+            p = style_preview.cast(sid)
+        elif what == "sample.png" and sid.startswith("lib:"):
+            got = style_lib.get(sid[4:]) or {}
+            p = Path(got["image"]) if got.get("image") else None
+        else:
+            p = None
+    except Exception as e:  # noqa: BLE001
+        traceback.print_exc()
+        return _err(f"Không vẽ được xem trước: {e}", 500)
+    if not p or not Path(p).exists():
+        return _err("Không có ảnh này.", 404)
+    return send_file(str(p), max_age=0)
+
+
+@app.post("/api/styles")
+def api_style_create():
+    """Tải ảnh nhân vật mẫu: Claude xem nét vẽ + ngoại hình, tool tạo kiểu nhân vật mới
+    (lưu ở thư viện, mọi truyện chọn được)."""
+    from PIL import Image
+    f = request.files.get("file")
+    if not f:
+        return _err("Chưa chọn ảnh.")
+    try:
+        img = Image.open(f.stream).convert("RGB")
+    except Exception:  # noqa: BLE001
+        return _err("Không đọc được ảnh (thử JPG, PNG, WEBP).")
+    img.thumbnail((1400, 1400))
+    tmp = config.DATA / "tmp"
+    tmp.mkdir(parents=True, exist_ok=True)
+    src = tmp / f"kieu_{uuid.uuid4().hex[:8]}.png"
+    img.save(src)
+    look = Path(claude_cli._claude_dir()) / f"mau_{uuid.uuid4().hex[:8]}.png"
+    small = img.copy()
+    small.thumbnail((768, 768))
+    small.save(look)
+    try:
+        res = claude_cli.style_from_photo(look)
+    except Exception as e:  # noqa: BLE001
+        src.unlink(missing_ok=True)
+        return _err(f"Claude chưa xem được ảnh: {_short_err(e)}")
+    finally:
+        look.unlink(missing_ok=True)
+    if not res:
+        src.unlink(missing_ok=True)
+        return _err("Claude không phân tích được ảnh.")
+    name = str(request.form.get("name") or "").strip() or res.get("note") or "Kiểu nhân vật mới"
+    sid = style_lib.save(res, src, name)
+    src.unlink(missing_ok=True)
+    if not sid:
+        return _err("Không lưu được kiểu nhân vật.")
+    return jsonify({"ok": True, "id": "lib:" + sid, "note": res.get("note", "")})
+
+
+@app.post("/api/styles/<sid>/rename")
+def api_style_rename(sid):
+    name = str((request.get_json(silent=True) or {}).get("name") or "")
+    if not sid.startswith("lib:") or not style_lib.rename(sid[4:], name):
+        return _err("Chỉ đổi tên được kiểu chị tự tạo.")
+    return jsonify({"ok": True})
+
+
+@app.delete("/api/styles/<sid>")
+def api_style_delete(sid):
+    if not sid.startswith("lib:") or not style_lib.remove(sid[4:]):
+        return _err("Chỉ xoá được kiểu chị tự tạo (kiểu có sẵn của tool thì giữ).")
+    return jsonify({"ok": True})
+
+
 @app.get("/api/story/options")
 def api_story_options():
     """Lựa chọn dùng khi chưa mở truyện nào (ô Kiểu nhân vật)."""

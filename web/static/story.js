@@ -287,14 +287,15 @@
     var cs = $("st-charstyle");
     cs.innerHTML = "";
     (d.char_styles || []).forEach(function (kv) { cs.appendChild(new Option(kv[1], kv[0])); });
-    cs.appendChild(new Option("Chưa chọn kiểu — theo ảnh nhân vật mẫu (tải lên)", "sample"));
     var smp = d.char_sample || {};
+    if (s.char_style === "sample" && !smp.lib)        // truyện cũ: ảnh mẫu tải lên trước khi có tab riêng
+      cs.appendChild(new Option("Theo ảnh nhân vật mẫu của truyện này", "sample"));
     cs.value = (s.char_style === "sample" && smp.lib) ? "lib:" + smp.lib : (s.char_style || "capsule");
     if (!cs.value) cs.value = s.char_style === "sample" ? "sample" : "capsule";
     if (smp.has) {
       $("st-sample-img").src = "/api/story/" + encodeURIComponent(d.id) + "/char_sample.png?v=" + Date.now();
       $("st-sample-img").hidden = false;
-      $("st-sample-note").textContent = "Claude thấy: " + (smp.note || "") + " — các nhân vật vẽ theo nét này. Tải ảnh khác để đổi.";
+      $("st-sample-note").textContent = "Claude thấy: " + (smp.note || "") + " — các nhân vật vẽ theo nét này.";
     } else {
       $("st-sample-img").hidden = true;
     }
@@ -987,23 +988,8 @@
       applyVisual();
       if (st.id) save(true);
     });
-    $("st-sample-file").addEventListener("change", function () {
-      var f = this.files && this.files[0];
-      if (!f || !st.id) {
-        if (!st.id) toast("warn", "Chưa có truyện", "Bấm “+ Truyện mới” hoặc Lưu trước.");
-        return;
-      }
-      var input = this;
-      var fd = new FormData();
-      fd.append("file", f);
-      toast("ok", "Claude đang xem nhân vật mẫu…", "Khoảng 20–60 giây.");
-      api("/api/story/" + encodeURIComponent(st.id) + "/char_sample", { body: fd })
-        .then(function (d) {
-          st.stamp = Date.now();
-          render(d);
-          toast("ok", "Đã rút nét vẽ từ ảnh mẫu", (d.char_sample || {}).note || "");
-          input.value = "";
-        }).catch(fail("Không phân tích được ảnh mẫu"));
+    $("st-goto-styles").addEventListener("click", function () {
+      document.dispatchEvent(new CustomEvent("switchTab", { detail: { name: "charstyles" } }));
     });
     $("st-sync-file").addEventListener("change", function () {
       var f = this.files && this.files[0];
@@ -1119,6 +1105,18 @@
     });
   }
 
+  // vừa tạo / xoá kiểu ở tab Kiểu nhân vật: cập nhật ô Kiểu nhân vật
+  document.addEventListener("stylesChanged", function () {
+    if (st.id) { open(st.id); return; }
+    api("/api/story/options").then(function (d) {
+      var cs = $("st-charstyle"), keep = cs.value;
+      cs.innerHTML = "";
+      (d.char_styles || []).forEach(function (kv) { cs.appendChild(new Option(kv[1], kv[0])); });
+      cs.value = keep || "capsule";
+      if (!cs.value) cs.value = "capsule";
+    }).catch(function () {});
+  });
+
   document.addEventListener("DOMContentLoaded", function () {
     if (!$("screen-story")) return;
     wire();
@@ -1132,7 +1130,6 @@
       var cs = $("st-charstyle");
       if (cs.options.length) return;
       (d.char_styles || []).forEach(function (kv) { cs.appendChild(new Option(kv[1], kv[0])); });
-      cs.appendChild(new Option("Chưa chọn kiểu — theo ảnh nhân vật mẫu (tải lên)", "sample"));
       cs.value = "capsule";
       applyVisual();
     }).catch(function () {});

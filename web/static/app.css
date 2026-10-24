@@ -909,3 +909,17 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 .st-sample-box { border: 1px dashed var(--line); border-radius: var(--radius); padding: 10px; margin: 6px 0 10px; }
 .st-sample-row { display: flex; gap: 12px; align-items: flex-start; flex-wrap: wrap; }
 .st-sample-img { width: 120px; height: 120px; object-fit: contain; background: #f6eede; border-radius: 8px; }
+
+/* tab Kiểu nhân vật */
+.cs-upload { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.cs-upload input[type=text] { flex: 1 1 260px; }
+.cs-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 460px), 1fr)); gap: 14px; margin-top: 14px; }
+.cs-card { background: var(--card, #151821); border: 1px solid var(--line); border-radius: var(--radius); padding: 12px; display: flex; flex-direction: column; gap: 8px; }
+.cs-card h3 { margin: 0; font-size: 15px; }
+.cs-tag { font-size: 11px; padding: 2px 8px; border-radius: 99px; background: rgba(120,160,255,.15); margin-left: 6px; font-weight: 500; }
+.cs-anim { width: 100%; aspect-ratio: 440 / 330; object-fit: contain; background: #eee4ce; border-radius: 8px; }
+.cs-row { display: flex; gap: 8px; align-items: center; }
+.cs-sample { flex: 0 0 34%; min-width: 0; max-height: 170px; object-fit: contain; background: #f6eede; border-radius: 8px; }
+.cs-cast { flex: 1 1 auto; min-width: 0; width: 100%; background: #eee4ce; border-radius: 8px; }
+.cs-note { font-size: 12px; opacity: .8; margin: 0; }
+.cs-actions { display: flex; gap: 8px; flex-wrap: wrap; }

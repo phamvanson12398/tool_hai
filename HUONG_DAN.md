@@ -651,6 +651,20 @@ AI dựng video theo mạch rõ ràng (cả Kể chuyện và Phim):
   cười "ha ha" thì cười ôm bụng...), không để ai chỉ "nói" mãi; người nghe thỉnh
   thoảng gật, suy nghĩ, sững sờ.
 
+### Tab "Kiểu nhân vật"
+Tab riêng trên thanh trên cùng, gồm:
+- **Tạo kiểu nhân vật từ ảnh**: chọn ảnh một nhân vật mẫu (ảnh chụp màn hình phim hoạt
+  hình, tranh vẽ...), đặt tên nếu muốn, bấm **Tạo kiểu nhân vật**. Claude xem nét vẽ (tỉ
+  lệ đầu – thân – tay chân, kiểu mắt, nét viền) và ngoại hình (20–60 giây), tool tự thiết
+  kế nhân vật theo đúng nét ấy.
+- **Thẻ từng kiểu** (kiểu vẽ sẵn, kiểu có sẵn, kiểu chị tự tạo): ảnh động nhân vật diễn
+  đủ hành động (đứng, đi, vẫy tay, nói, nhảy mừng, ngồi, khóc, suy nghĩ, cười), ảnh mẫu
+  gốc và **dàn nhân vật** cùng nét (người già, người trẻ, trẻ con, con chó) để xem các
+  nhân vật khác trong truyện sẽ trông thế nào. Kiểu tự tạo đổi tên, xoá được (xoá thì
+  chuyển vào data/thung_rac, truyện đang dùng vẫn giữ nét vẽ).
+- Kiểu tạo ở đây có ngay trong ô **Kiểu nhân vật** của mọi truyện (dòng "Đã lưu: ...").
+  Màn hình Truyện kể không còn ô tải ảnh mẫu; bấm **Xem / tạo kiểu nhân vật →** để sang tab này.
+
 ### Kiểu nhân vật (Kể chuyện tool vẽ và Phim)
 Ô **Kiểu nhân vật**:
 - Chọn sẵn một kiểu: **Con nhộng tay chân ngắn** (vẽ tay Hàn, mặc định), **Chibi

@@ -18,6 +18,7 @@
     <nav class="tabs" id="tabs">
       <button class="tab is-active" data-screen="new" type="button">Tập mới</button>
       <button class="tab" data-screen="story" type="button">Truyện kể</button>
+      <button class="tab" data-screen="charstyles" type="button">Kiểu nhân vật</button>
       <button class="tab" data-screen="library" type="button">Thư viện</button>
       <button class="tab" data-screen="settings" type="button">Cài đặt</button>
       <button class="tab" data-screen="rig" type="button">Dựng xương</button>
@@ -402,9 +403,8 @@
             <div class="st-sample-row">
               <img id="st-sample-img" class="st-sample-img" alt="Nhân vật mẫu" hidden>
               <div>
-                <label for="st-sample-file">Ảnh nhân vật mẫu</label>
-                <input type="file" id="st-sample-file" accept="image/*">
-                <p class="hint" id="st-sample-note">Chưa chọn kiểu nhân vật thì tải ảnh một nhân vật mẫu lên: Claude xem nét vẽ (tỉ lệ đầu – thân – tay chân, kiểu mắt, nét viền) và ngoại hình, tool vẽ nhân vật đó và các nhân vật liên quan theo đúng nét ấy.</p>
+                <p class="hint" id="st-sample-note">Nhân vật vẽ theo nét của ảnh mẫu này.</p>
+                <button class="btn btn-sm" id="st-goto-styles" type="button">Xem / tạo kiểu nhân vật →</button>
               </div>
             </div>
           </div>
@@ -528,6 +528,24 @@
         </section>
       </aside>
     </div>
+  </section>
+
+  <section class="screen" id="screen-charstyles">
+    <div class="screen-head">
+      <h1>Kiểu nhân vật</h1>
+      <button class="btn btn-ghost btn-sm" id="cs-reload" type="button">Tải lại</button>
+    </div>
+    <section class="card">
+      <h2 class="card-title">Tạo kiểu nhân vật từ ảnh</h2>
+      <p class="hint">Tải ảnh một nhân vật mẫu lên (ảnh chụp màn hình phim hoạt hình, tranh vẽ...). Claude xem nét vẽ (tỉ lệ đầu – thân – tay chân, kiểu mắt, nét viền) và ngoại hình, tool tự thiết kế nhân vật theo đúng nét ấy kèm đủ hành động (đi, vẫy tay, nói, nhảy, ngồi, khóc...). Kiểu mới có ngay trong ô <b>Kiểu nhân vật</b> của mọi truyện.</p>
+      <div class="cs-upload">
+        <input type="file" id="cs-file" accept="image/*">
+        <input type="text" id="cs-name" placeholder="Tên kiểu (không bắt buộc) — vd: Kể chuyện Hàn, Ông giáo">
+        <button class="btn btn-primary" id="cs-create" type="button">Tạo kiểu nhân vật</button>
+      </div>
+      <p class="hint" id="cs-status" hidden></p>
+    </section>
+    <div id="cs-list" class="cs-list"></div>
   </section>
 
   <section class="screen" id="screen-library">
@@ -900,5 +918,6 @@
 <script src="/static/app.js"></script>
 <script src="/static/rig.js"></script>
 <script src="/static/story.js"></script>
+<script src="/static/styles.js"></script>
 </body>
 </html>

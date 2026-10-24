@@ -91,3 +91,32 @@ def backup(st: dict, title: str = "") -> bool:
     smp["lib"] = sid
     st["char_sample"] = smp
     return True
+
+
+def is_builtin(sid: str) -> bool:
+    return (BUILTIN / sid / "meta.json").exists() and not (DIR / sid / "meta.json").exists()
+
+
+def rename(sid: str, name: str) -> bool:
+    """Đổi tên kiểu chị đã tạo (kiểu có sẵn của tool thì không đổi)."""
+    meta = DIR / sid / "meta.json"
+    if not re.fullmatch(r"[a-z0-9_]+", sid or "") or not meta.exists() or not name.strip():
+        return False
+    m = json.loads(meta.read_text("utf-8"))
+    m["name"] = name.strip()[:80]
+    meta.write_text(json.dumps(m, ensure_ascii=False, indent=1), encoding="utf-8")
+    return True
+
+
+def remove(sid: str) -> bool:
+    """Xoá kiểu chị đã tạo: chuyển vào data/thung_rac/kieu_nhan_vat (lấy lại được bằng tay)."""
+    d = DIR / sid
+    if not re.fullmatch(r"[a-z0-9_]+", sid or "") or not (d / "meta.json").exists():
+        return False
+    trash = config.DATA / "thung_rac" / "kieu_nhan_vat"
+    trash.mkdir(parents=True, exist_ok=True)
+    dest = trash / sid
+    if dest.exists():
+        shutil.rmtree(dest, ignore_errors=True)
+    shutil.move(str(d), str(dest))
+    return True
