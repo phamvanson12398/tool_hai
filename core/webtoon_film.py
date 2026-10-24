@@ -581,6 +581,51 @@ def ideas(genre: str = "", lang: str = "ko", avoid: list | None = None, count: i
     return out
 
 
+def _cast_block(st: dict) -> str:
+    """Làm series: nhân vật + địa điểm đã có ở các phần trước, dặn AI giữ nguyên."""
+    if not (st.get("prev_summary") or "").strip() or not st.get("characters"):
+        return ""
+    cs = "\n".join(f"- {c['id']}: {c.get('name')} — {json.dumps(c.get('look') or {}, ensure_ascii=False)}"
+                   f", home: {c.get('home') or ''}" for c in st.get("characters") or [])
+    ps = "\n".join(f"- {p['id']}: {p.get('name')} — kind {p.get('kind')}, time {p.get('time')}, look: {p.get('look') or ''}"
+                   for p in st.get("places") or [])
+    return ("\n### Nhân vật và địa điểm ĐÃ CÓ từ phần trước — GIỮ NGUYÊN id, tên, look (chép y nguyên vào "
+            "output), chỉ thêm người / nơi mới nếu truyện cần\n" + cs + ("\n" + ps if ps else ""))
+
+
+def episode_summary(st: dict) -> str:
+    """Tóm tắt tập vừa viết (để làm phần sau): tên tập + diễn biến từng đoạn + nhân vật."""
+    segs = [str(s.get("summary") or "").strip() for s in st.get("segments") or []]
+    segs = [x for x in segs if x]
+    if not segs:
+        return ""
+    names = ", ".join(f"{c.get('name')} ({c['id']})" for c in st.get("characters") or [] if c.get("name"))
+    head = f"Phần {int(st.get('part') or 1)}" + (f" – {st['title']}" if st.get("title") else "") + ":"
+    tail = "Phần này dừng ở: " + segs[-1] if st.get("cliffhanger", True) else ""
+    return " ".join([head] + segs[:-1] + ([] if tail else segs[-1:])) + (" " + tail if tail else "") + \
+        (f" Nhân vật: {names}." if names else "")
+
+
+def summarize_ai(st: dict) -> str:
+    """Tập cũ chưa có tóm tắt: AI đọc thoại các cảnh rồi tóm tắt (tiếng Việt)."""
+    from . import claude_cli
+    lines = [f"{(s.get('line') or {}).get('who')}: {(s.get('line') or {}).get('text')}"
+             for s in st.get("shots") or [] if (s.get("line") or {}).get("text")]
+    if not lines:
+        raise RuntimeError("Tập này chưa có thoại nào để tóm tắt.")
+    names = "\n".join(f"- {c['id']}: {c.get('name')}" for c in st.get("characters") or [])
+    p = ("Tóm tắt nội dung tập truyện dưới đây bằng TIẾNG VIỆT, 4–8 câu, đủ để viết tiếp phần sau: "
+         "ai là ai, chuyện gì đã xảy ra, bí mật / manh mối nào đã lộ, tập DỪNG ở đâu (cú sốc cuối). "
+         "Không thêm chi tiết không có trong thoại.\n"
+         f"Tên tập: {st.get('title') or ''}\nNhân vật:\n{names}\nThoại:\n" + "\n".join(lines[:400]) +
+         '\n\nOutput JSON đúng dạng: {"summary":"..."}')
+    data = claude_cli._run_json(p, task="story", timeout=300)
+    out = str((data or {}).get("summary") or "").strip() if isinstance(data, dict) else ""
+    if not out:
+        raise RuntimeError("AI chưa tóm tắt được, bấm lại thử.")
+    return f"Phần {int(st.get('part') or 1)}" + (f" – {st['title']}" if st.get("title") else "") + ": " + out
+
+
 def write(st: dict, progress=None) -> dict:
     """AI viết truyện: dàn ý + nhân vật + địa điểm, rồi phân cảnh từng đoạn."""
     from . import claude_cli
@@ -597,7 +642,8 @@ def write(st: dict, progress=None) -> dict:
               (f"\nTên tập đã chọn: \"{st['title']}\" — giữ đúng tên này, viết truyện khớp với tên."
                if (st.get("title") or "").strip() else ""),
         genre=GENRES.get(st.get("genre"), st.get("genre") or ""),
-        prev_block=(f"### Tóm tắt các phần trước (viết tiếp, giữ đúng nhân vật)\n{prev}" if prev else ""),
+        prev_block=(f"### Tóm tắt các phần trước (viết tiếp, giữ đúng nhân vật)\n{prev}" if prev else "")
+                   + _cast_block(st),
         ending_rule=("Đoạn cuối DỪNG ở cao trào / cú sốc, bỏ lửng cho người xem chờ phần sau."
                      if st.get("cliffhanger", True) else "Đoạn cuối kết trọn vẹn."),
         **cat), task="story", timeout=600)
@@ -605,17 +651,30 @@ def write(st: dict, progress=None) -> dict:
         raise RuntimeError("AI không lập được dàn ý.")
     st["title"] = st.get("title") or str(plan_.get("title") or "")[:120]
     st["hook"] = str(plan_.get("hook") or "")[:300]
+    old_c = {c["id"]: c for c in st.get("characters") or []} if prev else {}
+    old_p = {p["id"]: p for p in st.get("places") or []} if prev else {}
     st["characters"] = [{"id": wa_slug(c.get("id") or c.get("name")), "name": str(c.get("name") or ""),
                          "look": wa.Look.from_dict(c.get("look")).to_dict(), "voice": c.get("voice") or {},
                          "home": wa_slug(c.get("home")) if c.get("home") else ""}
                         for c in plan_.get("characters") or [] if isinstance(c, dict)][:6]
+    # làm series: nhân vật cũ giữ nguyên ngoại hình, giọng (ảnh AI, giọng mẫu gắn theo id)
     st["places"] = [{"id": wa_slug(p.get("id") or p.get("name")), "name": str(p.get("name") or ""),
                      "kind": p.get("kind") if p.get("kind") in scene_art.KINDS else "phong_khach",
                      "time": "dem" if p.get("time") == "dem" else "ngay",
                      "look": str(p.get("look") or "")[:500]}
                     for p in plan_.get("places") or [] if isinstance(p, dict)][:8]
+    if old_c:
+        st["characters"] = [dict(old_c[c["id"]], home=c.get("home") or old_c[c["id"]].get("home", ""))
+                            if c["id"] in old_c else c for c in st["characters"]]
+        st["characters"] += [c for cid, c in old_c.items()
+                             if cid not in {x["id"] for x in st["characters"]}][:max(0, 8 - len(st["characters"]))]
+    if old_p:
+        st["places"] = [old_p[p["id"]] if p["id"] in old_p else p for p in st["places"]]
+        st["places"] += [p for pid, p in old_p.items() if pid not in {x["id"] for x in st["places"]}]
+        st["places"] = st["places"][:10]
     segs = [s for s in plan_.get("segments") or [] if isinstance(s, dict)][:20]
     st["segments"] = segs
+    st["summary"] = episode_summary(st)
     ids = {c["id"] for c in st["characters"]}
     chars_txt = "\n".join(f"- {c['id']}: {c['name']} — {c['look']['sex']}, {c['look']['age']}, "
                           f"{c['look']['hair']}, áo {c['look']['top_color']} — ở {c.get('home') or '?'}"

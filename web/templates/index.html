@@ -580,6 +580,16 @@
             <label for="wt-prev">Tóm tắt các phần trước (khi làm phần 2, 3...)</label>
             <textarea id="wt-prev" rows="2" placeholder="Để trống nếu là phần 1"></textarea>
           </div>
+          <div class="field">
+            <label for="wt-summary">Nội dung tập này (để làm phần tiếp theo)</label>
+            <textarea id="wt-summary" rows="3" placeholder="Tool tự ghi sau khi AI viết truyện xong — chị sửa thêm được. Tập cũ chưa có thì bấm 'Tóm tắt bằng AI'."></textarea>
+            <div class="row-actions">
+              <button class="btn btn-sm" id="wt-sum-ai" type="button">Tóm tắt bằng AI</button>
+              <button class="btn btn-sm" id="wt-sum-copy" type="button">Chép</button>
+              <button class="btn btn-sm btn-primary" id="wt-next" type="button">Làm phần tiếp theo →</button>
+              <span class="muted">Tạo tập mới: phần số +1, tự ghép tóm tắt vào "Tóm tắt các phần trước", giữ nguyên nhân vật, giọng, ảnh AI, nền 3D.</span>
+            </div>
+          </div>
           <div class="row-actions">
             <button class="btn" id="wt-save" type="button">Lưu</button>
             <button class="btn btn-primary" id="wt-write" type="button">AI viết truyện &amp; phân cảnh</button>

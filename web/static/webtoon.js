@@ -107,7 +107,8 @@
       title: $("wt-title").value.trim(), brief: $("wt-brief").value.trim(), genre: $("wt-genre").value,
       language: $("wt-lang").value, minutes: parseFloat($("wt-minutes").value) || 4,
       part: parseInt($("wt-part").value, 10) || 1, cliffhanger: $("wt-cliff").value === "1",
-      subtitles: $("wt-subs").value === "1", prev_summary: $("wt-prev").value
+      subtitles: $("wt-subs").value === "1", prev_summary: $("wt-prev").value,
+      summary: $("wt-summary").value
     };
     if ($("wt-bgmode")) b.bg_mode = $("wt-bgmode").value;
     var cur = wt();
@@ -179,6 +180,7 @@
     $("wt-cliff").value = w.cliffhanger === false ? "0" : "1";
     $("wt-subs").value = w.subtitles === false ? "0" : "1";
     $("wt-prev").value = w.prev_summary || "";
+    $("wt-summary").value = w.summary || "";
     if ($("wt-open").value !== W.id && W.id) $("wt-open").value = W.id;
     renderChars();
     renderPics();
@@ -787,6 +789,33 @@
       .then(function () { btn.disabled = false; btn.textContent = "Gợi ý ý tưởng mới"; });
   }
 
+  /* ---------------------------- làm series ---------------------------- */
+  function summaryAI() {
+    var b = $("wt-sum-ai");
+    b.disabled = true; b.textContent = "AI đang tóm tắt...";
+    save(true).then(function () {
+      return api("/api/webtoon/" + encodeURIComponent(W.id) + "/summary", { method: "POST", body: { ai: true } });
+    }).then(function (d) {
+      W.data = d; $("wt-summary").value = d.webtoon.summary || "";
+      toast("ok", "Đã tóm tắt tập này");
+    }).catch(function (e) { toast("error", "Chưa tóm tắt được", e.message); })
+      .then(function () { b.disabled = false; b.textContent = "Tóm tắt bằng AI"; });
+  }
+  function nextPart() {
+    if (!W.id) return;
+    save(true).then(function () {
+      return api("/api/webtoon/" + encodeURIComponent(W.id) + "/next", { method: "POST", body: {} });
+    }).then(function (d) {
+      W.id = d.id; W.data = d;
+      try { localStorage.setItem(LS, d.id); } catch (e) {}
+      return loadList(d.id).then(function () {
+        render();
+        toast("ok", "Đã tạo phần " + (d.webtoon.part || ""), "Bấm 'AI viết truyện & phân cảnh' để viết tiếp.");
+        $("wt-brief").scrollIntoView({ behavior: "smooth", block: "center" });
+      });
+    }).catch(function (e) { toast("error", "Chưa tạo được phần tiếp theo", e.message); });
+  }
+
   function addShot() {
     var w = wt();
     w.shots = w.shots || [];
@@ -809,6 +838,11 @@
     $("wt-render").addEventListener("click", renderVideo);
     $("wt-add").addEventListener("click", addShot);
     initMark();
+    $("wt-sum-ai").addEventListener("click", summaryAI);
+    $("wt-next").addEventListener("click", nextPart);
+    $("wt-sum-copy").addEventListener("click", function () {
+      copyText($("wt-summary").value || "").then(function () { toast("ok", "Đã chép nội dung tập này"); });
+    });
     // lựa chọn thể loại / ngôn ngữ có sẵn cả khi chưa mở tập
     var g = [["thriller", "Giật gân / lừa đảo"], ["horror", "Kinh dị"], ["comedy", "Hài"], ["romance", "Tình cảm"],
              ["family", "Gia đình"], ["revenge", "Trả thù thoả mãn"], ["office", "Công sở"],

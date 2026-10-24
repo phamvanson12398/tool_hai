@@ -2752,7 +2752,7 @@ def api_webtoon_save(pid):
     except FileNotFoundError as e:
         return _err(str(e), 404)
     body = request.get_json(silent=True) or {}
-    for k in ("title", "brief", "prev_summary", "hook"):
+    for k in ("title", "brief", "prev_summary", "hook", "summary"):
         if k in body:
             wt[k] = str(body[k] or "")
     if body.get("genre") in wf.GENRES:
@@ -2826,6 +2826,60 @@ def api_webtoon_write(pid):
 
     threading.Thread(target=work, daemon=True).start()
     return jsonify({"ok": True})
+
+
+@app.post("/api/webtoon/<pid>/summary")
+def api_webtoon_summary(pid):
+    """Tóm tắt tập này để làm phần sau: có dàn ý thì ghép từ dàn ý, không thì AI đọc thoại."""
+    from core import webtoon_film as wf
+    try:
+        data, wt = _load_webtoon(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    body = request.get_json(silent=True) or {}
+    try:
+        text = (wf.episode_summary(wt) if not body.get("ai") else "") or wf.summarize_ai(wt)
+    except Exception as e:  # noqa: BLE001
+        return _err(f"Chưa tóm tắt được: {_short_err(e, 300)}")
+    wt["summary"] = text
+    _save_project(pid, data)
+    return jsonify(_webtoon_view(pid, data))
+
+
+@app.post("/api/webtoon/<pid>/next")
+def api_webtoon_next(pid):
+    """Làm phần tiếp theo: tập mới, phần số +1, tóm tắt các phần trước = tóm tắt cũ + nội dung
+    tập này; giữ nguyên nhân vật, giọng, địa điểm, ảnh AI nhân vật, nền 3D."""
+    import shutil
+    from core import webtoon_bg, webtoon_film as wf, webtoon_pics as wpic
+    try:
+        data, wt = _load_webtoon(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    summary = (wt.get("summary") or "").strip() or wf.episode_summary(wt)
+    if not summary:
+        return _err("Tập này chưa có nội dung tóm tắt — bấm 'Tóm tắt bằng AI' hoặc tự gõ vào ô Nội dung tập này.")
+    nid = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
+    nw = wf.default_story()
+    for k in ("genre", "language", "minutes", "subtitles", "cliffhanger", "narrator", "bg_mode", "pics"):
+        if k in wt:
+            nw[k] = json.loads(json.dumps(wt[k]))
+    nw["characters"] = json.loads(json.dumps(wt.get("characters") or []))
+    nw["places"] = json.loads(json.dumps(wt.get("places") or []))
+    nw["part"] = int(wt.get("part") or 1) + 1
+    nw["prev_summary"] = "\n".join(x for x in [(wt.get("prev_summary") or "").strip(), summary] if x)
+    nw["brief"] = f"Phần {nw['part']}: viết tiếp ngay sau chỗ phần trước dừng lại." + \
+        (f" (Series: {wt.get('title')})" if wt.get("title") else "")
+    nd = {"id": nid, "mode": "webtoon", "title": "", "language": nw["language"], "format": "16:9",
+          "webtoon": nw, "assets": {"characters": [], "background": None, "voices": {}},
+          "state": "draft", "created_at": datetime.now().isoformat(timespec="seconds"),
+          "series_of": pid}
+    src, dst = config.PROJECTS / pid, config.project_dir(nid)
+    for sub in (wpic.PICS_DIR, webtoon_bg.DIR, "audio/giong_mau"):     # ảnh, nền, giọng mẫu: giữ y nguyên
+        if (src / sub).exists():
+            shutil.copytree(src / sub, dst / sub, dirs_exist_ok=True)
+    _save_project(nid, nd)
+    return jsonify(_webtoon_view(nid, nd))
 
 
 @app.get("/api/webtoon/<pid>/preview/<int:i>.png")

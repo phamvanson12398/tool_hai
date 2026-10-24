@@ -1025,6 +1025,15 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
    giống nhau; đàn ông không bị giọng cao như nữ; người kể khác hẳn giọng nhân vật. Muốn giọng
    cụ thể thì gõ mô tả (vd `male, elderly, very low pitch`) hoặc chọn giọng trong Thư viện.
 
+### Làm series (phần 2, 3...)
+- Viết xong truyện, ô **Nội dung tập này** tự có tóm tắt tập đó (tên tập, diễn biến, tập dừng
+  ở đâu, nhân vật). Chị sửa thêm được. Tập làm từ bản cũ chưa có thì bấm **Tóm tắt bằng AI**.
+- Bấm **Làm phần tiếp theo →**: tool tạo tập mới, **phần số +1**, ô *Tóm tắt các phần trước*
+  = tóm tắt cũ + nội dung tập này, ô Yêu cầu ghi sẵn "viết tiếp". Tập mới **giữ nguyên**
+  nhân vật (ngoại hình, giọng đọc), địa điểm, ảnh AI nhân vật và nền 3D của tập trước.
+- Khi viết phần sau, AI được dặn giữ y nguyên nhân vật và địa điểm cũ, chỉ thêm người / nơi
+  mới nếu truyện cần.
+
 ### Nền 3D đúng bối cảnh (mục 2, phần địa điểm)
 - Khi viết truyện, AI tả **từng địa điểm đúng như trong truyện** bằng tiếng Anh (ô dưới tên
   địa điểm, vd *a small public restroom inside a Seoul subway station, white tiled walls,
