@@ -86,6 +86,23 @@
           .then(function () { load(); changed(); toast("ok", "Đã xoá kiểu nhân vật"); })
           .catch(function (e) { toast("error", "Không xoá được", e.message); });
       });
+      if (it.sample) {
+        var redo = el("button", "btn btn-sm", "↻ Thiết kế lại theo ảnh mẫu");
+        redo.type = "button";
+        redo.title = "Claude xem lại ảnh mẫu, so với nhân vật tool vẽ rồi chỉnh cho giống (1–3 phút)";
+        redo.addEventListener("click", function () {
+          redo.disabled = true;
+          redo.textContent = "Claude đang so và chỉnh… (1–3 phút)";
+          api("/api/styles/" + encodeURIComponent(it.id) + "/redo", { body: {} })
+            .then(function () { toast("ok", "Đã thiết kế lại", it.name); changed(); return load(it.id); })
+            .catch(function (e) {
+              toast("error", "Không thiết kế lại được", e.message);
+              redo.disabled = false;
+              redo.textContent = "↻ Thiết kế lại theo ảnh mẫu";
+            });
+        });
+        row.appendChild(redo);
+      }
       row.appendChild(rn);
       row.appendChild(del);
       c.appendChild(row);
@@ -118,7 +135,7 @@
     var btn = $("cs-create"), st = $("cs-status");
     btn.disabled = true;
     st.hidden = false;
-    st.textContent = "Claude đang xem ảnh và thiết kế nhân vật… khoảng 20–60 giây.";
+    st.textContent = "Claude đang xem ảnh, thiết kế nhân vật rồi so với ảnh mẫu để chỉnh cho giống… khoảng 1–3 phút.";
     api("/api/styles", { body: fd })
       .then(function (d) {
         st.textContent = "Đã tạo kiểu nhân vật: " + (d.note || "") + " — đang vẽ xem trước các hành động…";

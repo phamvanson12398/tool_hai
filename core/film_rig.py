@@ -292,13 +292,14 @@ CHAR_STYLES = {
                "arm": 1.05, "limb": 0.95, "eyes": "line", "outline": 1.1, "wobble": 1.2},
 }
 _RANGES = {"head": (0.12, 0.36), "body": (0.6, 1.3), "leg": (0.06, 0.38), "arm": (0.7, 2.0),
-           "limb": (0.5, 1.4), "outline": (0.4, 1.6), "wobble": (0.0, 1.6)}
+           "limb": (0.5, 1.4), "outline": (0.4, 1.6), "wobble": (0.0, 1.6), "belly": (0.0, 1.0)}
 EYES = ("dot", "round", "big", "line")
 
 
 def clean_style(d: dict | None) -> dict:
     """Thông số kiểu nhân vật hợp lệ (thiếu thì lấy kiểu con nhộng)."""
     out = {k: v for k, v in CHAR_STYLES["capsule"].items() if k != "label"}
+    out["belly"] = 0.0
     for k, (lo, hi) in _RANGES.items():
         try:
             out[k] = max(lo, min(hi, float((d or {}).get(k, out[k]))))
@@ -343,6 +344,7 @@ class Rig:
         wb = Rb * (0.98 if self.kit["top"] == "dress" else (0.84 if female else 0.86))
         if child:
             wt, wb = wt * 0.92, wb * 0.92
+        wb *= 1 + 0.3 * sty.get("belly", 0.0)            # bụng tròn: hông rộng ra
         self.wt, self.wb = wt, wb
         self.shoulder = (wt * 0.86, self.body_top + 0.36 * min(R, Rb))
         self.hipx = wb * 0.42
@@ -355,7 +357,9 @@ class Rig:
         long_bottom = self.kit["top"] in ("dress", "robe", "ao_dai")
         self.pants = self.skin if long_bottom and self.kit["top"] == "dress" else \
             doodle.CLOTH[self.kit["bottom_color"]]
-        barefoot = self.kit["top"] in ("ao_nau", "ao_ba_ba") or self.kit["age"] == "child"
+        self.short_sleeve = self.kit["top"] == "tshirt"          # áo cộc tay: cẳng tay màu da
+        self.shorts = self.kit.get("bottom") == "shorts"        # quần soóc: cẳng chân màu da
+        barefoot = self.kit["top"] in ("ao_nau", "ao_ba_ba") or self.kit["age"] == "child" or self.shorts
         self.foot = self.skin if barefoot else (70, 58, 54)
         self._cache: dict = {}
 
@@ -486,7 +490,7 @@ class Rig:
             for i, (a, g) in enumerate(legs):
                 sx = (1 if i == 0 else -1) * d * self.hipx
                 self._limb(canvas, Lm, (sx, -self.hip_h + 0.0), a, g, d, self.legd[0], self.legd[1],
-                           self.legd[2], self.pants, zoom, foot=True)
+                           self.legd[2], self.pants, zoom, foot=True, cover=0.85 if self.shorts else 1.0)
         if sit <= 0.5:
             draw_legs()                      # đứng: chân sau thân
         if tool_behind:                        # cuốc / rìu vác sau vai: sau lưng người
@@ -504,7 +508,7 @@ class Rig:
                 sx = (1 if i == 0 else -1) * d * self.shoulder[0]
                 hands.append(self._limb(canvas, Bl, (sx, self.shoulder[1]), a, e, d,
                                         self.arm[0], self.arm[1], self.arm[2], self.sleeve, zoom,
-                                        hand=True))
+                                        hand=True, cover=0.55 if self.short_sleeve else 1.0))
                 elbows.append(self._last_elbow)
         if tool_behind:
             draw_arms()
@@ -544,7 +548,9 @@ class Rig:
         t2 = math.atan2(X - ex, Y - ey)
         return math.degrees(t1), math.degrees(t2 - t1)
 
-    def _limb(self, canvas, M, root, a, e, d, l1, l2, w, color, zoom, hand=False, foot=False):
+    def _limb(self, canvas, M, root, a, e, d, l1, l2, w, color, zoom, hand=False, foot=False,
+              cover=1.0):
+        """cover < 1: vải chỉ phủ phần trên (áo cộc tay, quần soóc), phần dưới màu da."""
         import cv2
         t1 = math.radians(a)
         t2 = math.radians(a + e)
@@ -559,9 +565,25 @@ class Rig:
         cv2.polylines(canvas, [P], False, OUT, wz + 2 * lw, cv2.LINE_AA, shift=2)
         for p in P:
             cv2.circle(canvas, tuple(int(v) for v in p), (wz + 2 * lw) * 2, OUT, -1, cv2.LINE_AA, shift=2)
-        cv2.polylines(canvas, [P], False, color, wz, cv2.LINE_AA, shift=2)
-        for p in P[1:]:
-            cv2.circle(canvas, tuple(int(v) for v in p), wz * 2, color, -1, cv2.LINE_AA, shift=2)
+        if cover >= 1.0:
+            cv2.polylines(canvas, [P], False, color, wz, cv2.LINE_AA, shift=2)
+            for p in P[1:]:
+                cv2.circle(canvas, tuple(int(v) for v in p), wz * 2, color, -1, cv2.LINE_AA, shift=2)
+        else:
+            cv2.polylines(canvas, [P], False, self.skin, wz, cv2.LINE_AA, shift=2)
+            for p in P[1:]:
+                cv2.circle(canvas, tuple(int(v) for v in p), wz * 2, self.skin, -1, cv2.LINE_AA, shift=2)
+            mid = P[0] + (P[1] - P[0]) * cover
+            Q = np.array([P[0], mid.astype(np.int32)], np.int32)
+            cv2.polylines(canvas, [Q], False, color, wz + max(2, lw), cv2.LINE_AA, shift=2)
+            cv2.circle(canvas, tuple(int(v) for v in P[0]), (wz + max(2, lw)) * 2, color, -1, cv2.LINE_AA, shift=2)
+            m2 = tuple(int(v) for v in Q[1])
+            nx, ny = -(P[1][1] - P[0][1]), (P[1][0] - P[0][0])       # mép tay áo / ống quần
+            nn = max(1.0, math.hypot(nx, ny))
+            hw = (wz + max(2, lw)) * 2.2
+            a1 = (int(m2[0] + nx / nn * hw), int(m2[1] + ny / nn * hw))
+            a2 = (int(m2[0] - nx / nn * hw), int(m2[1] - ny / nn * hw))
+            cv2.line(canvas, a1, a2, OUT, max(1, lw), cv2.LINE_AA, shift=2)
         end = pts[-1]
         if hand:
             r = max(2, int(self.arm[3] * zoom))

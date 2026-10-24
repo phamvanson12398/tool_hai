@@ -45,7 +45,8 @@ HATS = ("none", "non_la", "khan_van", "khan_dau", "hat")
 GLASSES = ("none", "round", "square")
 FACIAL = ("none", "mustache", "beard", "stubble", "goatee")
 TOPS = ("ao_nau", "ao_ba_ba", "ao_cach", "dress", "jacket", "shirt", "sweater", "robe",
-        "ao_dai")
+        "ao_dai", "tshirt")
+BOTTOMS = ("pants", "shorts")          # quần dài / quần soóc (lộ chân)
 EXPRESSIONS = ("neutral", "happy", "sad", "cry", "angry", "shocked", "worried", "sleep",
                "sly", "think")
 
@@ -54,7 +55,7 @@ def default_kit() -> dict:
     return {"species": "human", "age": "adult", "sex": "male", "skin": "light",
             "hair": "short", "hair_color": "black", "hat": "none", "glasses": "none",
             "facial": "none", "top": "ao_nau", "top_color": "brown", "bottom_color": "black",
-            "patched": False, "fur": "yellow", "extra": "none"}
+            "patched": False, "fur": "yellow", "extra": "none", "bottom": "pants"}
 
 
 def _custom(kind: str) -> list[str]:
@@ -72,7 +73,8 @@ def clean_kit(k: dict | None) -> dict:
                     ("hat", list(HATS) + _custom("head")),
                     ("extra", ["none"] + _custom("head") + _custom("body")),
                     ("glasses", GLASSES), ("facial", FACIAL), ("top", TOPS),
-                    ("top_color", CLOTH), ("bottom_color", CLOTH), ("fur", FUR)):
+                    ("top_color", CLOTH), ("bottom_color", CLOTH), ("fur", FUR),
+                    ("bottom", BOTTOMS)):
         v = str(k.get(key, "")).strip().lower()
         if v in ok:
             out[key] = v
@@ -89,6 +91,7 @@ def options() -> dict:
             "extra": ["none"] + _custom("head") + _custom("body"),
             "glasses": list(GLASSES), "facial": list(FACIAL),
             "top": list(TOPS), "top_color": list(CLOTH), "bottom_color": list(CLOTH),
+            "bottom": list(BOTTOMS),
             "fur": list(FUR), "expressions": list(EXPRESSIONS)}
 
 
@@ -304,6 +307,22 @@ def _shade(c, k):
 
 # ------------------------------------------------------------ người
 
+def _belly_pts(cx, top, bottom, wt, wm, R, belly):
+    """Thân bụng tròn: vai tròn, phình to nhất khoảng 60% chiều cao, đáy thu lại bo tròn."""
+    h = bottom - top
+    pts = _ellipse_pts(cx, top + 0.42 * R, wt, 0.42 * R, 180, 360, 20)
+    right = []
+    for k in range(1, 13):
+        u = k / 12
+        y = top + 0.42 * R + (h - 0.42 * R) * u
+        w = wt + (wm - wt) * math.sin(math.pi * min(1.0, u / 0.62) / 2) if u < 0.62 else \
+            wm - (wm * (0.18 + 0.14 * belly)) * ((u - 0.62) / 0.38) ** 2
+        right.append((cx + w, y))
+    pts += right
+    pts += [(cx - x + cx, y) for x, y in reversed(right)]
+    return pts
+
+
 def _body_pts(cx, top, bottom, wt, wb, R):
     """Thân con nhộng: vai tròn, đáy hơi loe, góc đáy bo."""
     pts = []
@@ -325,12 +344,17 @@ def _draw_body(img, pen: _Pen, kit, cx, top, bottom, R, seed):
         wb = R * 0.98
     if kit["age"] == "child":
         wt, wb = wt * 0.92, wb * 0.92
-    pts = _body_pts(cx, top, bottom, wt, wb, R)
+    belly = float((kit.get("_sty") or {}).get("belly", 0.0) or 0.0)
+    if belly > 0.05:                                # bụng tròn: phình ở giữa, thu lại ở dưới
+        pts = _belly_pts(cx, top, bottom, wt, wb * (1 + 0.32 * belly), R, belly)
+        wb = wb * (1 + 0.32 * belly)
+    else:
+        pts = _body_pts(cx, top, bottom, wt, wb, R)
     top_c = CLOTH[kit["top_color"]]
     bot_c = CLOTH[kit["bottom_color"]]
     h = bottom - top
     split = {"dress": 0.46, "robe": 1.2, "ao_dai": 0.86, "jacket": 0.62, "sweater": 0.6,
-             "ao_ba_ba": 0.62, "ao_cach": 0.5}.get(kit["top"], 0.64)
+             "ao_ba_ba": 0.62, "ao_cach": 0.5, "tshirt": 0.74}.get(kit["top"], 0.64)
     # lớp thân: tô áo, phần dưới tô quần/váy, cắt theo hình thân
     layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
     ld = ImageDraw.Draw(layer)
@@ -347,7 +371,7 @@ def _draw_body(img, pen: _Pen, kit, cx, top, bottom, R, seed):
     thin = max(1, int(pen.lw * 0.55))
     t = kit["top"]
     neck_y = top + 0.14 * R
-    if t in ("ao_nau", "ao_ba_ba", "ao_cach", "sweater"):
+    if t in ("ao_nau", "ao_ba_ba", "ao_cach", "sweater", "tshirt"):
         pen.line(_ellipse_pts(cx, neck_y, 0.26 * R, 0.16 * R, 20, 160, 10), width=thin)
     if t == "sweater":
         pen.line([(cx - wb, ys - 0.05 * R), (cx + wb, ys - 0.05 * R)], width=int(pen.lw * 1.6),

@@ -1964,6 +1964,28 @@ def api_style_create():
     return jsonify({"ok": True, "id": "lib:" + sid, "note": res.get("note", "")})
 
 
+@app.post("/api/styles/<sid>/redo")
+def api_style_redo(sid):
+    """Thiết kế lại kiểu đã tạo theo ảnh mẫu của nó (Claude xem lại, so và chỉnh)."""
+    from PIL import Image
+    got = style_lib.get(sid[4:]) if sid.startswith("lib:") else None
+    if not got or style_lib.is_builtin(sid[4:]) or not got.get("image") or not Path(got["image"]).exists():
+        return _err("Chỉ thiết kế lại được kiểu chị tự tạo có ảnh mẫu.")
+    look = Path(claude_cli._claude_dir()) / f"mau_{uuid.uuid4().hex[:8]}.png"
+    small = Image.open(got["image"]).convert("RGB")
+    small.thumbnail((768, 768))
+    small.save(look)
+    try:
+        res = claude_cli.style_from_photo(look)
+    except Exception as e:  # noqa: BLE001
+        return _err(f"Claude chưa xem được ảnh: {_short_err(e)}")
+    finally:
+        look.unlink(missing_ok=True)
+    if not res or not style_lib.update(sid[4:], res):
+        return _err("Claude không phân tích được ảnh.")
+    return jsonify({"ok": True, "note": res.get("note", "")})
+
+
 @app.post("/api/styles/<sid>/rename")
 def api_style_rename(sid):
     name = str((request.get_json(silent=True) or {}).get("name") or "")

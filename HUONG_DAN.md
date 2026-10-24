@@ -655,8 +655,10 @@ AI dựng video theo mạch rõ ràng (cả Kể chuyện và Phim):
 Tab riêng trên thanh trên cùng, gồm:
 - **Tạo kiểu nhân vật từ ảnh**: chọn ảnh một nhân vật mẫu (ảnh chụp màn hình phim hoạt
   hình, tranh vẽ...), đặt tên nếu muốn, bấm **Tạo kiểu nhân vật**. Claude xem nét vẽ (tỉ
-  lệ đầu – thân – tay chân, kiểu mắt, nét viền) và ngoại hình (20–60 giây), tool tự thiết
-  kế nhân vật theo đúng nét ấy.
+  lệ đầu – thân – tay chân, kiểu mắt, nét viền, áo cộc / dài tay, quần dài / soóc, bụng
+  tròn) và ngoại hình, rồi tool **vẽ thử đặt cạnh ảnh mẫu cho Claude so và chỉnh lại**
+  (tối đa 2 lần, giống rồi thì thôi) — khoảng 1–3 phút. Ảnh nên rõ một nhân vật đứng
+  thẳng thấy cả người. Kiểu đã tạo mà chưa giống: bấm **↻ Thiết kế lại theo ảnh mẫu**.
 - **Thẻ từng kiểu** (kiểu vẽ sẵn, kiểu có sẵn, kiểu chị tự tạo): ảnh động nhân vật diễn
   đủ hành động (đứng, đi, vẫy tay, nói, nhảy mừng, ngồi, khóc, suy nghĩ, cười), ảnh mẫu
   gốc và **dàn nhân vật** cùng nét (người già, người trẻ, trẻ con, con chó) để xem các

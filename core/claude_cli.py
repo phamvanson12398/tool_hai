@@ -666,9 +666,11 @@ def spec_from_photo(image: Path, name: str) -> dict:
     return out
 
 
-def style_from_photo(image: Path) -> dict:
-    """Claude xem ảnh nhân vật mẫu: trả về tham số nét vẽ + bộ ghép + ghi chú."""
-    from . import doodle, film_rig
+def style_from_photo(image: Path, rounds: int = 2, progress=None) -> dict:
+    """Claude xem ảnh nhân vật mẫu: trả về tham số nét vẽ + bộ ghép + ghi chú.
+    Sau lần đầu, tool vẽ thử nhân vật đặt cạnh ảnh mẫu cho Claude so và chỉnh lại
+    (tối đa `rounds` lần, giống rồi thì thôi) để nét vẽ khớp ảnh mẫu."""
+    from . import doodle, film_rig, style_preview
     opt = doodle.options()
     catalog = "\n".join(f"- {k}: {', '.join(v)}" for k, v in opt.items()
                         if k not in ("expressions", "extra"))
@@ -676,9 +678,40 @@ def style_from_photo(image: Path) -> dict:
                      task="photo", timeout=240, allowed_tools=["Read"])
     if not isinstance(data, dict):
         return {}
-    return {"style": film_rig.clean_style(data.get("style") if isinstance(data.get("style"), dict) else {}),
-            "kit": doodle.clean_kit(data.get("kit") if isinstance(data.get("kit"), dict) else {}),
-            "note": str(data.get("note") or "")[:300]}
+
+    def clean(d, base=None):
+        base = base or {}
+        sty = d.get("style") if isinstance(d.get("style"), dict) else base.get("style") or {}
+        kit = d.get("kit") if isinstance(d.get("kit"), dict) else base.get("kit") or {}
+        return {"style": film_rig.clean_style(sty), "kit": doodle.clean_kit(kit),
+                "note": str(d.get("note") or base.get("note") or "")[:300]}
+    cur = clean(data)
+    for k in range(rounds):
+        if progress:
+            progress(f"So nhân vật tool vẽ với ảnh mẫu, chỉnh lần {k + 1}")
+        cmp = Path(_claude_dir()) / f"so_sanh_{os.getpid()}_{k}.png"
+        try:
+            style_preview.compare(image, cur["style"], cur["kit"]).save(cmp)
+            got = _run_json(_load_prompt("char_style_refine", image=str(cmp), catalog=catalog,
+                                         current=json.dumps({"style": cur["style"], "kit": {
+                                             x: y for x, y in cur["kit"].items() if not x.startswith("_")}},
+                                             ensure_ascii=False)),
+                            task="photo", timeout=240, allowed_tools=["Read"])
+        except Exception as e:  # noqa: BLE001 — chỉnh không được thì giữ kết quả lần trước
+            print(f"[claude_cli] Không chỉnh được kiểu nhân vật: {e}", file=sys.stderr)
+            break
+        finally:
+            cmp.unlink(missing_ok=True)
+        if not isinstance(got, dict):
+            break
+        try:
+            score = float(got.get("score") or 0)
+        except (TypeError, ValueError):
+            score = 0.0
+        if score >= 8.5:                                       # đã giống: giữ nguyên
+            break
+        cur = clean(got, cur)
+    return cur
 
 
 def design_background(script: str, language: str, desc: str = "") -> dict:

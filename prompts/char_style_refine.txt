@@ -1,0 +1,20 @@
+Mở và xem ảnh so sánh bằng công cụ Read: {{image}}
+
+Bên TRÁI là ảnh nhân vật mẫu chị gửi. Bên PHẢI là nhân vật tool đang vẽ theo tham số hiện tại (cùng chiều cao, đứng thẳng; có cả dáng đi bộ để xem tay chân).
+Tham số hiện tại:
+{{current}}
+
+Việc của bạn: so kỹ hai bên rồi CHỈNH tham số để bên phải giống bên trái nhất — tỉ lệ đầu / thân / chân (đo trên ảnh: đầu chiếm mấy phần chiều cao, chân lộ ra bao nhiêu), bề ngang thân, bụng tròn hay thẳng, độ dài và độ dày tay chân, kiểu mắt, độ đậm nét viền, độ run nét, kiểu tóc, màu tóc, áo (cộc tay "tshirt" hay dài tay), màu áo, quần dài hay soóc ("bottom"), màu quần, da.
+
+### Ý nghĩa tham số nét vẽ ("style")
+- head: bán kính đầu / chiều cao người (0.12–0.36) = (đầu cao / người cao) ÷ 2
+- body: bề ngang thân (0.6–1.3); belly: bụng tròn (0–1)
+- leg: chân lộ ra / chiều cao (0.06–0.38); arm: độ dài tay (0.7–2.0); limb: độ dày tay chân (0.5–1.4)
+- eyes: dot | round | big | line; outline: nét viền (0.4–1.6); wobble: độ run nét (0–1.6)
+
+### Bộ ghép ("kit") — chỉ dùng giá trị trong danh mục
+{{catalog}}
+
+"score": bên phải đã giống bên trái bao nhiêu điểm (0–10) TRƯỚC khi chỉnh.
+Output JSON đúng dạng này, không có gì khác:
+{"score":6,"diff":"khác nhau ở đâu (tiếng Việt, ngắn)","style":{...},"kit":{...},"note":"một câu tiếng Việt tả nét vẽ và nhân vật trong ảnh mẫu"}

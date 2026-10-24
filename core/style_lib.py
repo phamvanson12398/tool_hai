@@ -120,3 +120,15 @@ def remove(sid: str) -> bool:
         shutil.rmtree(dest, ignore_errors=True)
     shutil.move(str(d), str(dest))
     return True
+
+
+def update(sid: str, sample: dict) -> bool:
+    """Ghi lại nét vẽ / bộ ghép mới cho kiểu chị đã tạo (thiết kế lại theo ảnh mẫu)."""
+    meta = DIR / sid / "meta.json"
+    if not re.fullmatch(r"[a-z0-9_]+", sid or "") or not meta.exists():
+        return False
+    m = json.loads(meta.read_text("utf-8"))
+    m.update({"style": sample.get("style"), "kit": sample.get("kit"),
+              "note": sample.get("note") or m.get("note", "")})
+    meta.write_text(json.dumps(m, ensure_ascii=False, indent=1), encoding="utf-8")
+    return True

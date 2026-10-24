@@ -2,6 +2,11 @@ Mở và xem ảnh nhân vật mẫu bằng công cụ Read: {{image}}
 
 Tool vẽ nhân vật hoạt hình 2D bằng bộ ghép có tham số. Hãy chọn tham số để nhân vật tool vẽ GIỐNG NÉT VẼ và GIỐNG NHÂN VẬT trong ảnh nhất.
 
+### Cách đo (đo trên ảnh, đừng đoán theo "kiểu"):
+- Chiều cao cả người = từ đỉnh tóc tới gót chân. Đầu cao (đỉnh tóc tới cằm) bằng mấy phần chiều cao? "head" = (đầu cao / người cao) ÷ 2. Vd đầu chiếm 1/3 người → head ≈ 0.17; đầu chiếm 1/2 người → 0.25.
+- "leg" = phần chân lộ ra dưới thân / chiều cao.
+- Áo cộc tay (thấy cẳng tay da) thì top "tshirt"; quần soóc / quần đùi (thấy cẳng chân da) thì "bottom":"shorts". Thân tròn bụng phệ thì "belly" cao.
+
 ### Tham số nét vẽ ("style")
 - "head": bán kính đầu / chiều cao cả người (0.12–0.36). Người thật ~0.13, anime ~0.2, kiểu con nhộng Hàn 0.25, chibi đầu to 0.3+.
 - "body": bề ngang thân so với kiểu con nhộng (0.6 gầy – 1.3 béo).
@@ -11,11 +16,12 @@ Tool vẽ nhân vật hoạt hình 2D bằng bộ ghép có tham số. Hãy ch�
 - "eyes": "dot" (mắt bầu dục nhỏ, mí nặng kiểu vẽ tay Hàn), "round" (mắt tròn to chibi), "big" (mắt anime to có đốm sáng), "line" (mắt chấm đen kiểu meme).
 - "outline": độ dày nét viền (0.4 mảnh – 1.6 rất đậm).
 - "wobble": độ run tay của nét (0 nét máy thẳng – 1.6 nét run nguệch ngoạc).
+- "belly": độ tròn bụng (0 thân thẳng con nhộng – 1 bụng tròn phệ).
 
 ### Bộ ghép ngoại hình của nhân vật trong ảnh ("kit") — chỉ dùng giá trị trong danh mục
 {{catalog}}
 
 Output JSON đúng dạng này, không có gì khác:
-{"style":{"head":0.25,"body":1.0,"leg":0.15,"arm":1.0,"limb":1.0,"eyes":"dot","outline":1.0,"wobble":1.0},
- "kit":{"species":"human","age":"adult","sex":"male","skin":"light","hair":"short","hair_color":"black","hat":"none","glasses":"none","facial":"none","top":"shirt","top_color":"white","bottom_color":"black"},
+{"style":{"head":0.25,"body":1.0,"leg":0.15,"arm":1.0,"limb":1.0,"eyes":"dot","outline":1.0,"wobble":1.0,"belly":0.0},
+ "kit":{"species":"human","age":"adult","sex":"male","skin":"light","hair":"short","hair_color":"black","hat":"none","glasses":"none","facial":"none","top":"shirt","top_color":"white","bottom_color":"black","bottom":"pants"},
  "note":"một câu tiếng Việt tả nét vẽ và nhân vật trong ảnh"}

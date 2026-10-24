@@ -20,7 +20,7 @@ from PIL import Image, ImageDraw
 from . import config, doodle, film_act, film_rig, style_lib
 
 DIR = config.PREVIEWS / "kieu"
-VERSION = 1
+VERSION = 2
 BG = (238, 228, 206)
 FLOOR = (214, 196, 160)
 
@@ -167,4 +167,33 @@ def cast(sid: str) -> Path | None:
     for old in DIR.glob(sid.replace(":", "_") + "_cast_*"):
         old.unlink(missing_ok=True)
     Image.fromarray(img).save(out)
+    return out
+
+
+def compare(sample: str | Path, sty: dict, kit: dict) -> Image.Image:
+    """Ảnh so sánh cho Claude chỉnh nét vẽ: TRÁI ảnh mẫu, PHẢI nhân vật tool vẽ (đứng thẳng
+    + dáng đi), cùng chiều cao."""
+    H = 520
+    smp = Image.open(sample).convert("RGB")
+    smp.thumbnail((620, H - 40))
+    W = smp.width + 40 + 560
+    out = Image.new("RGB", (W, H), (255, 255, 255))
+    out.paste(smp, (20, (H - smp.height) // 2))
+    floor = H - 40
+    T = float(H - 90)
+    stage = _stage(560, H, floor)
+    cam = np.array([[1, 0, 0], [0, 1, 0]], float)
+    rig = film_rig.Rig(doodle.clean_kit(kit), T, 5, sty)
+    p = film_act.pose("idle", 0.0, 5)
+    p.update(x=170, y=floor, dir=1, look=0.1)
+    rig.draw(stage, p, cam, 1.0)
+    w = film_act.walk_cycle(0.25, 0.0)
+    w.update(x=420, y=floor, dir=1, look=0.5, expr="neutral")
+    rig.draw(stage, w, cam, 1.0)
+    out.paste(Image.fromarray(stage), (smp.width + 40, 0))
+    d = ImageDraw.Draw(out)
+    d.line([(smp.width + 30, 0), (smp.width + 30, H)], fill=(200, 60, 60), width=3)
+    f = _font(18)
+    d.text((24, 8), "ẢNH MẪU", fill=(200, 60, 60), font=f)
+    d.text((smp.width + 52, 8), "TOOL ĐANG VẼ", fill=(200, 60, 60), font=f)
     return out
