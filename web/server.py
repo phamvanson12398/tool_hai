@@ -2661,13 +2661,18 @@ def _load_webtoon(pid: str) -> tuple[dict, dict]:
     data = _load_project(pid)
     if data.get("mode") != "webtoon":
         raise FileNotFoundError(f"'{pid}' không phải truyện webtoon")
-    return data, data.setdefault("webtoon", wf.default_story())
+    wt = data.setdefault("webtoon", wf.default_story())
+    from core import webtoon_pics as wpic
+    if wt.get("pics") and wpic.refresh(wt, config.PROJECTS / pid):   # ảnh từ bản cũ: tìm lại mắt / miệng
+        _save_project(pid, data)
+    return data, wt
 
 
 def _webtoon_view(pid: str, data: dict) -> dict:
     from core import webtoon_art as wa, webtoon_film as wf, webtoon_pics as wpic
     out = dict(data)
     out["pics_needed"] = wpic.needed(data.get("webtoon") or {})
+    out["prompt_open"] = wpic.prompt_open()
     out["status"] = _status(pid)
     out["video_ready"] = (config.PROJECTS / pid / "out" / "video.mp4").exists()
     out["options"] = {
@@ -2896,6 +2901,7 @@ def api_webtoon_pic_upload(pid, cid, key):
         return _err(f"Không đọc được ảnh: {_short_err(e, 200)}")
     finally:
         tmp.unlink(missing_ok=True)
+    dst.with_name(key + wpic.OPEN_SUFFIX).unlink(missing_ok=True)     # ảnh miệng mở cũ không còn khớp
     wt.setdefault("pics", {}).setdefault(cid, {})[key] = meta
     _save_project(pid, data)
     return jsonify(_webtoon_view(pid, data))
@@ -2953,6 +2959,50 @@ def api_webtoon_pic_marks(pid, cid, key):
     return jsonify(_webtoon_view(pid, data))
 
 
+@app.post("/api/webtoon/<pid>/pic/<cid>/<key>/open")
+def api_webtoon_pic_open(pid, cid, key):
+    """Ảnh miệng mở của một ảnh nhân vật (AI sửa từ ảnh gốc): khi nói, tool hoà vùng miệng
+    của ảnh này vào thay cho miệng vẽ."""
+    from core import webtoon_pics as wpic
+    try:
+        data, wt = _load_webtoon(pid)
+        base = _pic_path(pid, cid, key)
+    except (FileNotFoundError, ValueError) as e:
+        return _err(str(e), 404)
+    meta = ((wt.get("pics") or {}).get(cid) or {}).get(key)
+    if not meta or not base.exists():
+        return _err("Tải ảnh gốc của ô này trước.", 404)
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return _err("Chưa chọn ảnh.")
+    tmp = base.with_suffix(".upload")
+    f.save(str(tmp))
+    try:
+        info = wpic.process_open(tmp, base, meta, base.with_name(key + wpic.OPEN_SUFFIX))
+    except Exception as e:  # noqa: BLE001
+        traceback.print_exc()
+        return _err(f"Không đọc được ảnh: {_short_err(e, 200)}")
+    finally:
+        tmp.unlink(missing_ok=True)
+    meta["open"] = info
+    _save_project(pid, data)
+    return jsonify(_webtoon_view(pid, data))
+
+
+@app.post("/api/webtoon/<pid>/pic/<cid>/<key>/open/delete")
+def api_webtoon_pic_open_delete(pid, cid, key):
+    from core import webtoon_pics as wpic
+    try:
+        data, wt = _load_webtoon(pid)
+        base = _pic_path(pid, cid, key)
+    except (FileNotFoundError, ValueError) as e:
+        return _err(str(e), 404)
+    base.with_name(key + wpic.OPEN_SUFFIX).unlink(missing_ok=True)
+    (((wt.get("pics") or {}).get(cid) or {}).get(key) or {}).pop("open", None)
+    _save_project(pid, data)
+    return jsonify(_webtoon_view(pid, data))
+
+
 @app.post("/api/webtoon/<pid>/pic/<cid>/<key>/delete")
 def api_webtoon_pic_delete(pid, cid, key):
     try:
@@ -2960,7 +3010,9 @@ def api_webtoon_pic_delete(pid, cid, key):
         p = _pic_path(pid, cid, key)
     except (FileNotFoundError, ValueError) as e:
         return _err(str(e), 404)
+    from core import webtoon_pics as wpic
     p.unlink(missing_ok=True)
+    p.with_name(key + wpic.OPEN_SUFFIX).unlink(missing_ok=True)
     ((wt.get("pics") or {}).get(cid) or {}).pop(key, None)
     _save_project(pid, data)
     return jsonify(_webtoon_view(pid, data))

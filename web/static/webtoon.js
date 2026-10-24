@@ -308,7 +308,12 @@
           img.title = "Bấm để chỉnh điểm mắt / miệng";
           img.addEventListener("click", function () { openMark(c.id, n.key, meta); });
           card.appendChild(img);
-          if (meta.auto) card.appendChild(el("div", "sub", "Mắt, miệng do tool tự tìm — bấm ảnh để kiểm tra"));
+          if (meta.sure === false) {
+            card.appendChild(el("div", "warn", "Tool chưa tìm chắc mắt / miệng nên chưa nhép miệng — bấm vào ảnh để đánh dấu"));
+          } else if (meta.auto) {
+            card.appendChild(el("div", "sub", "Mắt, miệng do tool tự tìm — bấm ảnh để kiểm tra"));
+          }
+          openRow(card, c, n, meta);
         } else {
           card.appendChild(el("div", "ph", "Chưa có ảnh"));
         }
@@ -393,6 +398,54 @@
         .then(function () { k += 1; next(); });
     }
     next();
+  }
+
+  // ảnh miệng mở (tuỳ chọn): AI sửa ảnh gốc cho mở miệng; khi nói tool hoà miệng thật vào
+  function openRow(card, c, n, meta) {
+    var o = meta.open;
+    if (o) {
+      card.appendChild(el("div", o.score < 0.5 ? "warn" : "ok",
+        o.score < 0.5 ? "Ảnh miệng mở lệch nhiều so với ảnh gốc — nên tạo lại" : "✓ Có ảnh miệng mở (nhép miệng thật)"));
+      var rm = el("button", "btn btn-ghost btn-sm", "Bỏ ảnh miệng mở");
+      rm.type = "button";
+      rm.addEventListener("click", function () {
+        api(picUrl(c.id, n.key) + "/open/delete", { method: "POST", body: {} }).then(function (d) {
+          W.data = d; renderPics(); refreshThumbs();
+        }).catch(function (e) { toast("error", "Xoá thất bại", e.message); });
+      });
+      card.appendChild(rm);
+      return;
+    }
+    var cp = el("button", "btn btn-sm", "Chép câu lệnh miệng mở");
+    cp.type = "button";
+    cp.title = "Gửi kèm ảnh này cho Gemini / ChatGPT, dán câu lệnh: AI sửa đúng ảnh này cho mở miệng";
+    cp.addEventListener("click", function () {
+      copyText((W.data && W.data.prompt_open) || "").then(function () {
+        toast("ok", "Đã chép câu lệnh miệng mở", "Gửi KÈM ảnh này (tải ảnh gốc của bạn) rồi dán câu lệnh.");
+      });
+    });
+    var file = document.createElement("input");
+    file.type = "file"; file.accept = "image/*"; file.hidden = true;
+    var up = el("button", "btn btn-sm", "Tải ảnh miệng mở");
+    up.type = "button";
+    up.title = "Không bắt buộc. Có ảnh này thì miệng nhép là miệng thật của tranh, hợp với tranh kiểu người thật.";
+    up.addEventListener("click", function () { file.click(); });
+    file.addEventListener("change", function () {
+      if (!file.files || !file.files[0]) return;
+      var fd = new FormData();
+      fd.append("file", file.files[0]);
+      up.disabled = true; up.textContent = "Đang căn khớp...";
+      api(picUrl(c.id, n.key) + "/open", { method: "POST", body: fd }).then(function (d) {
+        W.data = d; renderPics(); refreshThumbs();
+        var m = ((d.webtoon.pics || {})[c.id] || {})[n.key] || {};
+        toast(m.open && m.open.score < 0.5 ? "warn" : "ok", "Đã thêm ảnh miệng mở",
+          m.open && m.open.score < 0.5 ? "Hai ảnh lệch nhau nhiều, nên nhờ AI sửa lại giữ nguyên khung hình." : "");
+      }).catch(function (e) {
+        up.disabled = false; up.textContent = "Tải ảnh miệng mở";
+        toast("error", "Tải ảnh thất bại", e.message);
+      });
+    });
+    card.appendChild(cp); card.appendChild(file); card.appendChild(up);
   }
 
   function refreshThumbs() {

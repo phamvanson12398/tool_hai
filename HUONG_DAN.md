@@ -1037,6 +1037,14 @@ khung tranh đứng yên, tool chỉ **nhép miệng** theo giọng và **chớp
 3. Bấm **Tải ảnh lên**: tool tự xoá nền, cắt sát người, tự tìm hai mắt và miệng.
    Bấm vào ảnh để kiểm tra: vòng xanh là mắt, vòng hồng là miệng; sai thì **Bấm lại từ đầu**
    rồi bấm lần lượt mắt bên trái, mắt bên phải, giữa miệng → **Lưu điểm**.
+   Tool tìm được cả mắt sau kính và tranh vẽ kiểu gần người thật. Không chắc chỗ miệng thì
+   ô ảnh báo chữ cam và tool **không vẽ miệng nhép** (thà không nhép còn hơn vẽ sai chỗ) —
+   bấm vào ảnh để đánh dấu là xong.
+   - **Ảnh miệng mở** (không bắt buộc, nên dùng với tranh kiểu người thật): bấm **Chép câu
+     lệnh miệng mở**, gửi KÈM ảnh gốc của ô đó cho Gemini / ChatGPT để AI sửa đúng ảnh đó cho
+     mở miệng, rồi bấm **Tải ảnh miệng mở**. Tool tự căn khớp hai ảnh; khi nói, tool lấy miệng
+     thật trong ảnh này hoà vào thay cho miệng vẽ — trông tự nhiên hơn hẳn. Báo "lệch nhiều"
+     thì nhờ AI sửa lại, dặn giữ nguyên khung hình.
 4. Dựng video như thường. Cảnh nào thiếu ảnh đúng tư thế thì tool lấy ảnh gần nhất của nhân
    vật đó (cùng tư thế → ảnh gốc); nhân vật chưa có ảnh nào thì tool tự vẽ như cũ.
 - Mẹo: ảnh nhìn thẳng, thấy rõ hai mắt, miệng ngậm; nhân vật không mặc đồ màu xanh lá.
