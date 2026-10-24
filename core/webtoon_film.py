@@ -30,7 +30,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
-from . import scene_art, video, webtoon_art as wa, webtoon_phone as wp
+from . import scene_art, video, webtoon_art as wa, webtoon_phone as wp, webtoon_pics as wpic
 
 logger = logging.getLogger(__name__)
 
@@ -204,8 +204,10 @@ def _ease(u):
 class Shot:
     """Vẽ một cảnh quay: frame(t) với t tính từ đầu cảnh."""
 
-    def __init__(self, st: dict, row: dict, size, figs: dict, prev: dict | None = None):
+    def __init__(self, st: dict, row: dict, size, figs: dict, prev: dict | None = None,
+                 pics: dict | None = None):
         self.st, self.row, self.s = st, row, row["shot"]
+        self.pics = pics or {}                   # ảnh AI chị tải lên: {id nhân vật: {key: Pic}}
         self.W, self.H = size
         self.figs = figs
         self.lang = st.get("language") or "ko"
@@ -280,6 +282,33 @@ class Shot:
             foot = (foot[0] + dx, foot[1] - abs(math.sin(t * 9)) * 0.01 * H * (1 - k))
         return fig, foot, s
 
+    def _pic(self, img, cid, t, kind, x, main) -> bool:
+        """Nhân vật có ảnh AI: dán ảnh đúng tư thế + nét mặt như một khung truyện tranh,
+        chỉ nhép miệng, chớp mắt, nhún nhẹ khi nói."""
+        st = self._state(cid, t, main)
+        pic = wpic.pick(self.pics.get(cid) or {}, st.pose, st.expr)
+        if pic is None:
+            return False
+        W, H = self.W, self.H
+        if kind == "close":
+            d, ey, bottom = H * 0.22, H * 0.458, None
+        elif kind in ("medium", "two"):
+            d, ey, bottom = H * (0.104 if kind == "medium" else 0.093), H * 0.34, H
+        else:
+            d, ey, bottom = H * 0.07, H * 0.36, H
+        cx = x * W
+        enter = self.s.get("enter") if main else ""
+        if enter in ("left", "right"):
+            k = _ease(t / 1.1)
+            cx += (1 - k) * (0.65 * W) * (-1 if enter == "left" else 1)
+        if st.mouth > 0.05:                      # nhún nhẹ theo nhịp nói
+            ey += abs(math.sin(t * 7)) * H * 0.004
+        ey += math.sin(st.breathe * 2 * math.pi) * H * 0.0015
+        if st.shake:
+            cx += math.sin(t * 40) * 0.004 * W
+        pic.draw(img, cx, ey, d, st, max(self.lw, d * 0.02), bottom)
+        return True
+
     def frame(self, t: float) -> np.ndarray:
         W, H = self.W, self.H
         s = self.s
@@ -307,6 +336,8 @@ class Shot:
             layer = Image.new("RGBA", (W * wa.SS, H * wa.SS), (0, 0, 0, 0))
             for i, cid in enumerate(cast):
                 if not cid:
+                    continue
+                if cid in self.pics and self._pic(img, cid, t, kind, xs[min(i, len(xs) - 1)], i == 0):
                     continue
                 got = self._place(cid, t, kind, xs[min(i, len(xs) - 1)], i == 0)
                 if not got:
@@ -377,6 +408,7 @@ def render(st: dict, pdir: Path, size=(1920, 1080), audio: dict | None = None, p
     W, H = size
     rows = plan(st, audio)
     figs = figures(st)
+    pics = wpic.load(st, pdir)
     total = sum(r["dur"] for r in rows) + 0.5
     out_dir = pdir / "out"
     out_dir.mkdir(parents=True, exist_ok=True)
@@ -400,7 +432,7 @@ def render(st: dict, pdir: Path, size=(1920, 1080), audio: dict | None = None, p
                 break
             row = rows[i]
             if shot is None:
-                shot = Shot(st, row, size, figs, dict(prev_pose))
+                shot = Shot(st, row, size, figs, dict(prev_pose), pics)
                 s = row["shot"]
                 if s.get("who"):
                     prev_pose[s["who"]] = s.get("pose", "down")
@@ -439,7 +471,7 @@ def render(st: dict, pdir: Path, size=(1920, 1080), audio: dict | None = None, p
     return out
 
 
-def preview(st: dict, shot_idx: int, size=(960, 540), t: float = 0.6) -> Image.Image:
+def preview(st: dict, shot_idx: int, size=(960, 540), t: float = 0.6, pdir: Path | None = None) -> Image.Image:
     rows = plan(st, {})
     if not rows:
         return Image.new("RGB", size, (20, 20, 24))
@@ -449,7 +481,7 @@ def preview(st: dict, shot_idx: int, size=(960, 540), t: float = 0.6) -> Image.I
         s = r["shot"]
         if s.get("who"):
             prev[s["who"]] = s.get("pose", "down")
-    sh = Shot(st, rows[shot_idx], size, figures(st), prev)
+    sh = Shot(st, rows[shot_idx], size, figures(st), prev, wpic.load(st, pdir))
     return Image.fromarray(sh.subtitle(sh.frame(t), t))
 
 

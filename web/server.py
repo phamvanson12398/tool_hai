@@ -2665,8 +2665,9 @@ def _load_webtoon(pid: str) -> tuple[dict, dict]:
 
 
 def _webtoon_view(pid: str, data: dict) -> dict:
-    from core import webtoon_art as wa, webtoon_film as wf
+    from core import webtoon_art as wa, webtoon_film as wf, webtoon_pics as wpic
     out = dict(data)
+    out["pics_needed"] = wpic.needed(data.get("webtoon") or {})
     out["status"] = _status(pid)
     out["video_ready"] = (config.PROJECTS / pid / "out" / "video.mp4").exists()
     out["options"] = {
@@ -2810,7 +2811,7 @@ def api_webtoon_preview(pid, i):
         t = float(request.args.get("t") or 0.6)
     except ValueError:
         t = 0.6
-    im = wf.preview(wt, i, (640, 360), t)
+    im = wf.preview(wt, i, (640, 360), t, config.PROJECTS / pid)
     buf = io.BytesIO()
     im.save(buf, "PNG")
     buf.seek(0)
@@ -2829,6 +2830,18 @@ def api_webtoon_char(pid, cid):
     c = next((c for c in wt.get("characters") or [] if c["id"] == cid), None)
     if not c:
         return _err("Không thấy nhân vật.", 404)
+    have = (wt.get("pics") or {}).get(cid) or {}
+    if have:                                     # có ảnh AI: dùng ảnh gốc làm ảnh đại diện
+        p = _pic_path(pid, cid, "down" if "down" in have else next(iter(have)))
+        if p.exists():
+            im = Image.open(p).convert("RGBA")
+            im.thumbnail((240, 300))
+            bg = Image.new("RGBA", (240, 300), (236, 234, 228, 255))
+            bg.alpha_composite(im, ((240 - im.width) // 2, 300 - im.height))
+            buf = io.BytesIO()
+            bg.convert("RGB").save(buf, "PNG")
+            buf.seek(0)
+            return send_file(buf, mimetype="image/png")
     fig = wa.Figure(wa.Look.from_dict(c.get("look")))
     W, H = 240, 300
     s = H * 0.9 / fig.b["H"]
@@ -2838,6 +2851,87 @@ def api_webtoon_char(pid, cid):
     im.convert("RGB").save(buf, "PNG")
     buf.seek(0)
     return send_file(buf, mimetype="image/png")
+
+
+def _pic_path(pid: str, cid: str, key: str) -> Path:
+    from core import webtoon_pics as wpic
+    if not re.fullmatch(r"[A-Za-z0-9_\-]{1,60}", cid or "") or not re.fullmatch(r"[A-Za-z0-9_\-]{1,60}", key or ""):
+        raise ValueError("Tên ảnh không hợp lệ.")
+    return config.PROJECTS / pid / wpic.PICS_DIR / cid / f"{key}.png"
+
+
+@app.post("/api/webtoon/<pid>/pic/<cid>/<key>")
+def api_webtoon_pic_upload(pid, cid, key):
+    """Tải ảnh AI của nhân vật cho một tư thế (+ nét mặt): tách nền, tự tìm mắt / miệng."""
+    from core import webtoon_pics as wpic
+    try:
+        data, wt = _load_webtoon(pid)
+        dst = _pic_path(pid, cid, key)
+    except (FileNotFoundError, ValueError) as e:
+        return _err(str(e), 404)
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return _err("Chưa chọn ảnh.")
+    tmp = dst.with_suffix(".upload")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    f.save(str(tmp))
+    try:
+        meta = wpic.process(tmp, dst)
+    except Exception as e:  # noqa: BLE001
+        traceback.print_exc()
+        return _err(f"Không đọc được ảnh: {_short_err(e, 200)}")
+    finally:
+        tmp.unlink(missing_ok=True)
+    wt.setdefault("pics", {}).setdefault(cid, {})[key] = meta
+    _save_project(pid, data)
+    return jsonify(_webtoon_view(pid, data))
+
+
+@app.get("/api/webtoon/<pid>/pic/<cid>/<key>.png")
+def api_webtoon_pic_get(pid, cid, key):
+    try:
+        p = _pic_path(pid, cid, key)
+    except ValueError as e:
+        return _err(str(e), 404)
+    if not p.exists():
+        return _err("Chưa có ảnh.", 404)
+    return send_file(str(p), mimetype="image/png", max_age=0)
+
+
+@app.post("/api/webtoon/<pid>/pic/<cid>/<key>/marks")
+def api_webtoon_pic_marks(pid, cid, key):
+    """Chị chỉnh lại điểm mắt / miệng (toạ độ px trong ảnh đã xử lý)."""
+    from core import webtoon_pics as wpic
+    try:
+        data, wt = _load_webtoon(pid)
+        p = _pic_path(pid, cid, key)
+    except (FileNotFoundError, ValueError) as e:
+        return _err(str(e), 404)
+    meta = ((wt.get("pics") or {}).get(cid) or {}).get(key)
+    if not meta or not p.exists():
+        return _err("Chưa có ảnh.", 404)
+    body = request.get_json(silent=True) or {}
+    try:
+        eyes = [[float(x), float(y)] for x, y in body["eyes"]] if body.get("eyes") else None
+        mouth = [float(body["mouth"][0]), float(body["mouth"][1])] if body.get("mouth") else None
+    except (TypeError, ValueError, KeyError, IndexError):
+        return _err("Điểm đánh dấu không hợp lệ.")
+    wt["pics"][cid][key] = wpic.remark(p, meta, eyes, mouth)
+    _save_project(pid, data)
+    return jsonify(_webtoon_view(pid, data))
+
+
+@app.post("/api/webtoon/<pid>/pic/<cid>/<key>/delete")
+def api_webtoon_pic_delete(pid, cid, key):
+    try:
+        data, wt = _load_webtoon(pid)
+        p = _pic_path(pid, cid, key)
+    except (FileNotFoundError, ValueError) as e:
+        return _err(str(e), 404)
+    p.unlink(missing_ok=True)
+    ((wt.get("pics") or {}).get(cid) or {}).pop(key, None)
+    _save_project(pid, data)
+    return jsonify(_webtoon_view(pid, data))
 
 
 @app.post("/api/webtoon/<pid>/render")

@@ -179,6 +179,7 @@
     $("wt-prev").value = w.prev_summary || "";
     if ($("wt-open").value !== W.id && W.id) $("wt-open").value = W.id;
     renderChars();
+    renderPics();
     renderShots();
     var s = d.status || {};
     showStatus(s, d.video_ready);
@@ -235,6 +236,156 @@
       var tm = sel([["ngay", "Ngày"], ["dem", "Đêm"]], p.time); tm.className = "time";
       row.appendChild(k); row.appendChild(tm);
       pb.appendChild(row);
+    });
+  }
+
+  /* ---------------------------- ảnh AI nhân vật ---------------------------- */
+
+  function picUrl(cid, key) {
+    return "/api/webtoon/" + encodeURIComponent(W.id) + "/pic/" + encodeURIComponent(cid) + "/" +
+      encodeURIComponent(key);
+  }
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    var ta = document.createElement("textarea");
+    ta.value = text; document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch (e) {}
+    document.body.removeChild(ta);
+    return Promise.resolve();
+  }
+  function picLabel(n) {
+    var t = POSE_VI[n.pose] || n.pose;
+    if (n.expr && n.expr !== "neutral") t += " · " + (EXPR_VI[n.expr] || n.expr);
+    return t;
+  }
+
+  function renderPics() {
+    var box = $("wt-pics");
+    if (!box) return;
+    box.innerHTML = "";
+    var w = wt(), need = (W.data && W.data.pics_needed) || [], have = w.pics || {};
+    (w.characters || []).forEach(function (c) {
+      var items = need.filter(function (n) { return n.cid === c.id; });
+      if (!items.length) return;
+      var wrap = el("div");
+      var done = items.filter(function (n) { return n.have; }).length;
+      wrap.appendChild(el("h3", null, (c.name || c.id) + " — " + done + "/" + items.length + " ảnh"));
+      var row = el("div", "wt-pic-row");
+      items.forEach(function (n) {
+        var meta = (have[c.id] || {})[n.key];
+        var card = el("div", "wt-pic" + (n.have ? "" : " missing") + (n.required ? " req" : ""));
+        card.appendChild(el("div", "lb", picLabel(n)));
+        card.appendChild(el("div", "sub", (n.shots ? n.shots + " cảnh" : "ảnh gốc") +
+          (n.required ? "" : " · nên có")));
+        if (n.have && meta) {
+          var img = document.createElement("img");
+          img.src = picUrl(c.id, n.key) + ".png?v=" + Date.now() % 1000000;
+          img.title = "Bấm để chỉnh điểm mắt / miệng";
+          img.addEventListener("click", function () { openMark(c.id, n.key, meta); });
+          card.appendChild(img);
+          if (meta.auto) card.appendChild(el("div", "sub", "Mắt, miệng do tool tự tìm — bấm ảnh để kiểm tra"));
+        } else {
+          card.appendChild(el("div", "ph", "Chưa có ảnh"));
+        }
+        var cp = el("button", "btn btn-sm", "Chép câu lệnh vẽ");
+        cp.type = "button";
+        cp.addEventListener("click", function () {
+          copyText(n.prompt).then(function () { toast("ok", "Đã chép câu lệnh", "Dán vào Gemini / ChatGPT để vẽ."); });
+        });
+        card.appendChild(cp);
+        var file = document.createElement("input");
+        file.type = "file"; file.accept = "image/*"; file.hidden = true;
+        file.addEventListener("change", function () {
+          if (!file.files || !file.files[0]) return;
+          var fd = new FormData();
+          fd.append("file", file.files[0]);
+          up.disabled = true; up.textContent = "Đang xử lý...";
+          api(picUrl(c.id, n.key), { method: "POST", body: fd }).then(function (d) {
+            W.data = d; renderPics(); renderChars(); refreshThumbs();
+            var m = ((d.webtoon.pics || {})[c.id] || {})[n.key];
+            toast("ok", "Đã tải ảnh", m && m.auto ? "Bấm vào ảnh để kiểm tra điểm mắt / miệng." : "");
+          }).catch(function (e) {
+            up.disabled = false; up.textContent = "Tải ảnh lên";
+            toast("error", "Tải ảnh thất bại", e.message);
+          });
+        });
+        var up = el("button", "btn btn-sm" + (n.have ? "" : " btn-primary"), n.have ? "Thay ảnh" : "Tải ảnh lên");
+        up.type = "button";
+        up.addEventListener("click", function () { file.click(); });
+        card.appendChild(file); card.appendChild(up);
+        if (n.have) {
+          var rm = el("button", "btn btn-ghost btn-sm", "Xoá ảnh");
+          rm.type = "button";
+          rm.addEventListener("click", function () {
+            api(picUrl(c.id, n.key) + "/delete", { method: "POST", body: {} }).then(function (d) {
+              W.data = d; renderPics(); renderChars(); refreshThumbs();
+            }).catch(function (e) { toast("error", "Xoá thất bại", e.message); });
+          });
+          card.appendChild(rm);
+        }
+        row.appendChild(card);
+      });
+      wrap.appendChild(row);
+      box.appendChild(wrap);
+    });
+    if (!box.childNodes.length) box.appendChild(el("p", "hint", "Bấm 'AI viết truyện & phân cảnh' trước — tool sẽ liệt kê những ảnh cần vẽ."));
+  }
+
+  function refreshThumbs() {
+    document.querySelectorAll("#wt-shots img").forEach(function (img, i) { img.src = shotThumb(i); });
+  }
+
+  // chỉnh điểm mắt / miệng: bấm mắt bên trái ảnh, mắt bên phải ảnh, rồi giữa miệng
+  var MK = { cid: null, key: null, img: null, pts: [], k: 1 };
+  var MK_TIP = ["Bấm vào MẮT bên trái ảnh (giữa con ngươi)", "Bấm vào MẮT bên phải ảnh",
+                "Bấm vào giữa MIỆNG (đường môi)", "Xong — bấm Lưu điểm"];
+  function drawMark() {
+    var cv = $("wt-mark-cv"), g = cv.getContext("2d");
+    g.clearRect(0, 0, cv.width, cv.height);
+    g.drawImage(MK.img, 0, 0, cv.width, cv.height);
+    MK.pts.forEach(function (p, i) {
+      g.beginPath();
+      g.arc(p[0] * MK.k, p[1] * MK.k, 7, 0, Math.PI * 2);
+      g.lineWidth = 3; g.strokeStyle = i < 2 ? "#00b7ff" : "#ff2d6f"; g.stroke();
+    });
+    $("wt-mark-tip").textContent = MK_TIP[Math.min(3, MK.pts.length)];
+  }
+  function openMark(cid, key, meta) {
+    MK.cid = cid; MK.key = key;
+    MK.pts = (meta.eyes || []).map(function (p) { return p.slice(); });
+    if (meta.mouth) MK.pts.push(meta.mouth.slice());
+    var img = new Image();
+    img.onload = function () {
+      MK.img = img;
+      var maxH = Math.min(window.innerHeight - 160, 640), maxW = Math.min(window.innerWidth - 60, 900);
+      MK.k = Math.min(maxH / img.naturalHeight, maxW / img.naturalWidth, 1);
+      var cv = $("wt-mark-cv");
+      cv.width = Math.round(img.naturalWidth * MK.k); cv.height = Math.round(img.naturalHeight * MK.k);
+      $("wt-mark").hidden = false;
+      drawMark();
+      $("wt-mark-tip").textContent = "Vòng xanh = mắt, vòng hồng = miệng. Sai thì bấm 'Bấm lại từ đầu' rồi bấm lại 3 điểm.";
+    };
+    img.src = picUrl(cid, key) + ".png?v=" + Date.now() % 1000000;
+  }
+  function initMark() {
+    var cv = $("wt-mark-cv");
+    if (!cv) return;
+    cv.addEventListener("click", function (ev) {
+      if (MK.pts.length >= 3) return;
+      var r = cv.getBoundingClientRect();
+      var sx = cv.width / r.width, sy = cv.height / r.height;
+      MK.pts.push([(ev.clientX - r.left) * sx / MK.k, (ev.clientY - r.top) * sy / MK.k]);
+      drawMark();
+    });
+    $("wt-mark-reset").addEventListener("click", function () { MK.pts = []; drawMark(); });
+    $("wt-mark-close").addEventListener("click", function () { $("wt-mark").hidden = true; });
+    $("wt-mark-save").addEventListener("click", function () {
+      if (MK.pts.length < 3) { toast("warn", "Chưa đủ điểm", "Bấm đủ 2 mắt và miệng."); return; }
+      api(picUrl(MK.cid, MK.key) + "/marks", { method: "POST",
+        body: { eyes: [MK.pts[0], MK.pts[1]], mouth: MK.pts[2] } }).then(function (d) {
+        W.data = d; $("wt-mark").hidden = true; renderPics(); refreshThumbs();
+        toast("ok", "Đã lưu điểm mắt / miệng");
+      }).catch(function (e) { toast("error", "Lưu thất bại", e.message); });
     });
   }
 
@@ -386,6 +537,7 @@
     $("wt-write").addEventListener("click", writeAI);
     $("wt-render").addEventListener("click", renderVideo);
     $("wt-add").addEventListener("click", addShot);
+    initMark();
     // lựa chọn thể loại / ngôn ngữ có sẵn cả khi chưa mở tập
     var g = [["thriller", "Giật gân / lừa đảo"], ["horror", "Kinh dị"], ["comedy", "Hài"], ["romance", "Tình cảm"],
              ["family", "Gia đình"], ["revenge", "Trả thù thoả mãn"], ["office", "Công sở"],

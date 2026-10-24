@@ -1017,6 +1017,22 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
    **+ Cảnh quay** thêm. Bấm **Lưu**; bấm ảnh nhỏ để xem lớn.
 5. **Dựng video**: OmniVoice đọc từng câu (mỗi nhân vật một giọng cố định), tool vẽ từng khung.
 
+### Ảnh nhân vật vẽ bằng AI (mục 2b, không bắt buộc)
+Muốn nhân vật đẹp như tranh thật thì dùng ảnh vẽ bằng Gemini / ChatGPT; mỗi cảnh là một
+khung tranh đứng yên, tool chỉ **nhép miệng** theo giọng và **chớp mắt** (kiểu kênh 썰).
+1. Sau khi AI viết phân cảnh, mục 2b liệt kê đúng những ảnh cần cho từng nhân vật:
+   mỗi tư thế dùng trong truyện (áp điện thoại, xem điện thoại, ôm đầu...) và vài nét mặt
+   mạnh (sốc, khóc, giận... — ghi "nên có"). Ô **Tay buông** là ảnh gốc, vẽ trước tiên.
+2. Bấm **Chép câu lệnh vẽ**, dán vào Gemini / ChatGPT. Từ ảnh thứ hai trở đi **gửi kèm ảnh
+   gốc** để AI giữ đúng khuôn mặt, tóc, quần áo. Câu lệnh đã dặn nền **xanh lá** (phông xanh):
+   tool xoá nền sạch cả những khoảng hở giữa tay và người.
+3. Bấm **Tải ảnh lên**: tool tự xoá nền, cắt sát người, tự tìm hai mắt và miệng.
+   Bấm vào ảnh để kiểm tra: vòng xanh là mắt, vòng hồng là miệng; sai thì **Bấm lại từ đầu**
+   rồi bấm lần lượt mắt bên trái, mắt bên phải, giữa miệng → **Lưu điểm**.
+4. Dựng video như thường. Cảnh nào thiếu ảnh đúng tư thế thì tool lấy ảnh gần nhất của nhân
+   vật đó (cùng tư thế → ảnh gốc); nhân vật chưa có ảnh nào thì tool tự vẽ như cũ.
+- Mẹo: ảnh nhìn thẳng, thấy rõ hai mắt, miệng ngậm; nhân vật không mặc đồ màu xanh lá.
+
 ### Trên hình có gì
 - **Nhép miệng** theo giọng từng câu, **chớp mắt**, **thở**, đầu **lắc / nghiêng** nhẹ khi nói.
 - **Tay mềm, khớp liền**: cả cánh tay + bàn tay là một khối, chỉ có viền ngoài; khuỷu tay

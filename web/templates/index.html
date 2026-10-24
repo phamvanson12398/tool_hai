@@ -583,6 +583,11 @@
           <div id="wt-places" class="wt-places"></div>
         </section>
         <section class="card">
+          <h2 class="card-title"><span class="step">2b</span> Ảnh nhân vật vẽ bằng AI <span class="muted">(không bắt buộc)</span></h2>
+          <p class="hint">Muốn nhân vật đẹp như tranh thật: với mỗi ô dưới đây bấm <b>Chép câu lệnh</b>, dán vào Gemini / ChatGPT để vẽ, tải ảnh về rồi bấm <b>Tải ảnh lên</b>. Vẽ ảnh <b>Tay buông</b> trước; các ảnh sau gửi kèm ảnh đầu tiên để AI giữ đúng khuôn mặt. Tool tự xoá nền xanh, tự tìm mắt và miệng để nhép miệng, chớp mắt; bấm vào ảnh để chỉnh lại nếu tìm sai. Cảnh nào chưa có ảnh thì tool vẫn tự vẽ như cũ.</p>
+          <div id="wt-pics" class="wt-pics"></div>
+        </section>
+        <section class="card">
           <h2 class="card-title"><span class="step">3</span> Phân cảnh</h2>
           <p class="hint">Mỗi dòng là một cảnh quay. Sửa người nói, câu nói, nét mặt, tư thế, góc máy, màn hình điện thoại rồi bấm <b>Lưu</b>. Bấm vào ảnh nhỏ để xem lại.</p>
           <div id="wt-shots" class="wt-shots"></div>
@@ -604,6 +609,17 @@
           </div>
         </section>
       </aside>
+    </div>
+    <div class="wt-mark" id="wt-mark" hidden>
+      <div class="wt-mark-box">
+        <p class="hint" id="wt-mark-tip"></p>
+        <canvas id="wt-mark-cv"></canvas>
+        <div class="row-actions">
+          <button class="btn btn-primary btn-sm" id="wt-mark-save" type="button">Lưu điểm</button>
+          <button class="btn btn-sm" id="wt-mark-reset" type="button">Bấm lại từ đầu</button>
+          <button class="btn btn-ghost btn-sm" id="wt-mark-close" type="button">Đóng</button>
+        </div>
+      </div>
     </div>
   </section>
 
