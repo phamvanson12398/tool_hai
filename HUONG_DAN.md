@@ -998,8 +998,8 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
 ### Các bước
 1. **Câu chuyện:** gõ **Yêu cầu** (vd *"Một ông bố nối wifi miễn phí ở công viên rồi bị
    lừa là con gái bị bắt cóc"*), chọn **Thể loại** (giật gân / lừa đảo, kinh dị, hài, tình
-   cảm, gia đình, trả thù thoả mãn, công sở, học đường, bí ẩn), **Ngôn ngữ thoại** (Việt,
-   Hàn, Anh), **Thời lượng**, **Phần số**. **Cuối phần**: *bỏ lửng ở cao trào* để làm
+   cảm, gia đình, trả thù thoả mãn, công sở, học đường, bí ẩn), **Ngôn ngữ thoại** (mặc định
+   **tiếng Hàn**: tên tập, thoại, tin nhắn trên điện thoại đều bằng tiếng Hàn; chọn được Việt, Anh), **Thời lượng**, **Phần số**. **Cuối phần**: *bỏ lửng ở cao trào* để làm
    series (phần 2 thì dán tóm tắt các phần trước vào ô dưới), hoặc *kết trọn vẹn*.
 2. Bấm **AI viết truyện & phân cảnh**. AI:
    - nghĩ câu chuyện, tên tập, móc câu mở đầu;
@@ -1019,6 +1019,9 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
 
 ### Trên hình có gì
 - **Nhép miệng** theo giọng từng câu, **chớp mắt**, **thở**, đầu **lắc / nghiêng** nhẹ khi nói.
+- **Tay mềm, khớp liền**: cả cánh tay + bàn tay là một khối, chỉ có viền ngoài; khuỷu tay
+  tròn; giữa các ngón chỉ có nét mảnh. Đổi tư thế thì khuỷu đi trước, bàn tay theo sau hơi
+  vượt rồi dừng; tay đung đưa nhẹ theo nhịp thở.
 - **Tay đổi tư thế mượt** khi sang câu khác: áp điện thoại lên tai, cầm xem điện thoại, ôm
   đầu, hai tay ôm đầu, che mặt, khoanh tay, chỉ, vẫy, chống nạnh, nhún vai...
 - Nét mặt: lo lắng, sốc, sợ hãi (run, vạch sọc trên trán), buồn, khóc (nước mắt), giận, vui,

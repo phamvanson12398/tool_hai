@@ -157,6 +157,22 @@ class Pen:
         self.ox, self.oy, self.s = ox, oy, s
         self.lw = max(1, int(round(lw)))
         self.rot = None                     # (cx, cy, cos, sin) xoay quanh điểm (đơn vị u)
+        self._grp = None                    # khối liền đang gom (xem group / flush)
+
+    def group(self):
+        """Bắt đầu một khối liền (cánh tay + bàn tay + ngón...): các mảnh trong khối chỉ có
+        viền ở mép ngoài, chỗ nối bên trong không có nét (khớp mềm, không tách rời)."""
+        self._grp = []
+
+    def flush(self, gaps=()):
+        """Vẽ khối liền: viền dày trước, màu phủ sau; gaps = các nét mảnh giữa ngón tay."""
+        grp, self._grp = self._grp or [], None
+        for q, _f, w in grp:
+            self.d.line(q + [q[0]], fill=INK, width=w * 2, joint="curve")
+        for q, f, _w in grp:
+            self.d.polygon(q, fill=f)
+        for pts in gaps:
+            self.line(pts, width=self.lw * 0.75)
 
     def P(self, x, y):
         if self.rot:
@@ -168,6 +184,10 @@ class Pen:
     def poly(self, pts, fill, line=True, width=None):
         q = [self.P(x, y) for x, y in pts]
         if len(q) < 3:
+            return
+        if self._grp is not None and fill is not None and line:
+            w = self.lw if width is None else max(1, int(round(width)))
+            self._grp.append((q, fill, w))
             return
         if fill is not None:
             self.d.polygon(q, fill=fill)
@@ -231,7 +251,7 @@ def _arm_targets(pose: str, side: str, b: dict) -> tuple:
     if pose == "phone_ear" and side == "r":
         return rel(0.7, hc[1] + 1.5), rel(0.6, hc[1] + 0.92)
     if pose == "phone_look" and side == "r":
-        return rel(sh[0] + 0.1, sh[1] + 1.3), rel(0.18, sh[1] + 0.85)
+        return rel(sh[0] + 0.25, sh[1] + 1.15), rel(0.3, sh[1] + 0.95)
     if pose == "hand_head" and side == "l":
         return rel(0.62, hc[1] + 1.0), rel(0.5, hc[1] - 0.08)
     if pose == "hands_head":
@@ -239,7 +259,7 @@ def _arm_targets(pose: str, side: str, b: dict) -> tuple:
     if pose == "hands_face":
         return rel(sh[0] + 0.2, sh[1] + 1.1), rel(0.2, hc[1] + 0.25)
     if pose == "cross":
-        return rel(sh[0] + 0.12, sh[1] + 1.15), rel(-0.35, sh[1] + 1.0)
+        return rel(sh[0] + 0.22, sh[1] + 1.1), rel(-0.25, sh[1] + 1.05)
     if pose == "point" and side == "r":
         return rel(sh[0] + 0.55, sh[1] + 0.55), rel(sh[0] + 1.25, sh[1] + 0.45)
     if pose == "wave" and side == "r":
@@ -253,6 +273,18 @@ def _arm_targets(pose: str, side: str, b: dict) -> tuple:
     if pose == "hold_out":
         return rel(sh[0] + 0.15, sh[1] + 1.15), rel(0.25, sh[1] + 1.35)
     return down
+
+
+def _smoother(u):
+    u = max(0.0, min(1.0, u))
+    return u * u * u * (u * (u * 6 - 15) + 10)
+
+
+def _back(u, s=1.2):
+    """Đi tới đích, vượt nhẹ rồi dừng (tay người thật)."""
+    u = max(0.0, min(1.0, u))
+    v = u - 1
+    return 1 + v * v * ((s + 1) * v + s)
 
 
 def _lerp(a, b, k):
@@ -344,40 +376,50 @@ class Figure:
         p.poly(_crs([(x - 0.24, y), (x - 0.22, y - 0.16), (x + 0.2, y - 0.16), (x + 0.3, y),
                      (x + 0.05, y + 0.05)], 5), (50, 46, 46, 255))
 
-    def _arm(self, p: Pen, st: State, side: str, sy: float, part: str = "all"):
-        """Vẽ một tay: part "upper" (bắp tay, vẽ sau thân áo cho thân che đầu ống tay),
-        "lower" (cẳng tay + bàn tay, vẽ trước thân) hoặc "all"."""
+    def _arm(self, p: Pen, st: State, side: str, sy: float, part: str = "all", hand: bool = True):
+        """Một cánh tay = bắp tay + khớp khuỷu tròn + cẳng tay + bàn tay, gộp thành KHỐI LIỀN
+        (chỉ viền mép ngoài, khớp mềm, không gãy / thủng khi gập gắt).
+        part "back": cả cánh tay (vẽ sau thân áo); "front": từ khuỷu trở xuống (cẳng tay
+        + bàn tay đưa ra trước ngực / lên mặt); "all": cả tay."""
+        if part == "upper":
+            part = "back"
+        if part == "lower":
+            part = "front"
         b = self.b
         sgn = 1 if side == "l" else -1             # tay trái nhân vật = bên phải màn hình
-        sh = (sgn * (b["sh_w"] / 2 - 0.17), sy + 0.36)
+        sh = (sgn * (b["sh_w"] / 2 - 0.2), sy + 0.4)
         e0, w0 = _arm_targets(st.pose_from, side, b)
         e1, w1 = _arm_targets(st.pose, side, b)
-        k = max(0.0, min(1.0, st.pose_k))
-        k = k * k * (3 - 2 * k)
-        e, w = _lerp(e0, e1, k), _lerp(w0, w1, k)
-        shift = sy - b["sh_y"] - 0.18 + 0.18
-        el = (sgn * (abs(sh[0]) + e[0]) if True else 0, b["sh_y"] + e[1] + shift)
-        el = (sgn * (b["sh_w"] / 2 + e[0] - 0.12 + 0.12), b["sh_y"] + e[1] + shift)
-        wr = (sgn * (b["sh_w"] / 2 + w[0]), b["sh_y"] + w[1] + shift)
-        # tay vào sát mặt / trước ngực: vẽ trước thân; tay buông: vẽ cạnh thân
+        # chuyển tư thế mềm: khuỷu đi trước, cổ tay theo sau và hơi vượt rồi dừng
+        u = max(0.0, min(1.0, st.pose_k))
+        ke = _smoother(min(1.0, u * 1.25))
+        kw = _back(max(0.0, (u - 0.08) / 0.92))
+        e, w = _lerp(e0, e1, ke), _lerp(w0, w1, kw)
+        # đung đưa nhẹ theo nhịp thở cho tay không đứng đơ
+        sway = 0.025 * math.sin(st.breathe * 2 * math.pi + (0.0 if side == "l" else 1.3))
+        shift = sy - b["sh_y"]
+        el = (sgn * (b["sh_w"] / 2 + e[0]) + sway * sgn, b["sh_y"] + e[1] + shift)
+        wr = (sgn * (b["sh_w"] / 2 + w[0]) + sway * 1.6 * sgn, b["sh_y"] + w[1] + shift + abs(sway) * 0.5)
         sleeve_short = self.look.top in ("tshirt", "dress")
         tw = 0.42 if self.look.age != "child" else 0.36
-        path = _crs([sh, _lerp(sh, el, 0.5), el, _lerp(el, wr, 0.5), wr], 5, closed=False)
-        mid = len(path) // 2                          # khuỷu tay
-        up_path, lo_path = path[:mid + 2], path[mid - 1:]
-        if part in ("upper", "all"):
+        fore = _lerp(el, wr, 0.9)                    # ống tay dừng trước cổ tay
+        p.group()
+        if part in ("back", "all"):
+            p.poly(_tube([sh, _lerp(sh, el, 0.5), el], tw, tw * 0.92), self.top)
             if sleeve_short:
-                cut = max(2, len(up_path) * 8 // 10)
-                p.poly(_crs(_tube(up_path[:cut], tw + 0.04, tw), 2), self.top)
-                p.poly(_crs(_tube(up_path[cut - 1:], tw * 0.62, tw * 0.58), 2), self.skin)
-            else:
-                p.poly(_crs(_tube(up_path, tw, tw * 0.9), 2), self.top)
-        if part in ("lower", "all"):
-            if sleeve_short:
-                p.poly(_crs(_tube(lo_path, tw * 0.58, tw * 0.5), 2), self.skin)
-            else:
-                p.poly(_crs(_tube(lo_path[:-2], tw * 0.9, tw * 0.82), 2), self.top)
-            self._hand(p, wr, el, side, st)
+                p.poly(_tube([_lerp(sh, el, 0.7), el], tw * 0.6, tw * 0.56), self.skin)
+        elbow_col = self.skin if sleeve_short else self.top
+        p.poly(_ellipse(el[0], el[1], tw * (0.3 if sleeve_short else 0.46), tw * (0.3 if sleeve_short else 0.46), 20),
+               elbow_col)
+        if sleeve_short:
+            p.poly(_tube([el, _lerp(el, wr, 0.5), wr], tw * 0.58, tw * 0.48), self.skin)
+        else:
+            p.poly(_tube([el, _lerp(el, fore, 0.5), fore], tw * 0.88, tw * 0.8), self.top)
+            p.poly(_tube([_lerp(el, wr, 0.8), wr], tw * 0.48, tw * 0.45), self.skin)   # cổ tay lẩn vào ống tay
+        gaps, after = self._hand(p, wr, el, side, st) if hand else ([], None)
+        p.flush(gaps)
+        if after:
+            after()
 
     def _hand(self, p: Pen, wr, el, side, st: State):
         """Bàn tay kiểu webtoon: lòng bàn tay + 4 ngón tròn đầu + ngón cái.
@@ -390,9 +432,17 @@ class Figure:
             return (wr[0] + x * c - y * s, wr[1] + x * s + y * c)
         pose = st.pose if st.pose_k > 0.5 else st.pose_from
         phone = pose in ("phone_ear", "phone_look") and side == "r"
+        gaps: list = []
+        after = None
         if phone:
-            self._phone(p, wr, side, st)
             kind = "grip"
+            if pose == "phone_ear":
+                g = p._grp
+                p._grp = None
+                self._phone_ear(p, wr, st)
+                p._grp = g
+                return gaps, None
+            after = lambda: self._phone(p, wr, side, st)      # điện thoại trước lòng bàn tay
         elif pose in ("hand_head", "hands_head", "wave", "hands_face", "shrug", "hold_out"):
             kind = "open"
         elif pose in ("fist", "cross"):
@@ -402,33 +452,40 @@ class Figure:
         k_ = 1.9 if self.look.age != "child" else 1.5     # bàn tay to gần bằng mặt như người thật
         r = 0.085 * k_                              # nửa bề ngang bàn tay
         L = (0.15 if kind != "fist" else 0.1) * k_  # dài lòng bàn tay
-        if kind == "grip" and pose == "phone_ear":
-            return
-        palm = [R(-0.02, -r), R(L, -r * 1.05), R(L + 0.02, r * 1.05), R(-0.02, r)]
-        p.poly(_crs(palm, 4), self.skin)
+        palm = [R(-0.06, -r * 0.9), R(L * 0.5, -r * 1.08), R(L + 0.02, -r * 1.0), R(L + 0.04, r * 1.0),
+                R(L * 0.5, r * 1.06), R(-0.06, r * 0.9)]
+        p.poly(_crs(palm, 6), self.skin)
         if kind == "fist":
             for k in range(4):
                 yy = -r + k * r * 0.66 + r * 0.33
                 p.poly(_ellipse(*R(L + 0.03 * k_, yy), 0.045 * k_, 0.034 * k_, 14), self.skin)
-        elif kind == "grip" and pose == "phone_ear":
-            return                                   # vẽ cùng điện thoại trong _phone (theo đầu)
+
         else:
             spread = {"open": 0.5, "grip": 0.05, "relax": 0.15}[kind]
             fl = {"open": 0.17, "grip": 0.12, "relax": 0.15}[kind] * k_
             # ôm đầu: ngón ngả vào phía đầu, ôm lấy tóc
             curl = 0.75 if pose in ("hand_head", "hands_head") else 0.0
+            lines = []
             for k in range(4):
                 yy = -r * 0.85 + k * r * 0.57
                 a = (k - 1.5) * spread * 0.35 - curl
-                base = R(L - 0.01, yy)
+                base = R(L - 0.04, yy)
                 ln = fl * (0.88 if k in (0, 3) else 1.0)
                 mid = R(L + ln * 0.5 * math.cos(a * 0.5), yy + ln * 0.5 * math.sin(a * 0.5))
                 tip = R(L + ln * math.cos(a), yy + ln * math.sin(a))
-                p.poly(_tube(_crs([base, mid, tip], 6, closed=False), 0.06 * k_, 0.052 * k_, True), self.skin)
+                p.poly(_tube(_crs([base, mid, tip], 6, closed=False), 0.064 * k_, 0.054 * k_, True), self.skin)
+                lines.append((base, mid, tip))
+            for (b0, m0, t0), (b1, m1, t1) in zip(lines, lines[1:]):        # nét mảnh giữa hai ngón
+                gaps.append([_lerp(b0, b1, 0.5), _lerp(m0, m1, 0.5), _lerp(_lerp(m0, m1, 0.5), _lerp(t0, t1, 0.5), 0.6)])
         # ngón cái
         th = R(L * 0.5, -r * 1.0 - (0.07 if kind == "open" else 0.03) * k_)
         p.poly(_tube([R(0.02, -r * 0.6), _lerp(R(0.02, -r * 0.6), th, 0.5), th], 0.064 * k_, 0.054 * k_, True),
                self.skin)
+        if kind == "fist":
+            for k in range(3):
+                yy = -r + (k + 1) * r * 0.5
+                gaps.append([R(L * 0.8, yy), R(L + 0.05 * k_, yy)])
+        return gaps, after
 
     def _phone(self, p: Pen, wr, side, st):
         hc = self.b["head_c"]
@@ -436,9 +493,21 @@ class Figure:
             self._phone_ear(p, wr, st)
             return
         else:
-            cx, cy = wr[0] + 0.25, wr[1] - 0.15
-            pts = [(cx - 0.17, cy - 0.3), (cx + 0.17, cy - 0.3), (cx + 0.17, cy + 0.3), (cx - 0.17, cy + 0.3)]
-        p.poly(_crs(pts, 3), (150, 154, 162, 255))
+            cx, cy = wr[0] + 0.3, wr[1] - 0.2
+            w_, h_, r_ = 0.17, 0.32, 0.05
+            pts = []
+            for (qx, qy, a0) in ((cx + w_ - r_, cy - h_ + r_, -90), (cx + w_ - r_, cy + h_ - r_, 0),
+                                 (cx - w_ + r_, cy + h_ - r_, 90), (cx - w_ + r_, cy - h_ + r_, 180)):
+                for k in range(5):
+                    a = math.radians(a0 + 90 * k / 4)
+                    pts.append((qx + r_ * math.cos(a), qy + r_ * math.sin(a)))
+            p.poly(pts, (196, 199, 205, 255))
+            inner = [(x * 0.86 + cx * 0.14, y * 0.9 + cy * 0.1) for x, y in pts]
+            p.poly(inner, (64, 70, 86, 255), width=p.lw * 0.6)
+            # ngón cái đè lên mép máy
+            p.poly(_tube([(cx - w_ - 0.04, cy + 0.05), (cx - w_ + 0.06, cy - 0.02), (cx - w_ + 0.12, cy - 0.06)],
+                         0.07, 0.06, True), self.skin)
+            return
 
     def _phone_ear(self, p: Pen, wr, st):
         """Điện thoại áp tai: máy nghiêng có viền dày, lòng bàn tay sau máy, bốn ngón thon
@@ -451,7 +520,7 @@ class Figure:
             return (X - x * k, Y + y)                # tay phải nhân vật = bên trái màn hình
         # lòng bàn tay + cổ tay (sau máy), nối xuống ống tay áo
         palm = [P(0.62, 0.02), P(0.5, -0.02), P(0.4, 0.12), P(0.38, 0.34), P(0.46, 0.55),
-                P(0.5, 0.9), P(0.68, 0.9), P(0.7, 0.5)]
+                P(0.5, 0.95), P(0.7, 0.95), P(0.7, 0.5)]
         p.poly(_crs(palm, 8), self.skin)
         # điện thoại: cạnh dày phía sau + mặt máy
         top, bot = (0.62, -0.1), (0.42, 0.62)
@@ -464,7 +533,9 @@ class Figure:
             return [P(*a), P(a[0] + nx * wd, a[1] + ny * wd), P(b_[0] + nx * wd, b_[1] + ny * wd), P(*b_)]
         p.poly(quad(-0.07, 0.04), (128, 132, 140, 255))
         p.poly(quad(-0.035, 0.11), (196, 199, 205, 255))
-        # bốn ngón tay thon, đầu tròn, hơi chếch lên về phía má
+        # bốn ngón tay thon, đầu tròn, hơi chếch lên về phía má (một khối liền, nét mảnh giữa ngón)
+        p.group()
+        fl_ = []
         for i in range(4):
             y0 = 0.1 + i * 0.078
             base = P(0.56, y0 + 0.02)
@@ -472,6 +543,10 @@ class Figure:
             mid = P(0.46, y0 - 0.03)
             w0, w1 = 0.068, 0.058
             p.poly(_tube(_crs([base, mid, tip], 6, closed=False), w0 * k, w1 * k, True), self.skin)
+            fl_.append((base, mid, tip))
+        gaps = [[_lerp(a[0], b_[0], 0.5), _lerp(a[1], b_[1], 0.5), _lerp(_lerp(a[1], b_[1], 0.5), _lerp(a[2], b_[2], 0.5), 0.7)]
+                for a, b_ in zip(fl_, fl_[1:])]
+        p.flush(gaps)
         p.rot = rot0
 
     # ----- đầu
@@ -507,8 +582,8 @@ class Figure:
         # mặt: má tròn, cằm thon mềm (đo theo video mẫu)
         k = hw / 0.39
         jw = 1.0 if lk.sex == "male" and not child else 0.92
-        R_ = [(0.0, -0.56), (0.28, -0.52), (0.38, -0.32), (0.395, -0.1), (0.39, 0.06), (0.37, 0.2),
-              (0.33 * jw, 0.33), (0.25 * jw, 0.44), (0.13 * jw, 0.51), (0.0, 0.53)]
+        R_ = [(0.0, -0.56), (0.27, -0.52), (0.355, -0.32), (0.365, -0.1), (0.35, 0.06), (0.315, 0.2),
+              (0.255 * jw, 0.33), (0.175 * jw, 0.44), (0.085 * jw, 0.51), (0.0, 0.535)]     # mặt thon, cằm V
         face = [(X + x * k, Y + y) for x, y in R_] + [(X - x * k, Y + y) for x, y in reversed(R_[1:-1])]
         p.poly(_crs(face, 10), self.skin)
         if lk.beard in ("stubble", "full"):
@@ -722,17 +797,18 @@ class Figure:
     def draw(self, p: Pen, st: State):
         raised = {"phone_ear": ("r",), "hand_head": ("l",), "hands_head": ("l", "r"),
                   "hands_face": ("l", "r")}
+        chest = {"phone_look": ("r",), "cross": ("l", "r"), "fist": ("r",), "hold_out": ("l", "r")}
         up = set(raised.get(st.pose, ())) | set(raised.get(st.pose_from, ()))
-        def under(sy_):
+        front = (set(chest.get(st.pose, ())) | set(chest.get(st.pose_from, ()))) - up
+        def under(sy_):                              # cánh tay sau thân áo: không lộ đường vai
             for side in ("l", "r"):
-                self._arm(p, st, side, sy_, "upper")
+                self._arm(p, st, side, sy_, "back", hand=side not in up and side not in front)
         sy, shift = self._body(p, st, under)
-        for side in ("l", "r"):
-            if side not in up:
-                self._arm(p, st, side, sy, "lower")
+        for side in front:                           # cẳng tay đưa ra trước ngực
+            self._arm(p, st, side, sy, "front")
         self._head(p, st, shift)
         for side in up:                              # tay đưa lên mặt / đầu: vẽ đè lên đầu
-            self._arm(p, st, side, sy, "lower")
+            self._arm(p, st, side, sy, "front")
 
 
 def _shade(c, k):

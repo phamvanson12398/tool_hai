@@ -5,6 +5,8 @@ Bạn là biên kịch cho kênh YouTube truyện tranh động kiểu webtoon H
 Thể loại: {{genre}}
 {{prev_block}}
 
+NGÔN NGỮ: tên tập ("title"), móc câu ("hook"), tên nhân vật và mọi câu thoại đều viết bằng {{lang_label}} (bối cảnh, con người, đời sống đúng nước đó; tiếng Hàn thì người Hàn, tên Hàn, KakaoTalk, won...). "summary" của các đoạn viết bằng tiếng Việt cho người làm phim đọc.
+
 ### Việc cần làm
 1. Nghĩ một câu chuyện CUỐN theo thể loại trên: chuyện đời thường + một chi tiết tưởng vô hại + leo thang + cú sốc / cú lật. Đúng tâm lý người xem, có chi tiết thật của đời sống hôm nay (điện thoại, mạng xã hội, tiền, công việc, gia đình...).
 2. "title": tên tập ngắn, gây tò mò (kiểu "Đáng lẽ tôi không nên kết nối wifi miễn phí").

@@ -13,6 +13,9 @@ Móc câu: {{hook}}
 ### Viết phân cảnh cho ĐOẠN {{index}}: {{summary}}
 Khoảng {{seconds}} giây ≈ {{shots}} cảnh quay. {{segment_rule}}
 
+### Ngôn ngữ
+Mọi câu thoại ("line.text") và mọi chữ hiện trên màn hình điện thoại (tên người nhắn, tin nhắn, thông báo, cảnh báo, tên wifi...) viết bằng {{lang_label}}, đúng cách nói của người bản xứ (tiếng Hàn: kính ngữ / nói trống không đúng quan hệ, KakaoTalk, đơn vị won).
+
 ### Luật phân cảnh
 - MỖI câu thoại là MỘT cảnh quay ("line"), câu ngắn tự nhiên (dưới 22 chữ), đối đáp nhanh như nói thật; không để khoảng trống dài. Người kể ("who":"narr") rất ít.
 - Phần lớn là CẬN MẶT ("close") người đang nói, nét mặt đổi theo cảm xúc từng câu. Xen "medium" (nửa người, thấy tay làm gì), "two" (hai người cùng chỗ đối đáp), "wide" (toàn cảnh khi mở cảnh mới / đi vào: "enter":"left"|"right").

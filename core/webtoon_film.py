@@ -45,7 +45,7 @@ PLACE_KINDS = {**{k: v["label"] for k, v in scene_art.KINDS.items()}}
 
 
 def default_story() -> dict:
-    return {"title": "", "brief": "", "genre": "thriller", "language": "vi", "minutes": 4,
+    return {"title": "", "brief": "", "genre": "thriller", "language": "ko", "minutes": 4,
             "part": 1, "subtitles": True, "characters": [], "places": [], "shots": []}
 
 
@@ -97,7 +97,7 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict[str, Path]:
     import soundfile as sf
     from . import voice
     from .story import _voice_ref
-    lang = st.get("language") or "vi"
+    lang = st.get("language") or "ko"
     chars = {c["id"]: c for c in st.get("characters") or []}
     todo = all_lines(st)
     adir = pdir / AUDIO_DIR
@@ -208,7 +208,7 @@ class Shot:
         self.st, self.row, self.s = st, row, row["shot"]
         self.W, self.H = size
         self.figs = figs
-        self.lang = st.get("language") or "vi"
+        self.lang = st.get("language") or "ko"
         self.bg = background(st, self.s, size)
         self.env = envelope(row["audio"]) if row.get("audio") else None
         if self.env is not None and len(self.env):
@@ -465,7 +465,7 @@ GENRES = {
     "school": "Học đường (bạn bè, thầy cô, thi cử...)",
     "mystery": "Bí ẩn / trinh thám (ai là thủ phạm)",
 }
-LANGS = {"vi": "tiếng Việt", "ko": "tiếng Hàn", "en": "tiếng Anh"}
+LANGS = {"ko": "tiếng Hàn", "vi": "tiếng Việt", "en": "tiếng Anh"}
 
 
 def _catalog() -> dict:
@@ -480,7 +480,7 @@ def write(st: dict, progress=None) -> dict:
     from . import claude_cli
     say = progress or (lambda f, m: None)
     minutes = max(1.0, min(20.0, float(st.get("minutes") or 4)))
-    lang = st.get("language") or "vi"
+    lang = st.get("language") or "ko"
     cat = _catalog()
     part = int(st.get("part") or 1)
     prev = (st.get("prev_summary") or "").strip()

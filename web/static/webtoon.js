@@ -93,7 +93,7 @@
 
   function createNew() {
     return api("/api/webtoon", { method: "POST", body: { brief: $("wt-brief").value.trim(),
-      genre: $("wt-genre").value || "thriller", language: $("wt-lang").value || "vi" } })
+      genre: $("wt-genre").value || "thriller", language: $("wt-lang").value || "ko" } })
       .then(function (d) {
         W.id = d.id; W.data = d;
         try { localStorage.setItem(LS, d.id); } catch (e) {}
@@ -169,7 +169,7 @@
   function render() {
     var d = W.data || {}, w = wt(), o = opts();
     fillSelect("wt-genre", o.genres, w.genre || "thriller");
-    fillSelect("wt-lang", o.langs, w.language || "vi");
+    fillSelect("wt-lang", o.langs, w.language || "ko");
     $("wt-brief").value = w.brief || "";
     $("wt-title").value = w.title || "";
     $("wt-minutes").value = w.minutes || 4;
@@ -391,7 +391,7 @@
              ["family", "Gia đình"], ["revenge", "Trả thù thoả mãn"], ["office", "Công sở"],
              ["school", "Học đường"], ["mystery", "Bí ẩn"]];
     fillSelect("wt-genre", g, "thriller");
-    fillSelect("wt-lang", [["vi", "Tiếng Việt"], ["ko", "Tiếng Hàn"], ["en", "Tiếng Anh"]], "vi");
+    fillSelect("wt-lang", [["ko", "Tiếng Hàn"], ["vi", "Tiếng Việt"], ["en", "Tiếng Anh"]], "ko");
     var last = null;
     try { last = localStorage.getItem(LS); } catch (e) {}
     loadList(last).then(function () { if (last) open(last); });
