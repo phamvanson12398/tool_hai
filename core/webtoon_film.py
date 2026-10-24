@@ -1,0 +1,452 @@
+# -*- coding: utf-8 -*-
+"""Truyện webtoon (kiểu kênh kể chuyện 썰): danh sách cảnh quay -> video.
+
+Mỗi cảnh quay ("shot") là một khung hình có người nói / im lặng:
+  {"id": "s001", "type": "close" | "medium" | "wide" | "two" | "phone" | "black",
+   "place": "id địa điểm", "time": "ngay" | "dem",
+   "who": "id nhân vật chính", "with": ["id người thứ hai"]   (type "two" / "wide"),
+   "expr": "worried", "pose": "phone_ear", "look": "left" | "right" | "down" | "",
+   "extras": ["sweat"], "enter": "left" | "right" | "",        (đi vào khung)
+   "camera": "push_in" | "pull_out" | "pan_left" | "pan_right" | "shake" | "still",
+   "line": {"who": "id" | "narr", "text": "câu nói"},
+   "phone": {"screen": "chat" | "call" | ..., "data": {...}},  (type "phone")
+   "dur": 2.0}                                                 (khi không có câu nói)
+Nhân vật: {"id", "name", "look": {webtoon_art.Look}, "voice": {"voice" | "instruct"}}.
+
+Tool tự vẽ từng khung (webtoon_art) nên nhân vật nhép miệng đúng giọng, chớp mắt,
+thở, lắc đầu nhẹ khi nói, tay chuyển dần sang tư thế mới, có thể đi vào khung;
+máy quay đẩy / lia / rung; cận cảnh thì nền mờ tối như video mẫu.
+"""
+from __future__ import annotations
+
+import hashlib
+import json
+import logging
+import math
+import subprocess
+import zlib
+from pathlib import Path
+
+import numpy as np
+from PIL import Image, ImageDraw, ImageFilter
+
+from . import scene_art, video, webtoon_art as wa, webtoon_phone as wp
+
+logger = logging.getLogger(__name__)
+
+FPS = 24
+GAP = 0.25                  # nghỉ sau mỗi câu
+LEAD = 0.12                 # câu bắt đầu sau khi cắt cảnh
+AUDIO_DIR = "webtoon_audio"
+SHOT_TYPES = ("close", "medium", "wide", "two", "phone", "black")
+CAMERAS = ("push_in", "pull_out", "pan_left", "pan_right", "shake", "still")
+
+PLACE_KINDS = {**{k: v["label"] for k, v in scene_art.KINDS.items()}}
+
+
+def default_story() -> dict:
+    return {"title": "", "brief": "", "genre": "thriller", "language": "vi", "minutes": 4,
+            "part": 1, "subtitles": True, "characters": [], "places": [], "shots": []}
+
+
+# ---------------------------------------------------------------- dữ liệu
+
+def figures(st: dict) -> dict:
+    out = {}
+    for c in st.get("characters") or []:
+        lk = wa.Look.from_dict(c.get("look"))
+        lk.seed = zlib.crc32(str(c.get("id")).encode()) % 997
+        out[c["id"]] = wa.Figure(lk)
+    return out
+
+
+def clean_shot(s: dict, ids: set, k: int) -> dict:
+    s = dict(s or {})
+    s["id"] = str(s.get("id") or f"s{k + 1:03d}")
+    if s.get("type") not in SHOT_TYPES:
+        s["type"] = "phone" if s.get("phone") else ("close" if s.get("who") else "wide")
+    if s.get("who") not in ids:
+        s["who"] = next(iter(ids), "") if s["type"] not in ("phone", "black") else s.get("who") or ""
+    s["with"] = [w for w in (s.get("with") or []) if w in ids and w != s.get("who")][:2]
+    if s.get("expr") not in wa.EXPRS:
+        s["expr"] = "neutral"
+    if s.get("pose") not in wa.POSES:
+        s["pose"] = "down"
+    if s.get("camera") not in CAMERAS:
+        s["camera"] = "push_in" if s["type"] == "close" else "still"
+    ln = s.get("line") or {}
+    if ln and ln.get("text"):
+        who = ln.get("who")
+        s["line"] = {"who": who if (who in ids or who == "narr") else s.get("who") or "narr",
+                     "text": str(ln["text"]).strip()[:300]}
+    else:
+        s["line"] = {}
+    s["extras"] = [x for x in (s.get("extras") or []) if x in ("sweat", "tears", "blush", "bags",
+                                                               "bruise", "shadow")]
+    return s
+
+
+def all_lines(st: dict) -> list[tuple[dict, dict]]:
+    return [(s, s["line"]) for s in st.get("shots") or [] if (s.get("line") or {}).get("text")]
+
+
+# ---------------------------------------------------------------- giọng
+
+def narrate(st: dict, pdir: Path, progress=None) -> dict[str, Path]:
+    """Đọc từng câu (mỗi nhân vật một giọng cố định). {id cảnh quay: file wav}."""
+    import soundfile as sf
+    from . import voice
+    from .story import _voice_ref, default_voice
+    lang = st.get("language") or "vi"
+    chars = {c["id"]: c for c in st.get("characters") or []}
+    todo = all_lines(st)
+    adir = pdir / AUDIO_DIR
+    adir.mkdir(parents=True, exist_ok=True)
+    out, refs = {}, {}
+    for k, (s, ln) in enumerate(todo):
+        who = ln["who"]
+        c = chars.get(who) or {}
+        if who == "narr":
+            cfg = st.get("narrator") or {"instruct": "male, adult, low pitch"}
+        else:
+            cfg = c.get("voice") or {"instruct": _instruct_of(c)}
+        if who not in refs:
+            refs[who] = _voice_ref(pdir, f"wt_{who}", lang, cfg)
+        ref = refs[who]
+        key = hashlib.md5(json.dumps([ln["text"], ref.get("ref"), cfg.get("instruct")],
+                                     ensure_ascii=False).encode("utf-8")).hexdigest()[:12]
+        path = adir / f"{s['id']}_{key}.wav"
+        if not path.exists():
+            if progress:
+                progress(k / max(1, len(todo)), f"đọc thoại {k + 1}/{len(todo)}: {c.get('name') or who}")
+            wav, sr = voice.synthesize(ln["text"], lang,
+                                       ref_wav=Path(ref["ref"]) if ref.get("ref") else None,
+                                       ref_text=ref.get("ref_text"),
+                                       instruct=None if ref.get("ref") else cfg.get("instruct"),
+                                       seed=int(key[:6], 16))
+            wav = voice.trim_silence(np.asarray(wav, dtype=np.float32), sr)
+            for old in adir.glob(f"{s['id']}_*.wav"):
+                old.unlink(missing_ok=True)
+            sf.write(str(path), wav, sr)
+        out[s["id"]] = path
+    return out
+
+
+def _instruct_of(c: dict) -> str:
+    lk = c.get("look") or {}
+    sex = "female" if lk.get("sex") == "female" else "male"
+    age = {"child": "child", "teen": "teenager", "young": "young adult", "adult": "adult",
+           "middle": "middle-aged", "old": "elderly"}.get(lk.get("age"), "adult")
+    pitch = "low pitch" if sex == "male" and age in ("middle-aged", "elderly", "adult") else "moderate pitch"
+    return f"{sex}, {age}, {pitch}"
+
+
+# ---------------------------------------------------------------- mốc thời gian
+
+def plan(st: dict, audio: dict) -> list[dict]:
+    import soundfile as sf
+    rows, t = [], 0.0
+    for s in st.get("shots") or []:
+        p = audio.get(s["id"])
+        ad = sf.info(str(p)).duration if p and Path(p).exists() else 0.0
+        if ad:
+            dur = LEAD + ad + GAP
+        else:
+            dur = float(s.get("dur") or (2.2 if s["type"] == "phone" else 1.6))
+            if (s.get("line") or {}).get("text"):            # chưa có giọng: ước lượng theo chữ
+                ad = max(1.0, len(s["line"]["text"].split()) / 3.2)
+                dur = LEAD + ad + GAP
+        rows.append({"shot": s, "start": t, "dur": dur, "audio": p if ad and p else None,
+                     "audio_dur": ad})
+        t += dur
+    return rows
+
+
+def envelope(path, fps: int = FPS) -> np.ndarray | None:
+    try:
+        from .story_live import envelope as env
+        return env(path, fps)
+    except Exception:  # noqa: BLE001
+        return None
+
+
+# ---------------------------------------------------------------- dựng một cảnh quay
+
+_BG_CACHE: dict = {}
+
+
+def background(st: dict, s: dict, size) -> Image.Image:
+    """Bối cảnh của cảnh quay: cận cảnh thì mờ và tối (như video mẫu)."""
+    W, H = size
+    places = {p["id"]: p for p in st.get("places") or []}
+    pl = places.get(s.get("place")) or {}
+    kind = pl.get("kind") if pl.get("kind") in scene_art.KINDS else "phong_khach"
+    time = s.get("time") or pl.get("time") or "ngay"
+    blur = {"close": 16, "medium": 6, "two": 4, "phone": 20}.get(s["type"], 0)
+    key = (kind, time, size, blur, s.get("place"))
+    if key not in _BG_CACHE:
+        seed = zlib.crc32(str(s.get("place") or kind).encode()) % 1000
+        img = scene_art.render_scene(kind, time, size=(W, H), seed=seed).convert("RGB")
+        if blur:
+            img = img.filter(ImageFilter.GaussianBlur(blur * W / 1280))
+            img = Image.blend(img, Image.new("RGB", (W, H), (18, 20, 30)), 0.45 if s["type"] != "phone" else 0.55)
+        if len(_BG_CACHE) > 12:
+            _BG_CACHE.pop(next(iter(_BG_CACHE)))
+        _BG_CACHE[key] = img
+    return _BG_CACHE[key]
+
+
+def _ease(u):
+    u = max(0.0, min(1.0, u))
+    return u * u * (3 - 2 * u)
+
+
+class Shot:
+    """Vẽ một cảnh quay: frame(t) với t tính từ đầu cảnh."""
+
+    def __init__(self, st: dict, row: dict, size, figs: dict, prev: dict | None = None):
+        self.st, self.row, self.s = st, row, row["shot"]
+        self.W, self.H = size
+        self.figs = figs
+        self.lang = st.get("language") or "vi"
+        self.bg = background(st, self.s, size)
+        self.env = envelope(row["audio"]) if row.get("audio") else None
+        if self.env is not None and len(self.env):
+            self.env = self.env / (float(np.percentile(self.env, 95)) + 1e-6)
+        self.prev = prev or {}
+        self.lw = max(2.0, self.W / 520)
+        self.font = wp.font(int(self.H * 0.045), True, self.lang)
+
+    # --- nhép miệng
+    def _mouth(self, cid: str, t: float) -> float:
+        ln = self.s.get("line") or {}
+        if ln.get("who") != cid:
+            return 0.0
+        a0, a1 = LEAD, LEAD + self.row["audio_dur"]
+        if not (a0 <= t < a1):
+            return 0.0
+        if self.env is not None and len(self.env):
+            k = int((t - a0) * FPS)
+            if 0 <= k < len(self.env):
+                return float(min(1.0, self.env[k] * 1.1))
+            return 0.0
+        return 0.5 + 0.5 * math.sin((t - a0) * 14)        # chưa có giọng: nhép giả
+
+    def _state(self, cid: str, t: float, main: bool) -> wa.State:
+        s = self.s
+        seed = zlib.crc32(cid.encode()) % 97
+        st = wa.State()
+        st.expr = s.get("expr", "neutral") if main else (s.get("with_expr") or "neutral")
+        st.pose = s.get("pose", "down") if main else (s.get("with_pose") or "down")
+        st.pose_from = self.prev.get(cid, st.pose)
+        st.pose_k = _ease(t / 0.45) if st.pose_from != st.pose else 1.0
+        st.mouth = self._mouth(cid, t)
+        # chớp mắt mỗi 2,5–4 giây
+        per = 2.6 + (seed % 13) / 10
+        ph = (t + seed * 0.37) % per
+        st.blink = 1.0 if ph < 0.12 else 0.0
+        st.breathe = (t * 0.28 + seed * 0.1) % 1.0
+        talk = st.mouth > 0.05
+        st.tilt = 1.4 * math.sin(t * 0.8 + seed) + (1.2 * math.sin(t * 5.5) if talk else 0.0)
+        st.nod = (0.012 * math.sin(t * 9) if talk else 0.0)
+        look = s.get("look") if main else ""
+        st.yaw = {"left": -0.45, "right": 0.45}.get(look, 0.0) + 0.06 * math.sin(t * 0.5 + seed)
+        st.look = {"left": (-1, 0), "right": (1, 0), "down": (0, 1), "up": (0, -1)}.get(look, (0, 0))
+        st.extras = tuple(s.get("extras") or ()) if main else ()
+        if st.expr in ("scared", "desperate") and main:
+            st.shake = t
+        return st
+
+    def _place(self, cid, t, kind, x, main):
+        fig = self.figs.get(cid)
+        if fig is None:
+            return None
+        W, H = self.W, self.H
+        b = fig.b
+        if kind == "close":
+            s = H * 0.64                         # miệng nằm trên vùng phụ đề
+            hc_y = H * 0.45
+            foot = (x * W, hc_y - b["head_c"][1] * s)
+        elif kind in ("medium", "two"):
+            s = H / (3.3 if kind == "medium" else 3.7)
+            foot = (x * W, H * 0.34 - b["head_c"][1] * s)
+        else:                                    # wide: cả người
+            s = H * 0.6 / b["H"]
+            foot = (x * W, H * 0.93)
+        enter = self.s.get("enter") if main else ""
+        if enter in ("left", "right"):
+            k = _ease(t / 1.1)
+            dx = (1 - k) * (0.65 * W) * (-1 if enter == "left" else 1)
+            foot = (foot[0] + dx, foot[1] - abs(math.sin(t * 9)) * 0.01 * H * (1 - k))
+        return fig, foot, s
+
+    def frame(self, t: float) -> np.ndarray:
+        W, H = self.W, self.H
+        s = self.s
+        img = self.bg.copy().convert("RGBA")
+        if s["type"] == "black":
+            img = Image.new("RGBA", (W, H), (0, 0, 0, 255))
+        elif s["type"] == "phone":
+            ph = s.get("phone") or {}
+            scr = wp.screen(ph.get("screen", "app"), ph.get("data") or {}, (int(H * 0.6), int(H * 1.2)),
+                            self.lang, t, self.figs)
+            img.alpha_composite(wp.held(scr, (W, H), lw=self.lw, tilt=0.6 * math.sin(t * 0.7)))
+        else:
+            cast = [s.get("who")] + list(s.get("with") or [])
+            if s["type"] == "close":
+                xs = [0.5 + {"left": 0.06, "right": -0.06}.get(s.get("look"), 0.0)]
+            elif s["type"] == "two" or len(cast) == 2:
+                xs = [0.32, 0.68]
+            elif len(cast) == 3:
+                xs = [0.22, 0.5, 0.78]
+            else:
+                xs = [0.5]
+            kind = s["type"] if s["type"] != "wide" or len(cast) < 2 else "wide"
+            if s["type"] == "close":
+                cast = cast[:1]
+            layer = Image.new("RGBA", (W * wa.SS, H * wa.SS), (0, 0, 0, 0))
+            for i, cid in enumerate(cast):
+                if not cid:
+                    continue
+                got = self._place(cid, t, kind, xs[min(i, len(xs) - 1)], i == 0)
+                if not got:
+                    continue
+                fig, foot, sc = got
+                st = self._state(cid, t, i == 0)
+                if len(cast) >= 2 and i > 0:      # người thứ hai quay sang người nói
+                    st.yaw = -0.4 if xs[i] > 0.5 else 0.4
+                elif len(cast) >= 2:
+                    st.yaw = 0.4 if xs[0] < 0.5 else -0.4
+                pen = wa.Pen(layer, foot[0] * wa.SS, foot[1] * wa.SS, sc * wa.SS, self.lw * wa.SS)
+                if st.shake:
+                    pen.ox += math.sin(t * 40) * 0.004 * W * wa.SS
+                fig.draw(pen, st)
+            img.alpha_composite(layer.reduce(wa.SS))
+        arr = np.asarray(img.convert("RGB"))
+        arr = self._camera(arr, t)
+        return arr
+
+    def _camera(self, arr: np.ndarray, t: float) -> np.ndarray:
+        import cv2
+        cam = self.s.get("camera", "still")
+        d = max(0.5, self.row["dur"])
+        u = _ease(t / d)
+        z, dx, dy = 1.0, 0.0, 0.0
+        if cam == "push_in":
+            z = 1.0 + 0.07 * u
+        elif cam == "pull_out":
+            z = 1.07 - 0.07 * u
+        elif cam in ("pan_left", "pan_right"):
+            z = 1.08
+            dx = (0.035 if cam == "pan_left" else -0.035) * (u - 0.5) * 2 * self.W
+        elif cam == "shake" and t < 0.6:
+            z = 1.04
+            dx = math.sin(t * 60) * 0.012 * self.W * (1 - t / 0.6)
+            dy = math.cos(t * 47) * 0.01 * self.H * (1 - t / 0.6)
+        if z == 1.0 and dx == 0 and dy == 0:
+            return arr
+        W, H = self.W, self.H
+        M = np.float32([[z, 0, W / 2 - z * W / 2 + dx], [0, z, H / 2 - z * H / 2 + dy]])
+        return cv2.warpAffine(arr, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+
+    def subtitle(self, arr: np.ndarray, t: float, name: str = "") -> np.ndarray:
+        ln = self.s.get("line") or {}
+        if not ln.get("text") or not self.st.get("subtitles", True):
+            return arr
+        img = Image.fromarray(arr)
+        d = ImageDraw.Draw(img)
+        f = self.font
+        lines = wp._wrap(d, ln["text"], f, self.W * 0.8)
+        lh = int(self.H * 0.058)
+        y = self.H - int(self.H * 0.07) - lh * len(lines)
+        for k, l in enumerate(lines):
+            w = d.textlength(l, font=f)
+            x = (self.W - w) / 2
+            d.rectangle([x - 10, y + k * lh - 4, x + w + 10, y + k * lh + lh - 6], fill=(10, 10, 12))
+            d.text((x, y + k * lh), l, font=f, fill=(255, 255, 255))
+        return np.asarray(img)
+
+
+# ---------------------------------------------------------------- dựng video
+
+def render(st: dict, pdir: Path, size=(1920, 1080), audio: dict | None = None, progress=None,
+           out_name: str = "webtoon.mp4") -> Path:
+    import soundfile as sf
+    audio = audio or {}
+    W, H = size
+    rows = plan(st, audio)
+    figs = figures(st)
+    total = sum(r["dur"] for r in rows) + 0.5
+    out_dir = pdir / "out"
+    out_dir.mkdir(parents=True, exist_ok=True)
+    raw = out_dir / "webtoon_video.mp4"
+    ff = video._ffmpeg_path()
+    proc = subprocess.Popen(
+        [ff, "-y", "-f", "rawvideo", "-pixel_format", "rgb24", "-video_size", f"{W}x{H}",
+         "-framerate", str(FPS), "-i", "-", "-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p",
+         "-preset", "veryfast", str(raw)],
+        stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    prev_pose: dict = {}
+    n = int(total * FPS)
+    i, shot = 0, None
+    try:
+        for fi in range(n):
+            t = fi / FPS
+            while i < len(rows) - 1 and t >= rows[i + 1]["start"]:
+                i += 1
+                shot = None
+            if not rows:
+                break
+            row = rows[i]
+            if shot is None:
+                shot = Shot(st, row, size, figs, dict(prev_pose))
+                s = row["shot"]
+                if s.get("who"):
+                    prev_pose[s["who"]] = s.get("pose", "down")
+            lt = t - row["start"]
+            frame = shot.frame(lt)
+            frame = shot.subtitle(frame, lt)
+            proc.stdin.write(frame.tobytes())
+            if progress and fi % 48 == 0:
+                progress(fi / max(1, n), f"dựng hình {fi}/{n}")
+    finally:
+        proc.stdin.close()
+        proc.wait()
+    # tiếng: mọi câu đặt đúng mốc
+    sr = 24000
+    mix = np.zeros(int(total * sr) + sr, dtype=np.float32)
+    for r in rows:
+        if not r.get("audio"):
+            continue
+        a, asr = sf.read(str(r["audio"]), dtype="float32", always_2d=False)
+        if getattr(a, "ndim", 1) > 1:
+            a = a.mean(axis=1)
+        if asr != sr:
+            x = np.linspace(0, len(a) - 1, int(len(a) * sr / asr))
+            a = np.interp(x, np.arange(len(a)), a).astype(np.float32)
+        peak = float(np.max(np.abs(a))) or 1.0
+        a = a * (0.8 / peak)
+        k0 = int((r["start"] + LEAD) * sr)
+        mix[k0:k0 + len(a)] += a[: max(0, len(mix) - k0)]
+    wav = out_dir / "webtoon_audio.wav"
+    sf.write(str(wav), np.clip(mix, -1, 1), sr)
+    out = out_dir / out_name
+    subprocess.run([ff, "-y", "-i", str(raw), "-i", str(wav), "-c:v", "copy", "-c:a", "aac",
+                    "-b:a", "160k", "-shortest", str(out)], stdout=subprocess.DEVNULL,
+                   stderr=subprocess.DEVNULL, check=True)
+    raw.unlink(missing_ok=True)
+    return out
+
+
+def preview(st: dict, shot_idx: int, size=(960, 540), t: float = 0.6) -> Image.Image:
+    rows = plan(st, {})
+    if not rows:
+        return Image.new("RGB", size, (20, 20, 24))
+    shot_idx = max(0, min(len(rows) - 1, shot_idx))
+    prev = {}
+    for r in rows[:shot_idx]:
+        s = r["shot"]
+        if s.get("who"):
+            prev[s["who"]] = s.get("pose", "down")
+    sh = Shot(st, rows[shot_idx], size, figures(st), prev)
+    return Image.fromarray(sh.subtitle(sh.frame(t), t))
