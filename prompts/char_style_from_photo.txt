@@ -13,15 +13,21 @@ Tool vẽ nhân vật hoạt hình 2D bằng bộ ghép có tham số. Hãy ch�
 - "leg": chiều dài chân / chiều cao (0.06 chân rất ngắn – 0.38 chân dài).
 - "arm": độ dài tay (0.7 ngắn cũn – 2.0 dài).
 - "limb": độ dày tay chân (0.5 mảnh – 1.4 mập).
-- "eyes": "dot" (mắt bầu dục nhỏ, mí nặng kiểu vẽ tay Hàn), "round" (mắt tròn to chibi), "big" (mắt anime to có đốm sáng), "line" (mắt chấm đen kiểu meme).
+- "eyes": "dot" (mắt bầu dục nhỏ, mí nặng kiểu vẽ tay Hàn), "round" (mắt tròn to chibi), "big" (mắt anime to có đốm sáng), "line" (mắt chấm đen kiểu meme), "ring" (mắt tròn trắng viền đen, con ngươi chấm đen ở giữa).
 - "outline": độ dày nét viền (0.4 mảnh – 1.6 rất đậm).
 - "wobble": độ run tay của nét (0 nét máy thẳng – 1.6 nét run nguệch ngoạc).
 - "belly": độ tròn bụng (0 thân thẳng con nhộng – 1 bụng tròn phệ).
+- "ears": 1 nếu thấy rõ tai hai bên đầu, 0 nếu không.
+- "spread": tay buông dang ra hai bên bao nhiêu độ (0 tay sát người – 35 dang rộng).
+- "nose": "line" (mũi một nét cong nhỏ), "round" (mũi tròn to có hai lỗ mũi), "dot" (chấm nhỏ).
+- "mouth": "line" (miệng một nét), "lips" (môi hồng dày tô màu).
 
 ### Bộ ghép ngoại hình của nhân vật trong ảnh ("kit") — chỉ dùng giá trị trong danh mục
 {{catalog}}
 
 Output JSON đúng dạng này, không có gì khác:
-{"style":{"head":0.25,"body":1.0,"leg":0.15,"arm":1.0,"limb":1.0,"eyes":"dot","outline":1.0,"wobble":1.0,"belly":0.0},
+Ảnh có NHIỀU nhân vật cùng nét vẽ thì "kit" là nhân vật rõ nhất, và "cast" liệt kê từng nhân vật (tối đa 6, từ trái sang phải) — mỗi người một bộ ghép + "expr" là biểu cảm của họ (neutral, happy, sad, cry, angry, shocked, worried, sleep, sly, think). Ảnh một nhân vật thì "cast" là [].
+
+{"style":{"head":0.25,"body":1.0,"leg":0.15,"arm":1.0,"limb":1.0,"eyes":"dot","outline":1.0,"wobble":1.0,"belly":0.0,"ears":0,"spread":0,"nose":"line","mouth":"line"},"cast":[],
  "kit":{"species":"human","age":"adult","sex":"male","skin":"light","hair":"short","hair_color":"black","hat":"none","glasses":"none","facial":"none","top":"shirt","top_color":"white","bottom_color":"black","bottom":"pants"},
  "note":"một câu tiếng Việt tả nét vẽ và nhân vật trong ảnh"}

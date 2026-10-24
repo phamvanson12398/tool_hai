@@ -292,14 +292,17 @@ CHAR_STYLES = {
                "arm": 1.05, "limb": 0.95, "eyes": "line", "outline": 1.1, "wobble": 1.2},
 }
 _RANGES = {"head": (0.12, 0.36), "body": (0.6, 1.3), "leg": (0.06, 0.38), "arm": (0.7, 2.0),
-           "limb": (0.5, 1.4), "outline": (0.4, 1.6), "wobble": (0.0, 1.6), "belly": (0.0, 1.0)}
-EYES = ("dot", "round", "big", "line")
+           "limb": (0.5, 1.4), "outline": (0.4, 1.6), "wobble": (0.0, 1.6), "belly": (0.0, 1.0),
+           "ears": (0.0, 1.0), "spread": (0.0, 35.0)}
+EYES = ("dot", "round", "big", "line", "ring")
+NOSES = ("line", "round", "dot")
+MOUTHS = ("line", "lips")
 
 
 def clean_style(d: dict | None) -> dict:
     """Thông số kiểu nhân vật hợp lệ (thiếu thì lấy kiểu con nhộng)."""
     out = {k: v for k, v in CHAR_STYLES["capsule"].items() if k != "label"}
-    out["belly"] = 0.0
+    out.update(belly=0.0, ears=0.0, spread=0.0, nose="line", mouth="line")
     for k, (lo, hi) in _RANGES.items():
         try:
             out[k] = max(lo, min(hi, float((d or {}).get(k, out[k]))))
@@ -307,6 +310,10 @@ def clean_style(d: dict | None) -> dict:
             pass
     if (d or {}).get("eyes") in EYES:
         out["eyes"] = d["eyes"]
+    if (d or {}).get("nose") in NOSES:
+        out["nose"] = d["nose"]
+    if (d or {}).get("mouth") in MOUTHS:
+        out["mouth"] = d["mouth"]
     return out
 
 
@@ -389,6 +396,7 @@ class Rig:
             pp.amp *= self.sty["wobble"]
         doodle._draw_head_parts(pb, kit, cx, hy, R, "back")
         doodle._draw_hair_back(pb, kit, cx, hy, R, face_dir or 1)
+        doodle.draw_ears(pen, kit, cx, hy, R)
         pen.ell(cx, hy, R, R * 0.97, self.skin)
         doodle._draw_face(pen, kit, cx, hy, R, look, expr, mouth, blink)
         doodle._draw_hair_front(pen, kit, cx, hy, R, face_dir or 1)
@@ -458,6 +466,10 @@ class Rig:
         if sit > 0.05:
             legs = [(a + 85 * sit, g - 85 * sit) for a, g in legs]
         arms = pose.get("arms") or [(8, 0), (8, 0)]
+        sp = self.sty.get("spread", 0.0)
+        if sp:                                   # tay buông dang ra hai bên (kiểu nhân vật)
+            arms = [(a + sp, e) if (i == 0 and a < 35) else (a - sp, e) if (i == 1 and a < 35) else (a, e)
+                    for i, (a, e) in enumerate(arms)]
         Lm = _aff(G, _tr(0, drop))           # chân: không nghiêng theo thân, đứng trên đất
         prop = pose.get("prop")
         tm = pose.get("to_mouth")
@@ -490,7 +502,7 @@ class Rig:
             for i, (a, g) in enumerate(legs):
                 sx = (1 if i == 0 else -1) * d * self.hipx
                 self._limb(canvas, Lm, (sx, -self.hip_h + 0.0), a, g, d, self.legd[0], self.legd[1],
-                           self.legd[2], self.pants, zoom, foot=True, cover=0.85 if self.shorts else 1.0)
+                           self.legd[2], self.pants, zoom, foot=True, cover=0.4 if self.shorts else 1.0)
         if sit <= 0.5:
             draw_legs()                      # đứng: chân sau thân
         if tool_behind:                        # cuốc / rìu vác sau vai: sau lưng người
@@ -508,7 +520,7 @@ class Rig:
                 sx = (1 if i == 0 else -1) * d * self.shoulder[0]
                 hands.append(self._limb(canvas, Bl, (sx, self.shoulder[1]), a, e, d,
                                         self.arm[0], self.arm[1], self.arm[2], self.sleeve, zoom,
-                                        hand=True, cover=0.55 if self.short_sleeve else 1.0))
+                                        hand=True, cover=0.45 if self.short_sleeve else 1.0, puff=1.7))
                 elbows.append(self._last_elbow)
         if tool_behind:
             draw_arms()
@@ -549,7 +561,7 @@ class Rig:
         return math.degrees(t1), math.degrees(t2 - t1)
 
     def _limb(self, canvas, M, root, a, e, d, l1, l2, w, color, zoom, hand=False, foot=False,
-              cover=1.0):
+              cover=1.0, puff=1.0):
         """cover < 1: vải chỉ phủ phần trên (áo cộc tay, quần soóc), phần dưới màu da."""
         import cv2
         t1 = math.radians(a)
@@ -575,15 +587,24 @@ class Rig:
                 cv2.circle(canvas, tuple(int(v) for v in p), wz * 2, self.skin, -1, cv2.LINE_AA, shift=2)
             mid = P[0] + (P[1] - P[0]) * cover
             Q = np.array([P[0], mid.astype(np.int32)], np.int32)
-            cv2.polylines(canvas, [Q], False, color, wz + max(2, lw), cv2.LINE_AA, shift=2)
-            cv2.circle(canvas, tuple(int(v) for v in P[0]), (wz + max(2, lw)) * 2, color, -1, cv2.LINE_AA, shift=2)
-            m2 = tuple(int(v) for v in Q[1])
-            nx, ny = -(P[1][1] - P[0][1]), (P[1][0] - P[0][0])       # mép tay áo / ống quần
-            nn = max(1.0, math.hypot(nx, ny))
-            hw = (wz + max(2, lw)) * 2.2
-            a1 = (int(m2[0] + nx / nn * hw), int(m2[1] + ny / nn * hw))
-            a2 = (int(m2[0] - nx / nn * hw), int(m2[1] - ny / nn * hw))
-            cv2.line(canvas, a1, a2, OUT, max(1, lw), cv2.LINE_AA, shift=2)
+            cw = int(wz * puff) + max(2, lw)                       # tay áo phồng / ống quần
+            cv2.polylines(canvas, [Q], False, OUT, cw + 2 * lw, cv2.LINE_AA, shift=2)
+            cv2.circle(canvas, tuple(int(v) for v in P[0]), (cw + 2 * lw) * 2, OUT, -1, cv2.LINE_AA, shift=2)
+            cv2.polylines(canvas, [Q], False, color, cw, cv2.LINE_AA, shift=2)
+            cv2.circle(canvas, tuple(int(v) for v in P[0]), cw * 2, color, -1, cv2.LINE_AA, shift=2)
+            m2 = Q[1].astype(np.float64)
+            vx, vy = (P[1] - P[0]).astype(np.float64)
+            vn = max(1.0, math.hypot(vx, vy))
+            nx, ny = -vy / vn, vx / vn                              # mép (vuông góc với tay / chân)
+            hw = cw * 2.0
+            if puff > 1.0:                                          # tay áo: mép thẳng
+                zz = [m2 + (nx * hw, ny * hw), m2 - (nx * hw, ny * hw)]
+            else:                                                   # ống quần soóc: gấu tua rua
+                zz = [m2 + (nx * hw * (1 - 2 * k / 6), ny * hw * (1 - 2 * k / 6))
+                      + ((vx / vn) * cw * (1.2 if k % 2 else 0.0), (vy / vn) * cw * (1.2 if k % 2 else 0.0))
+                      for k in range(7)]
+            Z = np.array(zz, np.int32)
+            cv2.polylines(canvas, [Z], False, OUT, max(1, lw), cv2.LINE_AA, shift=2)
         end = pts[-1]
         if hand:
             r = max(2, int(self.arm[3] * zoom))

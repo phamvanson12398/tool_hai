@@ -659,6 +659,13 @@ Tab riêng trên thanh trên cùng, gồm:
   tròn) và ngoại hình, rồi tool **vẽ thử đặt cạnh ảnh mẫu cho Claude so và chỉnh lại**
   (tối đa 2 lần, giống rồi thì thôi) — khoảng 1–3 phút. Ảnh nên rõ một nhân vật đứng
   thẳng thấy cả người. Kiểu đã tạo mà chưa giống: bấm **↻ Thiết kế lại theo ảnh mẫu**.
+  Bộ vẽ có: mắt chấm / tròn / anime / meme / tròn trắng chấm đen giữa, mũi một nét / tròn có
+  lỗ mũi / chấm, miệng một nét / môi hồng dày, tai hai bên, tóc (ngắn, mái, rối, rẽ ngôi,
+  búi, dài, ngang vai, hói, bồng, bát úp, xoăn bồng, trọc có chỏm), áo (nâu, bà ba, cánh,
+  váy, khoác, sơ mi, len, thụng, áo dài, phông cộc tay phồng), quần dài / soóc gấu tua rua,
+  bụng tròn, tay dang ra hai bên. Ảnh mẫu có nhiều nhân vật thì Claude ghi từng người (kèm
+  biểu cảm) để dàn nhân vật xem trước giống đúng ảnh.
+- Kiểu có sẵn **"Bé bụng phệ áo phông quần soóc"** vẽ lại từ ảnh mẫu đã gửi (6 bạn).
 - **Thẻ từng kiểu** (kiểu vẽ sẵn, kiểu có sẵn, kiểu chị tự tạo): ảnh động nhân vật diễn
   đủ hành động (đứng, đi, vẫy tay, nói, nhảy mừng, ngồi, khóc, suy nghĩ, cười), ảnh mẫu
   gốc và **dàn nhân vật** cùng nét (người già, người trẻ, trẻ con, con chó) để xem các

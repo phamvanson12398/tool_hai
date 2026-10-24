@@ -683,8 +683,14 @@ def style_from_photo(image: Path, rounds: int = 2, progress=None) -> dict:
         base = base or {}
         sty = d.get("style") if isinstance(d.get("style"), dict) else base.get("style") or {}
         kit = d.get("kit") if isinstance(d.get("kit"), dict) else base.get("kit") or {}
-        return {"style": film_rig.clean_style(sty), "kit": doodle.clean_kit(kit),
-                "note": str(d.get("note") or base.get("note") or "")[:300]}
+        out = {"style": film_rig.clean_style(sty), "kit": doodle.clean_kit(kit),
+               "note": str(d.get("note") or base.get("note") or "")[:300]}
+        cast = d.get("cast") if isinstance(d.get("cast"), list) and d.get("cast") else base.get("cast")
+        if cast:                                 # các nhân vật trong ảnh mẫu, kèm biểu cảm
+            out["cast"] = [dict({k: v for k, v in doodle.clean_kit(c).items() if not k.startswith("_")},
+                                expr=c.get("expr") if c.get("expr") in doodle.EXPRESSIONS else "neutral")
+                           for c in cast[:6] if isinstance(c, dict)]
+        return out
     cur = clean(data)
     for k in range(rounds):
         if progress:

@@ -52,6 +52,8 @@ def save(sample: dict, image: str | Path, name: str = "") -> str | None:
     shutil.copy2(image, d / "sample.png")
     meta = {"name": label[:80], "note": sample.get("note", ""), "style": sample.get("style"),
             "kit": sample.get("kit"), "hash": h, "created": time.strftime("%Y-%m-%d %H:%M")}
+    if isinstance(sample.get("cast"), list) and sample["cast"]:
+        meta["cast"] = sample["cast"]
     (d / "meta.json").write_text(json.dumps(meta, ensure_ascii=False, indent=1), encoding="utf-8")
     return sid
 
@@ -76,8 +78,11 @@ def get(sid: str) -> dict | None:
     if base is None:
         return None
     m = json.loads((base / sid / "meta.json").read_text("utf-8"))
-    return {"note": m.get("note", ""), "style": m.get("style"), "kit": m.get("kit"),
-            "image": str(base / sid / "sample.png"), "lib": sid}
+    out = {"note": m.get("note", ""), "style": m.get("style"), "kit": m.get("kit"),
+           "image": str(base / sid / "sample.png"), "lib": sid}
+    if isinstance(m.get("cast"), list):          # các nhân vật trong ảnh mẫu (để xem trước)
+        out["cast"] = m["cast"]
+    return out
 
 
 def backup(st: dict, title: str = "") -> bool:
@@ -130,5 +135,7 @@ def update(sid: str, sample: dict) -> bool:
     m = json.loads(meta.read_text("utf-8"))
     m.update({"style": sample.get("style"), "kit": sample.get("kit"),
               "note": sample.get("note") or m.get("note", "")})
+    if isinstance(sample.get("cast"), list) and sample["cast"]:
+        m["cast"] = sample["cast"]
     meta.write_text(json.dumps(m, ensure_ascii=False, indent=1), encoding="utf-8")
     return True

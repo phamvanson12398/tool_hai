@@ -20,7 +20,7 @@ from PIL import Image, ImageDraw
 from . import config, doodle, film_act, film_rig, style_lib
 
 DIR = config.PREVIEWS / "kieu"
-VERSION = 2
+VERSION = 3
 BG = (238, 228, 206)
 FLOOR = (214, 196, 160)
 
@@ -52,6 +52,15 @@ def items() -> list[dict]:
                     "note": got.get("note", ""), "sample": bool(got.get("image")),
                     "created": it.get("created", "")})
     return out
+
+
+def cast_kits(sid: str) -> list[dict] | None:
+    """Các nhân vật trong ảnh mẫu (Claude liệt kê khi tạo kiểu): [{kit..., expr}]."""
+    if sid.startswith("lib:"):
+        got = style_lib.get(sid[4:]) or {}
+        if isinstance(got.get("cast"), list) and got["cast"]:
+            return [c for c in got["cast"] if isinstance(c, dict)][:6]
+    return None
 
 
 def resolve(sid: str) -> tuple[dict, dict] | None:
@@ -144,20 +153,25 @@ def cast(sid: str) -> Path | None:
     if not got:
         return None
     sty, kit = got
-    out = _sig(sid, sty, kit, "cast").with_suffix(".png")
+    mine = cast_kits(sid)
+    out = _sig(sid, sty, {"kit": kit, "cast": mine}, "cast").with_suffix(".png")
     if out.exists():
         return out
-    kits = [kit] + [doodle.clean_kit(k) for k in OTHERS]
-    W, H = 170 * (len(kits) + 1), 300
-    floor = H - 30
+    if mine:                                      # đúng các bạn trong ảnh mẫu, đúng biểu cảm
+        kits = [doodle.clean_kit(c) for c in mine]
+        exprs = [c.get("expr") or "neutral" for c in mine]
+    else:
+        kits = [kit] + [doodle.clean_kit(k) for k in OTHERS]
+        exprs = ["happy", "neutral", "sad", "happy"]
+    W, H = 170 * (len(kits) + 1), 320
+    floor = H - 34
     img = _stage(W, H, floor)
     cam = np.array([[1, 0, 0], [0, 1, 0]], float)
-    exprs = ["happy", "neutral", "sad", "happy"]
     for i, k in enumerate(kits):
         rig = film_rig.Rig(k, 210.0, 11 + i, sty)
         p = film_act.pose("idle", 0.4 * i, 11 + i)
-        p.update(x=85 + 170 * i, y=floor, dir=1 if i % 2 == 0 else -1, look=0.3 if i % 2 == 0 else -0.3,
-                 expr=exprs[i % len(exprs)])
+        p.update(x=85 + 170 * i, y=floor, dir=1 if i % 2 == 0 else -1, look=0.0 if mine else
+                 (0.3 if i % 2 == 0 else -0.3), expr=exprs[i % len(exprs)])
         rig.draw(img, p, cam, 1.0)
     dog = film_rig.AnimalRig(doodle.clean_kit({"species": "dog", "fur": "yellow"}), 210.0, 3)
     pd = film_act.animal_pose("wag", 0.3)

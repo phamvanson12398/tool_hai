@@ -10,7 +10,9 @@ Việc của bạn: so kỹ hai bên rồi CHỈNH tham số để bên phải g
 - head: bán kính đầu / chiều cao người (0.12–0.36) = (đầu cao / người cao) ÷ 2
 - body: bề ngang thân (0.6–1.3); belly: bụng tròn (0–1)
 - leg: chân lộ ra / chiều cao (0.06–0.38); arm: độ dài tay (0.7–2.0); limb: độ dày tay chân (0.5–1.4)
-- eyes: dot | round | big | line; outline: nét viền (0.4–1.6); wobble: độ run nét (0–1.6)
+- eyes: dot | round | big | line | ring (mắt tròn trắng chấm đen giữa); outline: nét viền (0.4–1.6); wobble: độ run nét (0–1.6)
+- ears: 1 thấy tai hai bên / 0; spread: tay dang ra hai bên (0–35 độ)
+- nose: line | round (mũi tròn to có lỗ mũi) | dot; mouth: line | lips (môi hồng dày)
 
 ### Bộ ghép ("kit") — chỉ dùng giá trị trong danh mục
 {{catalog}}

@@ -1,0 +1,113 @@
+{
+ "name": "Bé bụng phệ áo phông quần soóc (ảnh mẫu đã gửi)",
+ "note": "nét viền đen đều, sạch, không run; đầu tròn to có tai, mắt tròn viền trắng chấm đen, mũi tròn có lỗ mũi, môi hồng dày; áo phông cộc tay phồng, bụng tròn phệ, quần soóc gấu tua rua, tay dài mảnh dang ra hai bên, chân trần",
+ "style": {
+  "head": 0.19,
+  "body": 0.95,
+  "leg": 0.22,
+  "arm": 1.75,
+  "limb": 0.75,
+  "eyes": "ring",
+  "outline": 1.0,
+  "wobble": 0.0,
+  "belly": 0.9,
+  "ears": 1,
+  "spread": 24,
+  "nose": "round",
+  "mouth": "lips"
+ },
+ "kit": {
+  "species": "human",
+  "age": "child",
+  "sex": "male",
+  "skin": "fair",
+  "hair_color": "black",
+  "top": "tshirt",
+  "bottom_color": "navy",
+  "bottom": "shorts",
+  "hair": "bowl",
+  "top_color": "red"
+ },
+ "cast": [
+  {
+   "species": "human",
+   "age": "child",
+   "sex": "male",
+   "skin": "fair",
+   "hair_color": "black",
+   "top": "tshirt",
+   "bottom_color": "navy",
+   "bottom": "shorts",
+   "hair": "bowl",
+   "top_color": "red",
+   "expr": "neutral"
+  },
+  {
+   "species": "human",
+   "age": "child",
+   "sex": "male",
+   "skin": "fair",
+   "hair_color": "black",
+   "top": "tshirt",
+   "bottom_color": "navy",
+   "bottom": "shorts",
+   "hair": "curl_top",
+   "top_color": "green",
+   "expr": "shocked"
+  },
+  {
+   "species": "human",
+   "age": "child",
+   "sex": "male",
+   "skin": "fair",
+   "hair_color": "black",
+   "top": "tshirt",
+   "bottom_color": "navy",
+   "bottom": "shorts",
+   "hair": "curly",
+   "top_color": "navy",
+   "expr": "worried"
+  },
+  {
+   "species": "human",
+   "age": "child",
+   "sex": "male",
+   "skin": "fair",
+   "hair_color": "black",
+   "top": "tshirt",
+   "bottom_color": "navy",
+   "bottom": "shorts",
+   "hair": "bowl",
+   "top_color": "purple",
+   "expr": "cry"
+  },
+  {
+   "species": "human",
+   "age": "child",
+   "sex": "male",
+   "skin": "fair",
+   "hair_color": "black",
+   "top": "tshirt",
+   "bottom_color": "navy",
+   "bottom": "shorts",
+   "hair": "bun",
+   "top_color": "yellow",
+   "expr": "happy"
+  },
+  {
+   "species": "human",
+   "age": "child",
+   "sex": "male",
+   "skin": "fair",
+   "hair_color": "black",
+   "top": "tshirt",
+   "bottom_color": "navy",
+   "bottom": "shorts",
+   "hair": "bowl",
+   "top_color": "blue",
+   "expr": "angry"
+  }
+ ],
+ "hash": "builtin",
+ "created": "có sẵn"
+}
