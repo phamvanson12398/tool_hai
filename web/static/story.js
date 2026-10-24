@@ -105,6 +105,12 @@
     if (m === "film") return true;
     return $("st-visual").value !== "images";
   }
+  /** Lối phân tích: người kể đọc cả câu nói của nhân vật, không xen thoại. */
+  function applyTone() {
+    var box = document.querySelector(".st-retell-only");
+    if (box) box.style.display = $("st-tone").value === "analysis" ? "none" : "";
+  }
+
   function isSync() { return $("st-mode") && $("st-mode").value === "sync"; }
 
   function fmtTime(t) {
@@ -187,6 +193,7 @@
       sync_style: $("st-sync-style").value,
       bg_mode: $("st-bgmode").value,
       dialogue: $("st-dialogue").value,
+      tone: $("st-tone").value,
       subtitles: $("st-subs").value === "1",
       source_text: $("st-source").value,
       narrator: { voice: $("st-voice").value, instruct: $("st-instruct").value.trim() }
@@ -317,6 +324,8 @@
       $("st-dialogue").appendChild(new Option(kv[1], kv[0]));
     });
     $("st-dialogue").value = s.dialogue || "some";
+    $("st-tone").value = s.tone || "retell";
+    applyTone();
     var nar = s.narrator || {};
     $("st-voice").value = nar.voice || "";
     $("st-instruct").value = nar.instruct || "";
@@ -1028,6 +1037,12 @@
       });
     });
     $("st-bg3d-all").addEventListener("click", function () { drawBg3d([], false); });
+    $("st-tone").addEventListener("change", function () {
+      applyTone();
+      if (st.id) save(true);
+      if (st.data && st.data.scene_count)
+        toast("warn", "Đổi lối kể", "Bấm “AI viết lời kể & chia cảnh” lại để AI viết theo lối mới.");
+    });
     $("st-mode").addEventListener("change", function () {
       applyVisual();
       if (st.id) save(true);

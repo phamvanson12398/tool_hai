@@ -626,6 +626,24 @@ nguyên tác) hay **sáng tác tình huống mới** (nhiều việc đời thư
 tính cách, hoàn cảnh, thời đại, cách nói của nhân vật. Tên video AI tự đặt nếu để
 trống; tên truyện, tác giả, nguyên văn không bắt buộc.
 
+### Lối kể: Kể lại truyện hoặc Phân tích từng chi tiết
+Ô **Lối kể** (mục 1, kiểu video Kể chuyện):
+- **Kể lại truyện** (mặc định): người kể kể lại câu chuyện như trước.
+- **Phân tích từng chi tiết**: kiểu kênh phân tích văn học (như video "Vợ nhặt" đi
+  chậm từng chữ). Người kể xưng "mình", nói chuyện với "các bạn"; kể một đoạn rồi
+  dừng lại soi một chi tiết: trích đúng chữ của tác giả, giải nghĩa từ cổ / phong tục
+  (ngụ cư, cám khác trấu...), đưa bối cảnh lịch sử và số liệu, đọc ý đồ tác giả (vì
+  sao nhân vật không có tên...), gieo chi tiết "xin nhớ giúp mình" rồi trả lại ở sau.
+  Mạch video: chào + móc câu một sự thật gây sốc → bối cảnh thời đại → nhân vật và
+  những chữ quan trọng → diễn biến (mỗi chặng dừng ở vài chi tiết đắt) → cao trào
+  ("đây là chỗ mình muốn bạn nghe kỹ nhất") → kết: so sánh với tác phẩm khác, số phận
+  tác phẩm, vài nét về tác giả, câu hỏi cho người xem, mời like / subscribe.
+  - AI được dặn không bịa câu văn, tình tiết, số liệu; dán **nguyên văn** (nếu được
+    phép) để trích chữ chính xác hơn.
+  - Lối này không xen thoại: câu nói của nhân vật do người kể đọc trong ngoặc kép
+    (ô Thoại nhân vật ẩn đi).
+  - Đổi lối kể thì bấm **AI viết lời kể & chia cảnh** lại.
+
 ### Nội dung có đầu – thân – kết, mở bằng móc câu
 AI dựng video theo mạch rõ ràng (cả Kể chuyện và Phim):
 - **Móc câu (hook)** 15–30 giây đầu: hé lộ trước khoảnh khắc gay cấn / xúc động

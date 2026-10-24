@@ -91,8 +91,21 @@ def default_story(title: str = "", author: str = "") -> dict:
         "title": title, "author": author, "source_text": "", "minutes": 25,
         "style": "doodle", "visual": "tool", "narrator": {"voice": "", "instruct": DEFAULT_NARRATOR},
         "subtitles": False, "era": "", "characters": [], "places": [], "chapters": [],
-        "dialogue": "some", "mode": "story",
+        "dialogue": "some", "mode": "story", "tone": "retell",
     }
+
+
+# Lối kể (chế độ Kể chuyện): kể lại truyện, hoặc phân tích từng chi tiết như kênh
+# phân tích văn học (vd video "Vợ nhặt" kiểu đi chậm từng chữ)
+TONES = {
+    "retell": "Kể lại truyện",
+    "analysis": "Phân tích từng chi tiết (giải nghĩa từng chữ, bối cảnh, ý đồ tác giả)",
+}
+
+
+def is_analysis(st: dict) -> bool:
+    return st.get("tone") == "analysis" and st.get("mode", "story") == "story"
+
 
 
 # ------------------------------------------------------------------ viết (AI)
@@ -151,9 +164,11 @@ def write_story(st: dict, progress=None) -> dict:
                          ensure_ascii=False)
             + ". Nhân vật chính (hoặc nhân vật giống mẫu nhất) dùng ĐÚNG bộ ghép này; các nhân "
               "vật khác thiết kế cùng phong cách, màu sắc hài hoà với mẫu nhưng phân biệt rõ.\n")
+    analysis = is_analysis(st)
     say(0.03, "AI chia chương và lập danh sách nhân vật, địa điểm")
     plan = claude_cli._run_json(claude_cli._load_prompt(
-        "story_plan", minutes=str(int(minutes)), style_vi=style_vi,
+        "story_plan_analysis" if analysis else "story_plan",
+        minutes=str(int(minutes)), style_vi=style_vi,
         title=st.get("title") or "", author=st.get("author") or "(không rõ)",
         source_block=source_block, n_chapters=str(n), look_hint=look_hint,
         visual_block=visual_block),
@@ -165,6 +180,9 @@ def write_story(st: dict, progress=None) -> dict:
         st["title"] = str(plan["title"]).strip()[:120]
     st["era"] = str(plan.get("era") or "")
     st["hook"] = str(plan.get("hook") or "").strip()[:400]
+    if analysis:
+        st["thesis"] = str(plan.get("thesis") or "").strip()[:400]
+        st["motifs"] = [m for m in plan.get("motifs") or [] if isinstance(m, dict)][:6]
     if tool:
         _make_parts(plan.get("new_parts"), say)
     st["characters"] = [_clean_char(c) for c in plan.get("characters") or [] if isinstance(c, dict)]
@@ -174,10 +192,13 @@ def write_story(st: dict, progress=None) -> dict:
                         for i, c in enumerate(chapters))
     if st["hook"]:
         outline = f"Móc câu mở video: {st['hook']}\n" + outline
+    if analysis:
+        outline = _analysis_outline(st) + outline
     chars_txt = "\n".join(f"- {c['id']}: {c['name']}" for c in st["characters"]) or "(không có)"
     places_txt = "\n".join(f"- {p['id']}: {p['name']}" for p in st["places"]) or "(không có)"
     per_min = minutes / len(chapters)
     out_chapters = []
+    covered: list[str] = []              # lối phân tích: chữ / chi tiết đã soi ở chương trước
     for i, c in enumerate(chapters):
         say(0.08 + 0.9 * i / len(chapters), f"AI viết chương {i + 1}/{len(chapters)}: {c.get('title')}")
         block = f"### Nguyên văn đoạn tương ứng\n{parts[i]}" if parts[i] else ""
@@ -191,17 +212,23 @@ def write_story(st: dict, progress=None) -> dict:
                 say=lambda f, m, i=i: say(0.08 + 0.9 * (i + 0.6) / len(chapters), m)))
             continue
         data = claude_cli._run_json(claude_cli._load_prompt(
-            "story_chapter", title=st.get("title") or "", author=st.get("author") or "",
+            "story_chapter_analysis" if analysis else "story_chapter",
+            title=st.get("title") or "", author=st.get("author") or "",
             outline=outline, characters=chars_txt, places=places_txt, index=str(i + 1),
             chapter_title=str(c.get("title") or ""), chapter_summary=str(c.get("summary") or ""),
             source_block=block, syllables=str(int(per_min * SYLLABLES_PER_MIN)),
-            structure_block=structure_block(st, i, chapters, False),
+            structure_block=(analysis_structure_block(st, i, chapters) if analysis
+                             else structure_block(st, i, chapters, False)),
             minutes=f"{per_min:.1f}", scene_block=scene_block,
+            covered_block=(("### Đã phân tích ở các chương trước (không giải nghĩa lại)\n- "
+                            + "\n- ".join(covered)) if covered else ""),
             dialogue_block=DIALOGUE.get(st.get("dialogue", "some"), DIALOGUE["some"])[1]),
             task="story", timeout=600)
         scenes = data.get("scenes") if isinstance(data, dict) else None
         if not scenes:
             raise RuntimeError(f"AI không viết được chương {i + 1}.")
+        if analysis:
+            covered += [str(x).strip()[:80] for x in data.get("covered") or [] if str(x).strip()][:12]
         out_chapters.append({"title": str(c.get("title") or f"Chương {i + 1}"),
                              "scenes": [_clean_scene(s) for s in scenes if isinstance(s, dict)]})
     for i, c in enumerate(chapters):
@@ -249,6 +276,57 @@ def structure_block(st: dict, i: int, chapters: list, film: bool) -> str:
                    f"{unit} cuối là một hình ảnh đọng lại và một câu người kể khép lại câu chuyện / gợi suy ngẫm.")
     elif i < n - 1:
         out.append("- Cuối chương để lại một gút hoặc câu hỏi khiến người xem muốn xem tiếp chương sau.")
+    return "\n".join(out)
+
+
+def _analysis_outline(st: dict) -> str:
+    """Luận điểm + chi tiết gieo – gặt của video phân tích, đưa vào mọi chương."""
+    out = []
+    if st.get("thesis"):
+        out.append(f"Luận điểm cả video: {st['thesis']}")
+    for m in st.get("motifs") or []:
+        out.append(f"Chi tiết gieo – gặt: {m.get('detail')} (gieo ở chương {m.get('plant')}, "
+                   f"trả lại ở chương {m.get('pay')}): {m.get('meaning') or ''}")
+    return ("\n".join(out) + "\n") if out else ""
+
+
+def analysis_structure_block(st: dict, i: int, chapters: list) -> str:
+    """Vai của chương trong video phân tích (mở – bối cảnh – nhân vật – diễn biến – cao
+    trào – kết) và việc gieo / gặt chi tiết ở chương này."""
+    n = len(chapters)
+    part = str(chapters[i].get("part") or "")
+    out = ["### Vị trí của chương trong video"]
+    if i == 0:
+        hook = (st.get("hook") or "").strip()
+        out.append(
+            "- CHƯƠNG MỞ: chào người xem thật ngắn (\"Xin chào các bạn, lại là mình đây\"), rồi vào "
+            "ngay MÓC CÂU" + (f": {hook}" if hook else "") + " — kể phẳng như một sự thật, ghi "
+            "thêm \"hook\": true vào cảnh có móc câu. Giải nghĩa tên truyện, hứa \"hôm nay mình "
+            "sẽ đi thật chậm ở mấy chi tiết nhỏ\", nêu luận điểm. Chưa kể diễn biến.")
+    elif i == n - 1 or part == "ket":
+        out.append(
+            "- CHƯƠNG KẾT: kể cái kết của truyện và cách đọc nó; đặt cạnh một tác phẩm khác để so "
+            "sánh; số phận của chính tác phẩm và vài nét về tác giả (chỉ điều chắc chắn); trả lời "
+            "móc câu; gói thông điệp trong một câu; \"Mình kết bằng một câu hỏi thôi...\"; mời "
+            "like, subscribe, bật chuông; để lại một câu hỏi cho người xem tự trả lời.")
+    elif part == "cao_trao":
+        out.append("- CAO TRÀO: đoạn hay nhất của truyện. Báo trước \"đây là chỗ mình muốn bạn nghe "
+                   "kỹ nhất\", đi chậm nhất, soi từng câu, từng cử chỉ.")
+    else:
+        out.append("- Kể tiếp theo thứ tự (hoặc dựng bối cảnh / nhân vật nếu dàn ý ghi vậy), mỗi chặng "
+                   "dừng ở 2–4 chi tiết hoặc chữ đắt để phân tích. Cuối chương để một câu kéo sang "
+                   "chương sau.")
+    for m in st.get("motifs") or []:
+        try:
+            plant, pay = int(m.get("plant") or 0), int(m.get("pay") or 0)
+        except (TypeError, ValueError):
+            continue
+        if plant == i + 1:
+            out.append(f"- GIEO chi tiết \"{m.get('detail')}\" ở chương này và dặn người xem "
+                       "\"xin nhớ giúp mình chi tiết đó\".")
+        if pay == i + 1:
+            out.append(f"- TRẢ LẠI chi tiết \"{m.get('detail')}\" đã gieo ở chương {plant} "
+                       "(\"bạn nhớ ... ở đầu video không?\") và nói rõ ý nghĩa của nó.")
     return "\n".join(out)
 
 

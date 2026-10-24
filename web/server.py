@@ -1796,6 +1796,7 @@ def _story_view(pid: str, data: dict) -> dict:
     out["bg_mode"] = st.get("bg_mode", "draw")
     from core import story as story_m
     out["dialogues"] = [[k, v[0]] for k, v in story_m.DIALOGUE.items()]
+    out["tones"] = [[k, v] for k, v in story_m.TONES.items()]
     for c in st.get("characters") or []:
         if not isinstance(c.get("voice"), dict):
             c["voice"] = {"voice": "", "instruct": story_m.default_voice(c.get("kit"))}
@@ -2072,6 +2073,8 @@ def api_story_save(pid):
         st["bg_mode"] = body["bg_mode"]
     if body.get("dialogue") in story_mod.DIALOGUE:
         st["dialogue"] = body["dialogue"]
+    if body.get("tone") in story_mod.TONES:
+        st["tone"] = body["tone"]
     if body.get("mode") in ("story", "film", "sync"):
         st["mode"] = body["mode"]
     from core import film_rig as fr_m
