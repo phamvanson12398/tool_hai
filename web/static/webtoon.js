@@ -109,6 +109,7 @@
       part: parseInt($("wt-part").value, 10) || 1, cliffhanger: $("wt-cliff").value === "1",
       subtitles: $("wt-subs").value === "1", prev_summary: $("wt-prev").value
     };
+    if ($("wt-bgmode")) b.bg_mode = $("wt-bgmode").value;
     var cur = wt();
     if ((cur.characters || []).length) {
       b.characters = [];
@@ -125,7 +126,8 @@
       b.places = [];
       document.querySelectorAll("#wt-places .wt-place").forEach(function (row) {
         b.places.push({ id: row.getAttribute("data-id"), name: row.querySelector(".name").value,
-          kind: row.querySelector(".kind").value, time: row.querySelector(".time").value });
+          kind: row.querySelector(".kind").value, time: row.querySelector(".time").value,
+          look: row.querySelector(".look").value });
       });
     }
     b.shots = [];
@@ -224,19 +226,121 @@
       row.appendChild(f);
       box.appendChild(row);
     });
-    var pb = $("wt-places");
+    renderPlaces();
+  }
+
+  /* ---------------------------- địa điểm + nền 3D ---------------------------- */
+
+  function bgUrl(place, time) {
+    return "/api/webtoon/" + encodeURIComponent(W.id) + "/bg/" + encodeURIComponent(place) + "/" + time;
+  }
+
+  function renderPlaces() {
+    var w = wt(), o = opts(), pb = $("wt-places");
     pb.innerHTML = "";
+    if (!(w.places || []).length) return;
+    var bgs = (W.data && W.data.bgs) || [], has3d = W.data && W.data.bg3d_installed;
+    var top = el("div", "wt-bg-top");
+    top.appendChild(el("b", null, "Nền"));
+    var mode = sel([["3d", "Nền 3D (ảnh tool vẽ trên máy hoặc chị tải lên)"], ["draw", "Nền vẽ tay của tool (2D)"]],
+                   w.bg_mode || "3d");
+    mode.id = "wt-bgmode";
+    mode.addEventListener("change", function () { save(true); });
+    top.appendChild(mode);
+    if (has3d) {
+      var all = el("button", "btn btn-sm btn-primary", "Vẽ nền 3D cho mọi địa điểm còn thiếu");
+      all.type = "button";
+      all.addEventListener("click", function () { drawBg(null, false); });
+      top.appendChild(all);
+    }
+    top.appendChild(el("span", "muted", has3d
+      ? "Máy có card vẽ 3D: tool tự vẽ (20–60 giây mỗi ảnh), hoặc chị tự vẽ bằng Gemini rồi tải lên."
+      : "Máy chưa cài vẽ 3D: bấm 'Chép câu lệnh nền', vẽ bằng Gemini / ChatGPT rồi 'Tải ảnh nền'. (Muốn tool tự vẽ: chạy cai_3d.bat, cần card NVIDIA.)"));
+    pb.appendChild(top);
     (w.places || []).forEach(function (p) {
       var row = el("div", "wt-place");
       row.setAttribute("data-id", p.id);
+      var f = el("div", "wt-place-f");
       var nm = document.createElement("input");
-      nm.className = "name"; nm.value = p.name || "";
-      row.appendChild(nm);
-      var k = sel(o.kinds || [], p.kind); k.className = "kind";
+      nm.className = "name"; nm.value = p.name || ""; nm.placeholder = "Tên địa điểm";
+      f.appendChild(nm);
+      var k = sel(o.kinds || [], p.kind); k.className = "kind"; k.title = "Mẫu nền vẽ tay (dùng khi chưa có nền 3D)";
       var tm = sel([["ngay", "Ngày"], ["dem", "Đêm"]], p.time); tm.className = "time";
-      row.appendChild(k); row.appendChild(tm);
+      f.appendChild(k); f.appendChild(tm);
+      var lk = document.createElement("textarea");
+      lk.className = "look"; lk.rows = 3; lk.value = p.look || "";
+      lk.placeholder = "Tả bối cảnh bằng tiếng Anh để vẽ nền 3D, vd: a small public restroom inside a Seoul subway station, white tiled walls, flickering fluorescent light";
+      lk.title = "Tả đúng bối cảnh trong truyện (tiếng Anh). Sửa xong bấm Lưu rồi vẽ lại nền.";
+      f.appendChild(lk);
+      row.appendChild(f);
+      var shots = el("div", "wt-bg-list");
+      bgs.filter(function (b) { return b.place === p.id; }).forEach(function (b) {
+        var cell = el("div", "wt-bg");
+        cell.appendChild(el("div", "sub", b.time === "dem" ? "Ban đêm" : "Ban ngày"));
+        if (b.have) {
+          var img = document.createElement("img");
+          img.src = bgUrl(p.id, b.time) + ".png?w=1&v=" + Date.now() % 1000000;
+          img.addEventListener("click", function () { window.open(bgUrl(p.id, b.time) + ".png", "_blank"); });
+          cell.appendChild(img);
+        } else {
+          cell.appendChild(el("div", "ph", "Chưa có nền 3D — đang dùng nền vẽ tay"));
+        }
+        var acts = el("div", "acts");
+        var cp = el("button", "btn btn-sm", "Chép câu lệnh nền");
+        cp.type = "button";
+        cp.addEventListener("click", function () {
+          var lookNow = lk.value.trim();
+          var text = lookNow && lookNow !== b.look ? b.prompt.replace(b.look, lookNow) : b.prompt;
+          copyText(text).then(function () { toast("ok", "Đã chép câu lệnh nền", "Dán vào Gemini / ChatGPT để vẽ ảnh ngang 16:9."); });
+        });
+        acts.appendChild(cp);
+        var file = document.createElement("input");
+        file.type = "file"; file.accept = "image/*"; file.hidden = true;
+        var up = el("button", "btn btn-sm", b.have ? "Thay ảnh nền" : "Tải ảnh nền");
+        up.type = "button";
+        up.addEventListener("click", function () { file.click(); });
+        file.addEventListener("change", function () {
+          if (!file.files || !file.files[0]) return;
+          var fd = new FormData();
+          fd.append("file", file.files[0]);
+          up.disabled = true; up.textContent = "Đang tải...";
+          api(bgUrl(p.id, b.time), { method: "POST", body: fd }).then(function (d) {
+            W.data = d; renderPlaces(); refreshThumbs(); toast("ok", "Đã thêm ảnh nền");
+          }).catch(function (e) { up.disabled = false; toast("error", "Tải ảnh thất bại", e.message); });
+        });
+        acts.appendChild(file); acts.appendChild(up);
+        if (has3d) {
+          var dr = el("button", "btn btn-sm", b.have ? "Tool vẽ lại" : "Tool vẽ 3D");
+          dr.type = "button";
+          dr.addEventListener("click", function () { drawBg([p.id], b.have); });
+          acts.appendChild(dr);
+        }
+        if (b.have) {
+          var rm = el("button", "btn btn-ghost btn-sm", "Bỏ nền");
+          rm.type = "button";
+          rm.addEventListener("click", function () {
+            api(bgUrl(p.id, b.time) + "/delete", { method: "POST", body: {} }).then(function (d) {
+              W.data = d; renderPlaces(); refreshThumbs();
+            }).catch(function (e) { toast("error", "Xoá thất bại", e.message); });
+          });
+          acts.appendChild(rm);
+        }
+        cell.appendChild(acts);
+        shots.appendChild(cell);
+      });
+      row.appendChild(shots);
       pb.appendChild(row);
     });
+  }
+
+  function drawBg(places, force) {
+    save(true).then(function () {
+      return api("/api/webtoon/" + encodeURIComponent(W.id) + "/bg3d", { method: "POST",
+        body: { places: places || [], force: !!force } });
+    }).then(function () {
+      showStatus({ state: "drawing", progress: 0, message: "nạp mô hình vẽ 3D (lần đầu mất 1–2 phút)" });
+      poll();
+    }).catch(function (e) { toast("error", "Chưa vẽ được nền 3D", e.message); });
   }
 
   /* ---------------------------- ảnh AI nhân vật ---------------------------- */
@@ -575,7 +679,7 @@
   /* ---------------------------- việc nền ---------------------------- */
 
   function showStatus(s, ready) {
-    var busy = s.state === "writing" || s.state === "rendering";
+    var busy = s.state === "writing" || s.state === "rendering" || s.state === "drawing";
     $("wt-progress-wrap").hidden = !busy;
     $("wt-progress").style.width = Math.round((s.progress || 0) * 100) + "%";
     $("wt-msg").textContent = s.message || "";
@@ -601,11 +705,12 @@
       if (!W.id) return;
       api("/api/project/" + encodeURIComponent(W.id) + "/status").then(function (s) {
         showStatus(s, s.video_ready);
-        if (s.state !== "writing" && s.state !== "rendering") {
+        if (s.state !== "writing" && s.state !== "rendering" && s.state !== "drawing") {
           clearInterval(W.polling); W.polling = null;
           if (s.state === "error") toast("error", "Có lỗi", s.message);
           if (s.state === "written") { toast("ok", "AI đã viết xong", "Xem lại phân cảnh ở mục 3"); open(W.id); }
           if (s.state === "done") { toast("ok", "Đã dựng xong video"); open(W.id); }
+          if (s.state === "drawn") { toast("ok", "Xong nền 3D", s.message); open(W.id); }
         }
       }).catch(function () {});
     }, 1500);

@@ -1025,6 +1025,21 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
    giống nhau; đàn ông không bị giọng cao như nữ; người kể khác hẳn giọng nhân vật. Muốn giọng
    cụ thể thì gõ mô tả (vd `male, elderly, very low pitch`) hoặc chọn giọng trong Thư viện.
 
+### Nền 3D đúng bối cảnh (mục 2, phần địa điểm)
+- Khi viết truyện, AI tả **từng địa điểm đúng như trong truyện** bằng tiếng Anh (ô dưới tên
+  địa điểm, vd *a small public restroom inside a Seoul subway station, white tiled walls,
+  flickering fluorescent light*). Chị sửa ô này cho đúng ý rồi bấm **Lưu**.
+- Ô **Nền**: *Nền 3D* (mặc định) hoặc *Nền vẽ tay của tool (2D)*.
+- Mỗi địa điểm có ô ảnh nền **ban ngày / ban đêm** (theo cảnh dùng tới). Hai cách có nền 3D:
+  - **Tool tự vẽ trên máy** (cần card NVIDIA, đã chạy `cai_3d.bat`): bấm **Tool vẽ 3D** từng
+    ô, hoặc **Vẽ nền 3D cho mọi địa điểm còn thiếu**; khi **Dựng video** tool cũng tự vẽ chỗ
+    còn thiếu. Mỗi ảnh 20–60 giây. Chưa ưng thì **Tool vẽ lại** (ra ảnh khác).
+  - **Tự vẽ bằng Gemini / ChatGPT**: bấm **Chép câu lệnh nền**, dán vào, tải ảnh về rồi
+    **Tải ảnh nền**.
+- Mỗi địa điểm chỉ một ảnh ngày, một ảnh đêm, dùng lại cho mọi cảnh ở đó nên căn phòng giống
+  nhau suốt truyện. Thiếu ảnh đêm thì tool lấy ảnh ngày làm tối đi; chưa có ảnh nào thì dùng
+  nền vẽ tay. Cận mặt thì nền tự mờ, tối như video mẫu.
+
 ### Ảnh nhân vật vẽ bằng AI (mục 2b, không bắt buộc)
 Muốn nhân vật đẹp như tranh thật thì dùng ảnh vẽ bằng Gemini / ChatGPT; mỗi cảnh là một
 khung tranh đứng yên, tool chỉ **nhép miệng** theo giọng và **chớp mắt** (kiểu kênh 썰).

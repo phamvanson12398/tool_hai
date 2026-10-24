@@ -933,8 +933,9 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 .wt-char { border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 8px; display: grid; grid-template-columns: 84px 1fr; gap: 8px; }
 .wt-char img { width: 84px; height: 105px; object-fit: cover; border-radius: 6px; background: #eee; }
 .wt-char select, .wt-char input { width: 100%; font-size: 12px; padding: 3px 5px; margin-bottom: 3px; }
-.wt-places { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
-.wt-place { border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 6px; display: flex; gap: 6px; align-items: center; font-size: 12px; }
+.wt-places { display: flex; flex-direction: column; gap: 8px; margin-top: 10px; }
+.wt-place { border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 6px; display: grid; grid-template-columns: minmax(220px, 320px) 1fr; gap: 8px; align-items: start; font-size: 12px; }
+@media (max-width: 800px) { .wt-place { grid-template-columns: 1fr; } }
 .wt-place input, .wt-place select { font-size: 12px; padding: 3px 5px; }
 .wt-shots { display: flex; flex-direction: column; gap: 6px; }
 .wt-shot { display: grid; grid-template-columns: 30px 128px 1fr 54px; gap: 8px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 6px; align-items: start; }
@@ -943,7 +944,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 .wt-shot .ctl { display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; }
 .wt-shot .ctl select { width: auto; flex: 0 1 auto; max-width: 150px; }
 .wt-shot .ctl select, .wt-shot .ctl input, .wt-shot textarea, .wt-char input, .wt-char select,
-.wt-place input, .wt-place select {
+.wt-place input, .wt-place select, .wt-place textarea {
   font-size: 12px; padding: 3px 6px; background: var(--bg); color: var(--text);
   border: 1px solid var(--line); border-radius: 6px;
 }
@@ -982,3 +983,15 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 .wt-idea .h { font-style: italic; }
 .wt-idea .w { color: var(--text-faint); }
 .wt-idea .btn { align-self: flex-start; margin-top: auto; }
+
+/* nền 3D theo địa điểm (webtoon) */
+.wt-bg-top { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; font-size: 13px; }
+.wt-bg-top select { width: auto; font-size: 12px; padding: 3px 6px; background: var(--bg); color: var(--text); border: 1px solid var(--line); border-radius: 6px; }
+.wt-place-f { display: flex; flex-direction: column; gap: 4px; }
+.wt-place-f textarea { width: 100%; font-size: 12px; }
+.wt-bg-list { display: flex; flex-wrap: wrap; gap: 8px; }
+.wt-bg { display: flex; flex-direction: column; gap: 4px; width: 220px; }
+.wt-bg img { width: 220px; aspect-ratio: 16 / 9; object-fit: cover; border-radius: 4px; cursor: zoom-in; }
+.wt-bg .ph { width: 220px; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; background: var(--bg-soft, #f3f3f3); border-radius: 4px; color: var(--text-faint); }
+.wt-bg .sub { color: var(--text-faint); }
+.wt-bg .acts { display: flex; flex-wrap: wrap; gap: 4px; }

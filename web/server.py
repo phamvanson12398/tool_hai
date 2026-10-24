@@ -2673,6 +2673,9 @@ def _webtoon_view(pid: str, data: dict) -> dict:
     out = dict(data)
     out["pics_needed"] = wpic.needed(data.get("webtoon") or {})
     out["prompt_open"] = wpic.prompt_open()
+    from core import bg3d, webtoon_bg
+    out["bgs"] = webtoon_bg.status(data.get("webtoon") or {}, config.PROJECTS / pid)
+    out["bg3d_installed"] = bg3d.installed()
     out["status"] = _status(pid)
     out["video_ready"] = (config.PROJECTS / pid / "out" / "video.mp4").exists()
     out["options"] = {
@@ -2765,6 +2768,8 @@ def api_webtoon_save(pid):
     for k in ("subtitles", "cliffhanger"):
         if k in body:
             wt[k] = bool(body[k])
+    if body.get("bg_mode") in ("draw", "3d"):
+        wt["bg_mode"] = body["bg_mode"]
     if isinstance(body.get("narrator"), dict):
         wt["narrator"] = {"voice": str(body["narrator"].get("voice") or ""),
                           "instruct": str(body["narrator"].get("instruct") or "")}
@@ -2777,9 +2782,14 @@ def api_webtoon_save(pid):
                                                                 if x.get("id") == c.get("id")), "") or "")}
                             for c in body["characters"] if isinstance(c, dict)][:8]
     if isinstance(body.get("places"), list):
+        old_pl = {x.get("id"): x for x in wt.get("places") or []}
         wt["places"] = [{"id": wf.wa_slug(p.get("id") or p.get("name")), "name": str(p.get("name") or ""),
                          "kind": p.get("kind") if p.get("kind") in wf.PLACE_KINDS else "phong_khach",
-                         "time": "dem" if p.get("time") == "dem" else "ngay"}
+                         "time": "dem" if p.get("time") == "dem" else "ngay",
+                         "look": str(p.get("look") if "look" in p else
+                                     (old_pl.get(p.get("id")) or {}).get("look") or "")[:500],
+                         **({"bg3d_seed": (old_pl.get(p.get("id")) or {}).get("bg3d_seed")}
+                            if (old_pl.get(p.get("id")) or {}).get("bg3d_seed") else {})}
                         for p in body["places"] if isinstance(p, dict)][:10]
     if isinstance(body.get("shots"), list):
         ids = {c["id"] for c in wt.get("characters") or []}
@@ -3018,6 +3028,102 @@ def api_webtoon_pic_delete(pid, cid, key):
     return jsonify(_webtoon_view(pid, data))
 
 
+def _bg_path(pid: str, place: str, time: str) -> Path:
+    from core import webtoon_bg
+    if not re.fullmatch(r"[A-Za-z0-9_\-]{1,60}", place or "") or time not in ("ngay", "dem"):
+        raise ValueError("Tên địa điểm không hợp lệ.")
+    return webtoon_bg.path_for(config.PROJECTS / pid, place, time)
+
+
+@app.post("/api/webtoon/<pid>/bg3d")
+def api_webtoon_bg3d(pid):
+    """Tool vẽ nền 3D trên máy (chạy nền). body: places (id; không có = mọi địa điểm còn
+    thiếu), force (vẽ lại)."""
+    from core import bg3d, webtoon_bg
+    try:
+        data, wt = _load_webtoon(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    if not bg3d.installed():
+        return _err("Máy chưa cài phần vẽ 3D (chạy cai_3d.bat một lần, cần card NVIDIA). Hoặc tự vẽ nền "
+                    "bằng Gemini / ChatGPT: bấm 'Chép câu lệnh nền' rồi 'Tải ảnh nền'.")
+    if _status(pid).get("state") in ("writing", "rendering", "drawing"):
+        return jsonify({"ok": True, "already": True})
+    body = request.get_json(silent=True) or {}
+    only = [str(x) for x in body.get("places") or []] or None
+    force = bool(body.get("force"))
+    with JOBS_LOCK:
+        JOBS[pid] = {"state": "drawing", "progress": 0.0,
+                     "message": "nạp mô hình vẽ 3D (lần đầu mất 1–2 phút)", "log": []}
+
+    def work():
+        try:
+            made = webtoon_bg.draw(wt, config.project_dir(pid), only, force,
+                                   progress=lambda f, m: _set_status(pid, progress=round(float(f), 3), message=str(m)))
+            d2, w2 = _load_webtoon(pid)
+            w2["places"] = wt["places"]                       # hạt giống đã dùng
+            _save_project(pid, d2)
+            _set_status(pid, state="drawn", progress=1.0,
+                        message=f"đã vẽ {len(made)} nền 3D" if made else "nền 3D đã đủ")
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            _set_status(pid, state="error", message=f"Vẽ nền 3D lỗi: {_short_err(e, 400)}")
+        finally:
+            bg3d.unload()
+
+    threading.Thread(target=work, daemon=True).start()
+    return jsonify({"ok": True})
+
+
+@app.post("/api/webtoon/<pid>/bg/<place>/<time>")
+def api_webtoon_bg_upload(pid, place, time):
+    """Chị tải ảnh nền (vẽ bằng Gemini / ChatGPT) cho một địa điểm, ngày hoặc đêm."""
+    from core import webtoon_bg
+    try:
+        data, _ = _load_webtoon(pid)
+        dst = _bg_path(pid, place, time)
+    except (FileNotFoundError, ValueError) as e:
+        return _err(str(e), 404)
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return _err("Chưa chọn ảnh.")
+    dst.parent.mkdir(parents=True, exist_ok=True)
+    tmp = dst.with_suffix(".upload")
+    f.save(str(tmp))
+    try:
+        webtoon_bg.save_upload(tmp, dst)
+    except Exception as e:  # noqa: BLE001
+        return _err(f"Không đọc được ảnh: {_short_err(e, 200)}")
+    finally:
+        tmp.unlink(missing_ok=True)
+    return jsonify(_webtoon_view(pid, data))
+
+
+@app.get("/api/webtoon/<pid>/bg/<place>/<time>.png")
+def api_webtoon_bg_get(pid, place, time):
+    from core import bg3d
+    try:
+        p = _bg_path(pid, place, time)
+    except ValueError as e:
+        return _err(str(e), 404)
+    if not p.exists():
+        return _err("Chưa có nền.", 404)
+    if request.args.get("w"):
+        return _png(bg3d.load_cover(p, (320, 180)))
+    return send_file(str(p), max_age=0)
+
+
+@app.post("/api/webtoon/<pid>/bg/<place>/<time>/delete")
+def api_webtoon_bg_delete(pid, place, time):
+    try:
+        data, _ = _load_webtoon(pid)
+        p = _bg_path(pid, place, time)
+    except (FileNotFoundError, ValueError) as e:
+        return _err(str(e), 404)
+    p.unlink(missing_ok=True)
+    return jsonify(_webtoon_view(pid, data))
+
+
 @app.post("/api/webtoon/<pid>/render")
 def api_webtoon_render(pid):
     from core import webtoon_film as wf
@@ -3027,7 +3133,7 @@ def api_webtoon_render(pid):
         return _err(str(e), 404)
     if not wt.get("shots"):
         return _err("Chưa có cảnh quay nào — bấm 'AI viết truyện & phân cảnh' trước.")
-    if _status(pid).get("state") in ("writing", "rendering"):
+    if _status(pid).get("state") in ("writing", "rendering", "drawing"):
         return jsonify({"ok": True, "already": True})
     with JOBS_LOCK:
         JOBS[pid] = {"state": "rendering", "progress": 0.0, "message": "bắt đầu", "log": []}
@@ -3035,6 +3141,20 @@ def api_webtoon_render(pid):
     def work():
         try:
             pdir = config.project_dir(pid)
+            if wt.get("bg_mode") == "3d":
+                from core import bg3d, webtoon_bg
+                if bg3d.installed():                       # nền 3D còn thiếu: vẽ trước
+                    try:
+                        webtoon_bg.draw(wt, pdir, progress=lambda f, m: _set_status(pid, progress=0.0, message=str(m)))
+                        d2, w2 = _load_webtoon(pid)
+                        w2["places"] = wt["places"]
+                        _save_project(pid, d2)
+                    except Exception as e:  # noqa: BLE001
+                        traceback.print_exc()
+                        _set_status(pid, message=f"Không vẽ được nền 3D ({_short_err(e)}); "
+                                                 "chỗ còn thiếu dùng nền vẽ tay.")
+                    finally:
+                        bg3d.unload()                      # trả bộ nhớ card cho OmniVoice
             audio = wf.narrate(wt, pdir, progress=lambda f, m: _set_status(
                 pid, progress=round(0.35 * float(f), 3), message=str(m)))
             mp4 = wf.render(wt, pdir, (1920, 1080), audio, out_name="video.mp4",

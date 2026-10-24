@@ -202,18 +202,26 @@ def envelope(path, fps: int = FPS) -> np.ndarray | None:
 _BG_CACHE: dict = {}
 
 
-def background(st: dict, s: dict, size) -> Image.Image:
-    """Bối cảnh của cảnh quay: cận cảnh thì mờ và tối (như video mẫu)."""
+def background(st: dict, s: dict, size, pdir: Path | None = None) -> Image.Image:
+    """Bối cảnh của cảnh quay: ảnh nền 3D của địa điểm nếu đã có (tool vẽ / chị tải lên),
+    không thì bối cảnh vẽ tay; cận cảnh thì mờ và tối (như video mẫu)."""
+    from . import webtoon_bg
     W, H = size
     places = {p["id"]: p for p in st.get("places") or []}
     pl = places.get(s.get("place")) or {}
     kind = pl.get("kind") if pl.get("kind") in scene_art.KINDS else "phong_khach"
-    time = s.get("time") or pl.get("time") or "ngay"
+    time = webtoon_bg.shot_time(st, s)
     blur = {"close": 16, "medium": 6, "two": 4, "phone": 20}.get(s["type"], 0)
-    key = (kind, time, size, blur, s.get("place"))
+    p3 = webtoon_bg.path_for(pdir, s.get("place") or "", time) if pdir else None
+    stamp = (p3.stat().st_mtime if p3 and p3.exists() else
+             (webtoon_bg.path_for(pdir, s.get("place") or "", "ngay").stat().st_mtime
+              if pdir and webtoon_bg.path_for(pdir, s.get("place") or "", "ngay").exists() else 0))
+    key = (kind, time, size, blur, s.get("place"), str(pdir), stamp)
     if key not in _BG_CACHE:
         seed = zlib.crc32(str(s.get("place") or kind).encode()) % 1000
-        img = scene_art.render_scene(kind, time, size=(W, H), seed=seed).convert("RGB")
+        img = webtoon_bg.image_for(pdir, s.get("place") or "", time, (W, H))
+        if img is None:
+            img = scene_art.render_scene(kind, time, size=(W, H), seed=seed).convert("RGB")
         if blur:
             img = img.filter(ImageFilter.GaussianBlur(blur * W / 1280))
             img = Image.blend(img, Image.new("RGB", (W, H), (18, 20, 30)), 0.45 if s["type"] != "phone" else 0.55)
@@ -232,13 +240,13 @@ class Shot:
     """Vẽ một cảnh quay: frame(t) với t tính từ đầu cảnh."""
 
     def __init__(self, st: dict, row: dict, size, figs: dict, prev: dict | None = None,
-                 pics: dict | None = None):
+                 pics: dict | None = None, pdir: Path | None = None):
         self.st, self.row, self.s = st, row, row["shot"]
         self.pics = pics or {}                   # ảnh AI chị tải lên: {id nhân vật: {key: Pic}}
         self.W, self.H = size
         self.figs = figs
         self.lang = st.get("language") or "ko"
-        self.bg = background(st, self.s, size)
+        self.bg = background(st, self.s, size, pdir)
         self.env = envelope(row["audio"]) if row.get("audio") else None
         if self.env is not None and len(self.env):
             self.env = self.env / (float(np.percentile(self.env, 95)) + 1e-6)
@@ -459,7 +467,7 @@ def render(st: dict, pdir: Path, size=(1920, 1080), audio: dict | None = None, p
                 break
             row = rows[i]
             if shot is None:
-                shot = Shot(st, row, size, figs, dict(prev_pose), pics)
+                shot = Shot(st, row, size, figs, dict(prev_pose), pics, pdir)
                 s = row["shot"]
                 if s.get("who"):
                     prev_pose[s["who"]] = s.get("pose", "down")
@@ -508,7 +516,7 @@ def preview(st: dict, shot_idx: int, size=(960, 540), t: float = 0.6, pdir: Path
         s = r["shot"]
         if s.get("who"):
             prev[s["who"]] = s.get("pose", "down")
-    sh = Shot(st, rows[shot_idx], size, figures(st), prev, wpic.load(st, pdir))
+    sh = Shot(st, rows[shot_idx], size, figures(st), prev, wpic.load(st, pdir), pdir)
     return Image.fromarray(sh.subtitle(sh.frame(t), t))
 
 
@@ -603,7 +611,8 @@ def write(st: dict, progress=None) -> dict:
                         for c in plan_.get("characters") or [] if isinstance(c, dict)][:6]
     st["places"] = [{"id": wa_slug(p.get("id") or p.get("name")), "name": str(p.get("name") or ""),
                      "kind": p.get("kind") if p.get("kind") in scene_art.KINDS else "phong_khach",
-                     "time": "dem" if p.get("time") == "dem" else "ngay"}
+                     "time": "dem" if p.get("time") == "dem" else "ngay",
+                     "look": str(p.get("look") or "")[:500]}
                     for p in plan_.get("places") or [] if isinstance(p, dict)][:8]
     segs = [s for s in plan_.get("segments") or [] if isinstance(s, dict)][:20]
     st["segments"] = segs
