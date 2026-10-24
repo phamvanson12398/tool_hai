@@ -2652,6 +2652,228 @@ def api_story_render(pid):
     return jsonify({"ok": True})
 
 
+# ------------------------------------------------------------ truyện webtoon
+# Tab riêng: truyện tranh động kiểu webtoon Hàn (nhân vật người thật, cận mặt,
+# chèn màn hình điện thoại); AI viết truyện + phân cảnh, tool tự vẽ và diễn.
+
+def _load_webtoon(pid: str) -> tuple[dict, dict]:
+    from core import webtoon_film as wf
+    data = _load_project(pid)
+    if data.get("mode") != "webtoon":
+        raise FileNotFoundError(f"'{pid}' không phải truyện webtoon")
+    return data, data.setdefault("webtoon", wf.default_story())
+
+
+def _webtoon_view(pid: str, data: dict) -> dict:
+    from core import webtoon_art as wa, webtoon_film as wf
+    out = dict(data)
+    out["status"] = _status(pid)
+    out["video_ready"] = (config.PROJECTS / pid / "out" / "video.mp4").exists()
+    out["options"] = {
+        "genres": [[k, v] for k, v in wf.GENRES.items()], "langs": [[k, v] for k, v in wf.LANGS.items()],
+        "types": list(wf.SHOT_TYPES), "cameras": list(wf.CAMERAS), "exprs": list(wa.EXPRS),
+        "poses": list(wa.POSES), "hairs": list(wa.HAIRS), "hair_colors": list(wa.HAIR),
+        "tops": list(wa.TOPS), "colors": list(wa.CLOTH), "skins": list(wa.SKIN),
+        "kinds": [[k, v] for k, v in wf.PLACE_KINDS.items()],
+        "screens": ["chat", "call", "wifi", "notice", "alert", "video", "noise", "lock", "loading", "app"],
+    }
+    return out
+
+
+@app.post("/api/webtoon")
+def api_webtoon_new():
+    from core import webtoon_film as wf
+    body = request.get_json(silent=True) or {}
+    pid = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
+    wt = wf.default_story()
+    for k in ("brief", "genre", "language"):
+        if body.get(k):
+            wt[k] = body[k]
+    data = {"id": pid, "mode": "webtoon", "title": (body.get("title") or "").strip(),
+            "language": wt["language"], "format": "16:9", "webtoon": wt,
+            "assets": {"characters": [], "background": None, "voices": {}},
+            "state": "draft", "created_at": datetime.now().isoformat(timespec="seconds")}
+    config.project_dir(pid)
+    _save_project(pid, data)
+    return jsonify(_webtoon_view(pid, data))
+
+
+@app.get("/api/webtoon/list")
+def api_webtoon_list():
+    out = []
+    for p in sorted(config.PROJECTS.glob("*/project.json"), reverse=True):
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        if d.get("mode") == "webtoon":
+            out.append({"id": d["id"], "title": d.get("title") or (d.get("webtoon") or {}).get("title")
+                        or "(chưa đặt tên)", "created_at": d.get("created_at")})
+    return jsonify({"items": out[:60]})
+
+
+@app.get("/api/webtoon/<pid>")
+def api_webtoon_get(pid):
+    try:
+        data, _ = _load_webtoon(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    return jsonify(_webtoon_view(pid, data))
+
+
+@app.post("/api/webtoon/<pid>/save")
+def api_webtoon_save(pid):
+    from core import webtoon_art as wa, webtoon_film as wf
+    try:
+        data, wt = _load_webtoon(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    body = request.get_json(silent=True) or {}
+    for k in ("title", "brief", "prev_summary", "hook"):
+        if k in body:
+            wt[k] = str(body[k] or "")
+    if body.get("genre") in wf.GENRES:
+        wt["genre"] = body["genre"]
+    if body.get("language") in wf.LANGS:
+        wt["language"] = data["language"] = body["language"]
+    for k, lo, hi in (("minutes", 1, 20), ("part", 1, 99)):
+        if k in body:
+            try:
+                wt[k] = max(lo, min(hi, float(body[k]) if k == "minutes" else int(body[k])))
+            except (TypeError, ValueError):
+                pass
+    for k in ("subtitles", "cliffhanger"):
+        if k in body:
+            wt[k] = bool(body[k])
+    if isinstance(body.get("narrator"), dict):
+        wt["narrator"] = {"voice": str(body["narrator"].get("voice") or ""),
+                          "instruct": str(body["narrator"].get("instruct") or "")}
+    if isinstance(body.get("characters"), list):
+        wt["characters"] = [{"id": wf.wa_slug(c.get("id") or c.get("name")), "name": str(c.get("name") or ""),
+                             "look": wa.Look.from_dict(c.get("look")).to_dict(),
+                             "voice": {"voice": str((c.get("voice") or {}).get("voice") or ""),
+                                       "instruct": str((c.get("voice") or {}).get("instruct") or "")},
+                             "home": str(c.get("home") or next((x.get("home") for x in wt.get("characters") or []
+                                                                if x.get("id") == c.get("id")), "") or "")}
+                            for c in body["characters"] if isinstance(c, dict)][:8]
+    if isinstance(body.get("places"), list):
+        wt["places"] = [{"id": wf.wa_slug(p.get("id") or p.get("name")), "name": str(p.get("name") or ""),
+                         "kind": p.get("kind") if p.get("kind") in wf.PLACE_KINDS else "phong_khach",
+                         "time": "dem" if p.get("time") == "dem" else "ngay"}
+                        for p in body["places"] if isinstance(p, dict)][:10]
+    if isinstance(body.get("shots"), list):
+        ids = {c["id"] for c in wt.get("characters") or []}
+        wt["shots"] = [wf.clean_shot(s, ids, k) for k, s in enumerate(body["shots"]) if isinstance(s, dict)]
+    if wt.get("title"):
+        data["title"] = wt["title"]
+    _save_project(pid, data)
+    return jsonify(_webtoon_view(pid, data))
+
+
+@app.post("/api/webtoon/<pid>/write")
+def api_webtoon_write(pid):
+    from core import webtoon_film as wf
+    try:
+        data, wt = _load_webtoon(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    if _status(pid).get("state") in ("writing", "rendering"):
+        return jsonify({"ok": True, "already": True})
+    with JOBS_LOCK:
+        JOBS[pid] = {"state": "writing", "progress": 0.0, "message": "bắt đầu", "log": []}
+
+    def work():
+        try:
+            wf.write(wt, progress=lambda f, m: _set_status(pid, progress=round(float(f), 3), message=str(m)))
+            d2, _ = _load_webtoon(pid)
+            d2["webtoon"] = wt
+            d2["title"] = wt.get("title") or d2.get("title")
+            _save_project(pid, d2)
+            _set_status(pid, state="written", progress=1.0, message="đã viết xong")
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            _set_status(pid, state="error", message=f"AI viết lỗi: {_short_err(e, 400)}")
+
+    threading.Thread(target=work, daemon=True).start()
+    return jsonify({"ok": True})
+
+
+@app.get("/api/webtoon/<pid>/preview/<int:i>.png")
+def api_webtoon_preview(pid, i):
+    import io
+    from core import webtoon_film as wf
+    try:
+        _, wt = _load_webtoon(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    try:
+        t = float(request.args.get("t") or 0.6)
+    except ValueError:
+        t = 0.6
+    im = wf.preview(wt, i, (640, 360), t)
+    buf = io.BytesIO()
+    im.save(buf, "PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png")
+
+
+@app.get("/api/webtoon/<pid>/char/<cid>.png")
+def api_webtoon_char(pid, cid):
+    import io
+    from PIL import Image
+    from core import webtoon_art as wa
+    try:
+        _, wt = _load_webtoon(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    c = next((c for c in wt.get("characters") or [] if c["id"] == cid), None)
+    if not c:
+        return _err("Không thấy nhân vật.", 404)
+    fig = wa.Figure(wa.Look.from_dict(c.get("look")))
+    W, H = 240, 300
+    s = H * 0.9 / fig.b["H"]
+    im = wa.render(fig, wa.State(expr="neutral"), (W, H), (W / 2, H * 0.96), s, 1.6,
+                   Image.new("RGB", (W, H), (236, 234, 228)))
+    buf = io.BytesIO()
+    im.convert("RGB").save(buf, "PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png")
+
+
+@app.post("/api/webtoon/<pid>/render")
+def api_webtoon_render(pid):
+    from core import webtoon_film as wf
+    try:
+        data, wt = _load_webtoon(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    if not wt.get("shots"):
+        return _err("Chưa có cảnh quay nào — bấm 'AI viết truyện & phân cảnh' trước.")
+    if _status(pid).get("state") in ("writing", "rendering"):
+        return jsonify({"ok": True, "already": True})
+    with JOBS_LOCK:
+        JOBS[pid] = {"state": "rendering", "progress": 0.0, "message": "bắt đầu", "log": []}
+
+    def work():
+        try:
+            pdir = config.project_dir(pid)
+            audio = wf.narrate(wt, pdir, progress=lambda f, m: _set_status(
+                pid, progress=round(0.35 * float(f), 3), message=str(m)))
+            mp4 = wf.render(wt, pdir, (1920, 1080), audio, out_name="video.mp4",
+                            progress=lambda f, m: _set_status(pid, progress=round(0.35 + 0.65 * float(f), 3),
+                                                              message=str(m)))
+            d2, _ = _load_webtoon(pid)
+            d2["result"] = {"video": str(mp4)}
+            _save_project(pid, d2)
+            _set_status(pid, state="done", progress=1.0, message="xong")
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            _set_status(pid, state="error", message=f"Dựng video lỗi: {_short_err(e, 400)}")
+
+    threading.Thread(target=work, daemon=True).start()
+    return jsonify({"ok": True})
+
+
 def main() -> None:
     host = "127.0.0.1"
     port = 8766

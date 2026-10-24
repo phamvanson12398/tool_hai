@@ -18,6 +18,7 @@
     <nav class="tabs" id="tabs">
       <button class="tab is-active" data-screen="new" type="button">Tập mới</button>
       <button class="tab" data-screen="story" type="button">Truyện kể</button>
+      <button class="tab" data-screen="webtoon" type="button">Truyện webtoon</button>
       <button class="tab" data-screen="charstyles" type="button">Kiểu nhân vật</button>
       <button class="tab" data-screen="library" type="button">Thư viện</button>
       <button class="tab" data-screen="settings" type="button">Cài đặt</button>
@@ -536,6 +537,76 @@
     </div>
   </section>
 
+  <section class="screen" id="screen-webtoon">
+    <div class="screen-head">
+      <h1>Truyện webtoon</h1>
+      <span class="muted">Truyện tranh động kiểu webtoon Hàn: nhân vật người thật, cận mặt, nhép miệng, chèn màn hình điện thoại. Video 16:9.</span>
+    </div>
+    <div class="wt-grid">
+      <div class="wt-main">
+        <section class="card">
+          <h2 class="card-title"><span class="step">1</span> Câu chuyện</h2>
+          <div class="field-row">
+            <div class="field"><label for="wt-open">Mở tập đã làm</label><select id="wt-open"></select></div>
+            <div class="field" style="align-self:end"><button class="btn btn-sm" id="wt-new" type="button">+ Tập mới</button></div>
+          </div>
+          <div class="field">
+            <label for="wt-brief">Yêu cầu</label>
+            <textarea id="wt-brief" rows="3" placeholder="VD: Một ông bố nối wifi miễn phí ở công viên rồi bị lừa là con gái bị bắt cóc · Cô nhân viên mới phát hiện sếp đọc trộm tin nhắn · Chàng trai đi xem mắt gặp lại người yêu cũ"></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="wt-genre">Thể loại</label><select id="wt-genre"></select></div>
+            <div class="field"><label for="wt-lang">Ngôn ngữ thoại</label><select id="wt-lang"></select></div>
+            <div class="field"><label for="wt-minutes">Thời lượng (phút)</label><input type="number" id="wt-minutes" min="1" max="20" step="0.5" value="4"></div>
+            <div class="field"><label for="wt-part">Phần số</label><input type="number" id="wt-part" min="1" max="99" value="1"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="wt-cliff">Cuối phần</label>
+              <select id="wt-cliff"><option value="1">Bỏ lửng ở cao trào (làm series)</option><option value="0">Kết trọn vẹn</option></select></div>
+            <div class="field"><label for="wt-subs">Phụ đề</label>
+              <select id="wt-subs"><option value="1">Có</option><option value="0">Không</option></select></div>
+            <div class="field"><label for="wt-title">Tên tập</label><input type="text" id="wt-title" placeholder="AI tự đặt nếu để trống"></div>
+          </div>
+          <div class="field">
+            <label for="wt-prev">Tóm tắt các phần trước (khi làm phần 2, 3...)</label>
+            <textarea id="wt-prev" rows="2" placeholder="Để trống nếu là phần 1"></textarea>
+          </div>
+          <div class="row-actions">
+            <button class="btn" id="wt-save" type="button">Lưu</button>
+            <button class="btn btn-primary" id="wt-write" type="button">AI viết truyện &amp; phân cảnh</button>
+            <span class="muted" id="wt-state"></span>
+          </div>
+        </section>
+        <section class="card">
+          <h2 class="card-title"><span class="step">2</span> Nhân vật &amp; địa điểm</h2>
+          <div id="wt-chars" class="wt-chars"></div>
+          <div id="wt-places" class="wt-places"></div>
+        </section>
+        <section class="card">
+          <h2 class="card-title"><span class="step">3</span> Phân cảnh</h2>
+          <p class="hint">Mỗi dòng là một cảnh quay. Sửa người nói, câu nói, nét mặt, tư thế, góc máy, màn hình điện thoại rồi bấm <b>Lưu</b>. Bấm vào ảnh nhỏ để xem lại.</p>
+          <div id="wt-shots" class="wt-shots"></div>
+          <div class="row-actions"><button class="btn btn-sm" id="wt-add" type="button">+ Cảnh quay</button></div>
+        </section>
+      </div>
+      <aside class="wt-side">
+        <section class="card">
+          <h2 class="card-title"><span class="step">4</span> Dựng video</h2>
+          <img id="wt-big" class="wt-big" alt="Xem trước">
+          <div class="row-actions">
+            <button class="btn btn-primary" id="wt-render" type="button">Dựng video</button>
+          </div>
+          <div class="progress" id="wt-progress-wrap" hidden><div class="progress-bar" id="wt-progress"></div></div>
+          <p class="hint" id="wt-msg"></p>
+          <div id="wt-out" hidden>
+            <video id="wt-video" controls style="width:100%"></video>
+            <a class="btn btn-sm" id="wt-dl" download="truyen_webtoon.mp4">Tải mp4</a>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </section>
+
   <section class="screen" id="screen-charstyles">
     <div class="screen-head">
       <h1>Kiểu nhân vật</h1>
@@ -925,5 +996,6 @@
 <script src="/static/rig.js"></script>
 <script src="/static/story.js"></script>
 <script src="/static/styles.js"></script>
+<script src="/static/webtoon.js"></script>
 </body>
 </html>

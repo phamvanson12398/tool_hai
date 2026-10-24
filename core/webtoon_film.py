@@ -96,7 +96,7 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict[str, Path]:
     """Đọc từng câu (mỗi nhân vật một giọng cố định). {id cảnh quay: file wav}."""
     import soundfile as sf
     from . import voice
-    from .story import _voice_ref, default_voice
+    from .story import _voice_ref
     lang = st.get("language") or "vi"
     chars = {c["id"]: c for c in st.get("characters") or []}
     todo = all_lines(st)
@@ -450,3 +450,124 @@ def preview(st: dict, shot_idx: int, size=(960, 540), t: float = 0.6) -> Image.I
             prev[s["who"]] = s.get("pose", "down")
     sh = Shot(st, rows[shot_idx], size, figures(st), prev)
     return Image.fromarray(sh.subtitle(sh.frame(t), t))
+
+
+# ---------------------------------------------------------------- AI viết
+
+GENRES = {
+    "thriller": "Giật gân / lừa đảo công nghệ (hack, lừa qua điện thoại, bắt cóc giả...)",
+    "horror": "Kinh dị đời thường (nhà trọ lạ, tin nhắn lúc nửa đêm...)",
+    "comedy": "Hài đời thường (hiểu lầm, sĩ diện, gia đình lầy...)",
+    "romance": "Tình cảm (crush, người yêu cũ, hẹn hò...)",
+    "family": "Gia đình cảm động (bố mẹ, con cái, hiểu lầm rồi thương)",
+    "revenge": "Trả thù thoả mãn / 사이다 (kẻ xấu bị vạch mặt)",
+    "office": "Công sở (sếp, đồng nghiệp, phỏng vấn...)",
+    "school": "Học đường (bạn bè, thầy cô, thi cử...)",
+    "mystery": "Bí ẩn / trinh thám (ai là thủ phạm)",
+}
+LANGS = {"vi": "tiếng Việt", "ko": "tiếng Hàn", "en": "tiếng Anh"}
+
+
+def _catalog() -> dict:
+    return {"hairs": " | ".join(wa.HAIRS), "hair_colors": " | ".join(wa.HAIR),
+            "tops": " | ".join(wa.TOPS), "colors": " | ".join(wa.CLOTH),
+            "kinds": ", ".join(f"{k} ({v})" for k, v in PLACE_KINDS.items()),
+            "exprs": ", ".join(wa.EXPRS), "poses": ", ".join(wa.POSES)}
+
+
+def write(st: dict, progress=None) -> dict:
+    """AI viết truyện: dàn ý + nhân vật + địa điểm, rồi phân cảnh từng đoạn."""
+    from . import claude_cli
+    say = progress or (lambda f, m: None)
+    minutes = max(1.0, min(20.0, float(st.get("minutes") or 4)))
+    lang = st.get("language") or "vi"
+    cat = _catalog()
+    part = int(st.get("part") or 1)
+    prev = (st.get("prev_summary") or "").strip()
+    say(0.03, "AI nghĩ câu chuyện, nhân vật, địa điểm")
+    plan_ = claude_cli._run_json(claude_cli._load_prompt(
+        "webtoon_plan", minutes=f"{minutes:g}", part=str(part), lang_label=LANGS.get(lang, lang),
+        brief=st.get("brief") or "(tự nghĩ một chuyện hay theo thể loại)",
+        genre=GENRES.get(st.get("genre"), st.get("genre") or ""),
+        prev_block=(f"### Tóm tắt các phần trước (viết tiếp, giữ đúng nhân vật)\n{prev}" if prev else ""),
+        ending_rule=("Đoạn cuối DỪNG ở cao trào / cú sốc, bỏ lửng cho người xem chờ phần sau."
+                     if st.get("cliffhanger", True) else "Đoạn cuối kết trọn vẹn."),
+        **cat), task="story", timeout=600)
+    if not isinstance(plan_, dict) or not plan_.get("segments"):
+        raise RuntimeError("AI không lập được dàn ý.")
+    st["title"] = st.get("title") or str(plan_.get("title") or "")[:120]
+    st["hook"] = str(plan_.get("hook") or "")[:300]
+    st["characters"] = [{"id": wa_slug(c.get("id") or c.get("name")), "name": str(c.get("name") or ""),
+                         "look": wa.Look.from_dict(c.get("look")).to_dict(), "voice": c.get("voice") or {},
+                         "home": wa_slug(c.get("home")) if c.get("home") else ""}
+                        for c in plan_.get("characters") or [] if isinstance(c, dict)][:6]
+    st["places"] = [{"id": wa_slug(p.get("id") or p.get("name")), "name": str(p.get("name") or ""),
+                     "kind": p.get("kind") if p.get("kind") in scene_art.KINDS else "phong_khach",
+                     "time": "dem" if p.get("time") == "dem" else "ngay"}
+                    for p in plan_.get("places") or [] if isinstance(p, dict)][:8]
+    segs = [s for s in plan_.get("segments") or [] if isinstance(s, dict)][:20]
+    st["segments"] = segs
+    ids = {c["id"] for c in st["characters"]}
+    chars_txt = "\n".join(f"- {c['id']}: {c['name']} — {c['look']['sex']}, {c['look']['age']}, "
+                          f"{c['look']['hair']}, áo {c['look']['top_color']} — ở {c.get('home') or '?'}"
+                          for c in st["characters"])
+    places_txt = "\n".join(f"- {p['id']}: {p['name']} — {p['kind']}, {p['time']}" for p in st["places"])
+    outline = "\n".join(f"{i + 1}. {s.get('summary')}" for i, s in enumerate(segs))
+    per = minutes * 60 / max(1, len(segs))
+    shots: list = []
+    for i, sg in enumerate(segs):
+        say(0.1 + 0.85 * i / len(segs), f"AI phân cảnh đoạn {i + 1}/{len(segs)}")
+        before = [f"{(s.get('line') or {}).get('who')}: {(s.get('line') or {}).get('text')}"
+                  for s in shots[-14:] if (s.get("line") or {}).get("text")]
+        data = claude_cli._run_json(claude_cli._load_prompt(
+            "webtoon_shots", lang_label=LANGS.get(lang, lang), title=st["title"], hook=st["hook"],
+            outline=outline, characters=chars_txt, places=places_txt, index=str(i + 1),
+            summary=str(sg.get("summary") or ""), seconds=str(int(per)), shots=str(max(6, int(per / 2.6))),
+            segment_rule=("Mở video bằng MÓC CÂU." if i == 0 else "") +
+                         (" Đây là đoạn CUỐI: dừng ở cú sốc, cảnh cuối là một câu bỏ lửng."
+                          if i == len(segs) - 1 and st.get("cliffhanger", True) else ""),
+            before_block=("### Thoại ngay trước đó (nối tiếp, không lặp lại)\n" + "\n".join(before)) if before else "",
+            **cat), task="story", timeout=600)
+        got = data.get("shots") if isinstance(data, dict) else None
+        if not got:
+            raise RuntimeError(f"AI không phân cảnh được đoạn {i + 1}.")
+        shots += [s for s in got if isinstance(s, dict)]
+    st["shots"] = [clean_shot(s, ids, k) for k, s in enumerate(shots)]
+    fix_places(st)
+    say(1.0, "xong")
+    return st
+
+
+def fix_places(st: dict) -> None:
+    """Người nói qua điện thoại phải ở nơi của mình: cảnh cận mặt một người đang nghe gọi
+    mà lại đặt ở nơi thường ở của người khác (trong khi người đó có nơi riêng) thì chuyển
+    về nơi của người nói."""
+    places = {p["id"] for p in st.get("places") or []}
+    home = {c["id"]: c.get("home") for c in st.get("characters") or [] if c.get("home") in places}
+    owner = {}
+    for cid, pl in home.items():
+        owner.setdefault(pl, set()).add(cid)
+    first = (st.get("places") or [{}])[0].get("id")
+    for s in st.get("shots") or []:
+        if s.get("place") not in places:
+            s["place"] = home.get(s.get("who")) or first
+        who = s.get("who")
+        if s.get("type") in ("close", "medium") and who in home and s.get("pose") in ("phone_ear", "phone_look"):
+            here = owner.get(s["place"], set())
+            if here and who not in here:          # đang ở "nhà" của người khác: về nơi của mình
+                s["place"] = home[who]
+    # cảnh "hai người" mà AI quên ghi người thứ hai: lấy người vừa nói gần nhất ở cùng chỗ
+    shots = st.get("shots") or []
+    for k, s in enumerate(shots):
+        if s.get("type") != "two" or s.get("with"):
+            continue
+        for p in reversed(shots[:k]):
+            o = (p.get("line") or {}).get("who") or p.get("who")
+            if o and o != s.get("who") and o != "narr" and p.get("place") == s.get("place"):
+                s["with"] = [o]
+                break
+
+
+def wa_slug(v) -> str:
+    from .story import _slug
+    return _slug(v)

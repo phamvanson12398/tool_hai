@@ -986,3 +986,48 @@ khác, hoặc chọn truyện dân gian, cổ tích.
 Viết lời kể là bước tốn nhất (truyện dài, nhiều chương). Cài đặt → Trợ lý AI →
 "Truyện kể: viết lời kể, chia cảnh" chọn được Antigravity; lỗi thì tự chuyển sang
 Claude.
+
+---
+
+## 13. Truyện webtoon (tab riêng)
+
+Truyện tranh động kiểu kênh kể chuyện webtoon Hàn ("썰"): nhân vật vẽ kiểu **người
+thật** (tỉ lệ người lớn, nét đen mảnh, màu phẳng, mắt trắng chấm đen, mũi hai nét),
+phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn hình điện thoại**. Video 16:9.
+
+### Các bước
+1. **Câu chuyện:** gõ **Yêu cầu** (vd *"Một ông bố nối wifi miễn phí ở công viên rồi bị
+   lừa là con gái bị bắt cóc"*), chọn **Thể loại** (giật gân / lừa đảo, kinh dị, hài, tình
+   cảm, gia đình, trả thù thoả mãn, công sở, học đường, bí ẩn), **Ngôn ngữ thoại** (Việt,
+   Hàn, Anh), **Thời lượng**, **Phần số**. **Cuối phần**: *bỏ lửng ở cao trào* để làm
+   series (phần 2 thì dán tóm tắt các phần trước vào ô dưới), hoặc *kết trọn vẹn*.
+2. Bấm **AI viết truyện & phân cảnh**. AI:
+   - nghĩ câu chuyện, tên tập, móc câu mở đầu;
+   - tạo nhân vật (ngoại hình cố định, mỗi người một vẻ) và địa điểm (người gọi điện ở chỗ
+     khác thì có nơi riêng);
+   - viết **danh sách cảnh quay**: mỗi câu thoại một cảnh, ghi ai nói, ở đâu, nét mặt, tư thế
+     tay, hướng nhìn, góc máy, chỗ chèn màn hình điện thoại và nội dung trên màn hình.
+3. **Nhân vật & địa điểm** (mục 2): đổi giới, tuổi, kiểu tóc, màu tóc, áo, màu áo, quần, da,
+   kính; ảnh nhỏ vẽ lại ngay. Ô **Giọng** là mô tả giọng (vd `female, young adult, moderate pitch`).
+4. **Phân cảnh** (mục 3): mỗi dòng một cảnh quay — loại cảnh (cận mặt, nửa người, toàn cảnh,
+   hai người, màn hình điện thoại, màn đen), địa điểm, nhân vật, nét mặt, tư thế, hướng
+   nhìn, góc máy, người nói và câu nói. Cảnh màn hình điện thoại có ô nội dung (dạng JSON):
+   tin nhắn, cuộc gọi, danh sách wifi, thông báo, cảnh báo chữ đỏ có đếm ngược, gọi video
+   (thấy mặt người bên kia), nhiễu sóng, màn hình khoá, đang tải. **↑** đưa lên, **✕** bỏ,
+   **+ Cảnh quay** thêm. Bấm **Lưu**; bấm ảnh nhỏ để xem lớn.
+5. **Dựng video**: OmniVoice đọc từng câu (mỗi nhân vật một giọng cố định), tool vẽ từng khung.
+
+### Trên hình có gì
+- **Nhép miệng** theo giọng từng câu, **chớp mắt**, **thở**, đầu **lắc / nghiêng** nhẹ khi nói.
+- **Tay đổi tư thế mượt** khi sang câu khác: áp điện thoại lên tai, cầm xem điện thoại, ôm
+  đầu, hai tay ôm đầu, che mặt, khoanh tay, chỉ, vẫy, chống nạnh, nhún vai...
+- Nét mặt: lo lắng, sốc, sợ hãi (run, vạch sọc trên trán), buồn, khóc (nước mắt), giận, vui,
+  cười to, nhếch mép, mệt mỏi, suy nghĩ, tuyệt vọng; thêm mồ hôi, quầng thâm, vết bầm, má hồng.
+- Người **đi vào khung**; **máy quay** đẩy vào, lùi ra, lia, rung khi sốc.
+- Cận cảnh thì **nền mờ tối** như video mẫu; phụ đề trắng nền đen phía dưới.
+- Gọi điện: mỗi câu cận mặt người đang nói ở đúng nơi của người đó.
+
+### Lưu ý
+- Video 4 phút 1080p dựng khoảng 10–15 phút (sau khi đọc giọng).
+- Bối cảnh dùng các mẫu vẽ có sẵn của tool (phòng khách, phòng ngủ, văn phòng, đường phố,
+  công viên...). Thứ chưa có (ga tàu, bệnh viện, xe hơi...) thì chọn mẫu gần nhất.

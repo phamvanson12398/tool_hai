@@ -1,0 +1,43 @@
+Bạn là đạo diễn phân cảnh cho video truyện tranh động kiểu webtoon Hàn. Tool tự vẽ và tự diễn đúng những gì bạn ghi: nhân vật nhép miệng theo giọng, chớp mắt, đổi nét mặt, đổi tư thế tay; máy quay đẩy / lia / rung; chèn màn hình điện thoại. Thoại bằng {{lang_label}}.
+
+### Truyện: {{title}}
+Móc câu: {{hook}}
+### Toàn bộ các đoạn
+{{outline}}
+### Nhân vật (id: tên — ngoại hình — nơi thường ở)
+{{characters}}
+### Địa điểm (id: tên — mẫu, giờ)
+{{places}}
+{{before_block}}
+
+### Viết phân cảnh cho ĐOẠN {{index}}: {{summary}}
+Khoảng {{seconds}} giây ≈ {{shots}} cảnh quay. {{segment_rule}}
+
+### Luật phân cảnh
+- MỖI câu thoại là MỘT cảnh quay ("line"), câu ngắn tự nhiên (dưới 22 chữ), đối đáp nhanh như nói thật; không để khoảng trống dài. Người kể ("who":"narr") rất ít.
+- Phần lớn là CẬN MẶT ("close") người đang nói, nét mặt đổi theo cảm xúc từng câu. Xen "medium" (nửa người, thấy tay làm gì), "two" (hai người cùng chỗ đối đáp), "wide" (toàn cảnh khi mở cảnh mới / đi vào: "enter":"left"|"right").
+- Gọi điện / nhắn tin: hai người ở HAI NƠI, mỗi câu cận mặt người nói ở ĐÚNG NƠI CỦA NGƯỜI ĐÓ ("place" là nơi người nói đang đứng, KHÔNG phải nơi người nghe), "pose":"phone_ear" khi nghe gọi, "phone_look" khi xem điện thoại.
+- Chèn MÀN HÌNH ĐIỆN THOẠI ("type":"phone") mỗi khi điện thoại quan trọng (tin nhắn đến, cuộc gọi đến, thông báo, danh sách wifi, màn hình lạ...), có thể kèm câu thoại của người đang nhìn; không có thoại thì "dur" 1.5–2.5.
+  screen và data:
+  chat {"name":"tên người nhắn","msgs":[{"me":true|false,"text":"..."}],"app":"kakao"|"sms"}
+  call {"name":"...","state":"incoming"|"calling"|"talking","time":"00:42"}
+  wifi {"items":["tên mạng",...],"pick":0,"state":"connecting"|"connected"|""}
+  notice {"title":"...","text":"...","time":"04:52"}
+  alert {"lines":["chữ đỏ",...],"count":"04:59"}
+  video {"who":"id nhân vật","expr":"crying"} (gọi video, thấy mặt người bên kia)
+  noise {} | lock {"time":"04:52"} | loading {"text":"..."} | app {"title":"...","lines":["..."]}
+- Cảm xúc thể hiện bằng nét mặt + tư thế + máy quay: sốc thì "expr":"shocked" + "camera":"shake"; sợ thì "scared" + "extras":["sweat"]; lo âu thì "hand_head"; câu quan trọng thì "push_in".
+- Nét mặt ("expr"): {{exprs}}
+- Tư thế tay ("pose"): {{poses}}
+- Thêm ("extras"): sweat, tears, blush, bags (quầng thâm), bruise (vết bầm), shadow (mặt tái)
+- Góc máy ("camera"): push_in, pull_out, pan_left, pan_right, shake, still
+- "look": left | right | down | up | "" (hướng nhìn, cận mặt thì nhìn về phía người kia)
+- Đúng người, đúng nơi: người nói phải ở đúng địa điểm của cảnh; "with" chỉ dùng cho "two"/"wide" (người cùng đứng đó).
+
+Output JSON đúng dạng này, không có gì khác:
+{"shots":[
+ {"type":"wide","place":"ga","who":"bo","pose":"phone_ear","expr":"neutral","enter":"left","camera":"pan_right","line":{"who":"bo","text":"..."}},
+ {"type":"close","place":"phong","who":"con","expr":"happy","pose":"phone_ear","look":"left","line":{"who":"con","text":"..."}},
+ {"type":"phone","place":"ga","phone":{"screen":"notice","data":{"title":"...","text":"...","time":"21:40"}},"dur":2.0},
+ {"type":"close","place":"ga","who":"bo","expr":"shocked","pose":"phone_look","look":"down","camera":"shake","extras":["sweat"],"line":{"who":"bo","text":"..."}}
+]}

@@ -923,3 +923,31 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 .cs-cast { flex: 1 1 auto; min-width: 0; width: 100%; background: #eee4ce; border-radius: 8px; }
 .cs-note { font-size: 12px; opacity: .8; margin: 0; }
 .cs-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+/* ---------------- Truyện webtoon ---------------- */
+.wt-grid { display: grid; grid-template-columns: minmax(0, 1fr) 420px; gap: 16px; align-items: start; }
+@media (max-width: 1100px) { .wt-grid { grid-template-columns: 1fr; } }
+.wt-side { position: sticky; top: 70px; }
+.wt-big { width: 100%; aspect-ratio: 16 / 9; background: #111; border-radius: var(--radius-sm); display: block; margin-bottom: 10px; }
+.wt-chars { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 10px; }
+.wt-char { border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 8px; display: grid; grid-template-columns: 84px 1fr; gap: 8px; }
+.wt-char img { width: 84px; height: 105px; object-fit: cover; border-radius: 6px; background: #eee; }
+.wt-char select, .wt-char input { width: 100%; font-size: 12px; padding: 3px 5px; margin-bottom: 3px; }
+.wt-places { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+.wt-place { border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 6px; display: flex; gap: 6px; align-items: center; font-size: 12px; }
+.wt-place input, .wt-place select { font-size: 12px; padding: 3px 5px; }
+.wt-shots { display: flex; flex-direction: column; gap: 6px; }
+.wt-shot { display: grid; grid-template-columns: 30px 128px 1fr 54px; gap: 8px; border: 1px solid var(--line-soft); border-radius: var(--radius-sm); padding: 6px; align-items: start; }
+.wt-shot .num { font-size: 12px; color: var(--text-faint); text-align: center; padding-top: 4px; }
+.wt-shot img { width: 128px; aspect-ratio: 16/9; object-fit: cover; border-radius: 4px; background: #222; cursor: pointer; }
+.wt-shot .ctl { display: flex; flex-wrap: wrap; gap: 4px; align-content: flex-start; }
+.wt-shot .ctl select { width: auto; flex: 0 1 auto; max-width: 150px; }
+.wt-shot .ctl select, .wt-shot .ctl input, .wt-shot textarea, .wt-char input, .wt-char select,
+.wt-place input, .wt-place select {
+  font-size: 12px; padding: 3px 6px; background: var(--bg); color: var(--text);
+  border: 1px solid var(--line); border-radius: 6px;
+}
+.wt-shot .ctl .text { flex: 1 1 100%; width: 100%; }
+.wt-shot textarea { width: 100%; font-size: 11px; font-family: monospace; }
+.wt-char label { font-size: 12px; color: var(--text-faint); display: block; margin: 2px 0; }
+.wt-shot .acts { display: flex; flex-direction: column; gap: 4px; }
