@@ -43,12 +43,12 @@ Viết lời kể cho riêng chương này, khoảng {{syllables}} chữ (âm ti
 
 ### Chia cảnh
 - Chia lời kể thành các CẢNH, mỗi cảnh 35–70 chữ (đọc 8–15 giây) ứng với MỘT bức tranh. Đoạn phân tích dài thì chia nhiều cảnh, mỗi cảnh một ý.
-- Cảnh kể truyện: tranh vẽ đúng khoảnh khắc trong truyện. Cảnh phân tích / bối cảnh lịch sử: tranh minh hoạ thứ đang được nói tới (cận cảnh đồ vật, cảnh xã hội thời đó, nhân vật đang lặng im...), không vẽ người kể.
+- Cảnh kể truyện: tranh vẽ đúng khoảnh khắc trong truyện. Cảnh phân tích / bối cảnh lịch sử: vẫn cho nhân vật trên hình đang làm đúng việc / khoảnh khắc đang được soi (lão ngồi lặng bên con chó, người đói dắt díu nhau trên đường...) để hình luôn có người cử động; không vẽ người kể.
 
 ### Mỗi cảnh cần
 - "text": lời kể của cảnh (tiếng Việt).
 - "prompt": mô tả bức tranh bằng tiếng Anh cho AI vẽ: ai / cái gì, đang làm gì, ở đâu, biểu cảm, bố cục, góc máy (wide shot / medium shot / close-up), ánh sáng. Gọi nhân vật bằng tên, KHÔNG tả lại ngoại hình, không nhắc phong cách vẽ, không có chữ trong tranh.
-- "chars": id nhân vật có mặt trong tranh (cảnh chỉ có đồ vật / cảnh xã hội thì có thể để []).
+- "chars": id nhân vật có mặt trong tranh — gần như cảnh nào cũng phải có ít nhất 1 nhân vật (cảnh không có ai thì hình đứng yên); chỉ để [] khi thật sự không thể.
 - "place": id địa điểm (hoặc "").
 - "camera": một trong zoom_in, zoom_out, pan_left, pan_right, pan_up, pan_down, still — zoom_in khi dừng lại soi một chi tiết, still khi trầm lắng, pan cho cảnh rộng.
 

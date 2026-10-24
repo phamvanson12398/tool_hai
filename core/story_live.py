@@ -474,6 +474,97 @@ class LiveShot:
         return self.cv2.warpAffine(canvas, M, (self.W, self.H), flags=self.cv2.INTER_LINEAR)
 
 
+# ------------------------------------------------------------ diễn như Phim
+# Cảnh kể chuyện được đổi thành một cảnh phim (core/film.py) để nhân vật đi lại, ngồi,
+# nằm, đưa đồ, quay sang nhau và máy quay đổi góc như chế độ Phim; lời kể và câu thoại
+# đặt đúng mốc của file giọng đã đọc.
+
+_FIDGET = ["nod", "think", "scratch_head", "cross_arms", "hands_hips", "talk"]
+_STILL = {"lie", "sleep"}
+
+
+def film_scene(st: dict, sc: dict, narr_at: float, narr_dur: float, speech=None,
+               dur: float = 0.0) -> dict:
+    """Cảnh Kể chuyện -> cảnh Phim (lời kể, hành động theo lời, thoại xen)."""
+    from . import story as story_m
+    looks = {c["id"]: c for c in st.get("characters") or []}
+    ids = [c for c in sc.get("chars") or [] if c in looks][:5]
+    cl = [looks[c] for c in ids]
+    acts = dict(sc.get("acts") or {}) or guess_acts(sc.get("text") or "", cl)
+    species = {c: ((looks[c].get("kit") or {}).get("species") or "human") for c in ids}
+    start, posture = {}, {}
+    beats = [{"t": "narr", "text": sc.get("text") or "", "at": narr_at}]
+    side = 0
+    for cid in ids:
+        a = act_of(acts.get(cid) or "idle")
+        if a == "walk_in":
+            start[cid] = "ngoai_trai" if side % 2 == 0 else "ngoai_phai"
+            side += 1
+            beats.append({"t": "act", "who": cid, "act": "enter", "with_prev": True})
+        elif a == "walk_out":
+            beats.append({"t": "act", "who": cid, "act": "exit", "at": narr_at + max(0.5, narr_dur * 0.4)})
+        elif a in _STILL:
+            posture[cid] = "lie"                 # ốm, chết, ngủ: nằm sẵn từ đầu cảnh
+            if a == "sleep":
+                beats.append({"t": "act", "who": cid, "act": "sleep", "with_prev": True})
+        elif a == "sit":
+            posture[cid] = "sit"
+        elif a != "idle":
+            beat = {"t": "act", "who": cid, "act": a, "at": narr_at + 0.2}
+            if a in ("give", "hug", "pat", "feed"):
+                other = next((o for o in ids if o != cid), None)
+                if not other:
+                    continue
+                beat["to"] = other
+            beats.append(beat)
+    scn = {"place": sc.get("place"), "chars": ids, "start": start, "posture": posture,
+           "time": sc.get("time"), "beats": beats}
+    story_m.match_narration(scn, cl, species)        # lời kể tả ai làm gì mà chưa có thì thêm
+    # đứng nghe lâu: thỉnh thoảng đổi động tác nhỏ cho khỏi đơ
+    end = max(dur, narr_at + narr_dur)
+    for k, cid in enumerate(ids):
+        if species[cid] != "human" or cid in posture:
+            continue
+        tt = narr_at + 3.5 + 1.3 * k
+        while tt < end - 2.0:
+            scn["beats"].append({"t": "act", "who": cid, "act": _FIDGET[(k * 2 + int(tt)) % len(_FIDGET)],
+                                 "at": tt, "dur": 1.6})
+            tt += 4.5
+    for ln in speech or []:                          # thoại xen: đúng mốc file giọng
+        if ln.get("who") in ids:
+            scn["beats"].append({"t": "line", "who": ln["who"], "text": ln.get("text") or "…",
+                                 "at": max(0.0, ln["at"] - 0.15), "path": ln.get("path"),
+                                 "to": next((o for o in ids if o != ln["who"]), None)})
+    scn["beats"].sort(key=lambda b: (b.get("at") if b.get("at") is not None else -1))
+    return scn
+
+
+class FilmLiveShot:
+    """Cảnh Kể chuyện diễn bằng bộ máy Phim: frame(u) như LiveShot (u: 0..1 của cảnh)."""
+
+    def __init__(self, st: dict, sc: dict, size, dur: float, audio_at: float = 0.0,
+                 audio_dur: float = 0.0, fps: int = 24, pdir=None, speech=None):
+        from . import film
+        self.dur = max(0.1, dur)
+        looks = {c["id"]: c for c in st.get("characters") or []}
+        for c in looks.values():
+            if not c.get("kit"):
+                c["kit"] = doodle.kit_from_look(c.get("name", ""), c.get("look", ""))
+        places = {p["id"]: p for p in st.get("places") or []}
+        scn = film_scene(st, sc, audio_at, audio_dur, speech, dur)
+        scn["time"] = scene_time(sc, places.get(sc.get("place")))
+        durs = {i: (audio_dur if b["t"] == "narr" else (next((s["dur"] for s in speech or []
+                                                              if s.get("path") == b.get("path")), 2.0)))
+                for i, b in enumerate(scn["beats"]) if b["t"] in ("narr", "line")}
+        W, H = size
+        self.plan = film.simulate(scn, looks, W, film.char_T(size), durs, lead=audio_at,
+                                  indoor=place_kind(places.get(sc.get("place"))) not in scene_art.OUTDOOR)
+        self.shot = film.FilmShot(st, scn, self.plan, size, pdir, fps=fps)
+
+    def frame(self, u: float) -> np.ndarray:
+        return self.shot.frame(max(0.0, u) * self.dur)
+
+
 def preview(st: dict, sc: dict, size, t: float = 1.0, pdir=None) -> Image.Image:
     """Ảnh xem trước một cảnh (khung giữa cảnh)."""
     shot = LiveShot(st, sc, size, "still", 6.0, pdir=pdir)

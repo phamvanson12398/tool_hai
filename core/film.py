@@ -426,6 +426,8 @@ def simulate(scene: dict, chars: dict, W: float, T: float, durs: dict,
             t = anchor[0] if anchor else beats[-1]["t0"]
         if kind == "line" and who in tracks and last_speaker and last_speaker != who:
             t += GAP_TURN
+        if b.get("at") is not None:            # mốc giờ cố định (Kể chuyện: khớp file giọng đã đọc)
+            t = float(b["at"])
         bt = dict(b, t0=t)
         if kind == "narr":
             d = durs.get(bt["i"], 2.5) + 0.4

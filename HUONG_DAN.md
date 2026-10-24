@@ -707,6 +707,13 @@ Tab riêng trên thanh trên cùng, gồm:
 Ô **Kiểu video** ở đầu mục 1:
 
 - **Kể chuyện**: người kể đọc suốt, nhân vật diễn theo lời kể (có thể xen thoại).
+  Với cách làm hình "Tool tự vẽ & nhân vật cử động", mỗi cảnh kể được **diễn bằng bộ
+  máy của Phim**: nhân vật đi vào / đi ra, đi tới xoa đầu, đưa đồ, ôm, ngồi lên chõng,
+  nằm trên giường, quay sang nhau, đứng nghe thì thỉnh thoảng đổi động tác; máy quay đổi
+  góc (toàn cảnh, hai người, cận mặt) thay vì chỉ phóng chậm trên một khung đứng yên.
+  Lời kể tả ai làm gì thì người đó làm đúng việc đó lúc đang kể. Cảnh nào lỗi thì tự
+  quay về cách diễn tại chỗ như trước. (Cách "Tranh tự vẽ ở công cụ khác" vẫn là tranh
+  tĩnh có máy quay lia / phóng.)
   Nhân vật có tay chân ngắn và **luôn cử động**: lúc đứng nghe cũng tự đổi động
   tác nhỏ mỗi vài giây (nhìn quanh, chắp tay sau lưng, gãi đầu, chống cằm, đổi chân...);
   khi lời kể nói "khóc, cười, ăn, uống, ôm, chỉ, vẫy, van xin, ngồi, nằm..." thì

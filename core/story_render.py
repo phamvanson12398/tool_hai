@@ -293,9 +293,17 @@ def render(st: dict, pdir: Path, fmt: str, settings: dict, audio: dict[str, Path
             p = imgs.get(sc["id"])
             if not p and tool:
                 # tool tự vẽ cảnh và cho nhân vật cử động theo lời kể
-                from .story_live import LiveShot
+                from .story_live import FilmLiveShot, LiveShot
                 speech = [{"who": ln["who"], "at": ln["at"] - row["start"], "dur": ln["dur"],
-                           "path": ln["path"]} for ln in row["lines"]]
+                           "path": ln["path"], "text": ln.get("text", "")} for ln in row["lines"]]
+                if sc.get("chars") and st.get("live_engine", "film") == "film":
+                    try:            # diễn như Phim: đi lại, ngồi, quay sang nhau, máy quay đổi góc
+                        shots[i] = FilmLiveShot(st, sc, size, row["dur"], audio_at=row["card"] + LEAD,
+                                                audio_dur=row["audio_dur"], fps=FPS, pdir=pdir,
+                                                speech=speech)
+                        return shots[i]
+                    except Exception as e:  # noqa: BLE001 — lỗi thì diễn tại chỗ như cũ
+                        logger.warning("Cảnh %s không diễn kiểu Phim được: %s", sc.get("id"), e)
                 shots[i] = LiveShot(st, sc, size, sc.get("camera") or "zoom_in", row["dur"],
                                     audio=row["audio"], audio_at=row["card"] + LEAD,
                                     audio_dur=row["audio_dur"], over=OVER, fps=FPS, pdir=pdir,
