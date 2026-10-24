@@ -214,7 +214,7 @@ class Shot:
         if self.env is not None and len(self.env):
             self.env = self.env / (float(np.percentile(self.env, 95)) + 1e-6)
         self.prev = prev or {}
-        self.lw = max(2.0, self.W / 520)
+        self.lw = max(2.0, self.W / 640)
         self.font = wp.font(int(self.H * 0.045), True, self.lang)
 
     # --- nhép miệng
@@ -317,7 +317,8 @@ class Shot:
                     st.yaw = -0.4 if xs[i] > 0.5 else 0.4
                 elif len(cast) >= 2:
                     st.yaw = 0.4 if xs[0] < 0.5 else -0.4
-                pen = wa.Pen(layer, foot[0] * wa.SS, foot[1] * wa.SS, sc * wa.SS, self.lw * wa.SS)
+                lw = max(self.lw, sc * 0.0068)            # nét dày theo cỡ người như ảnh mẫu
+                pen = wa.Pen(layer, foot[0] * wa.SS, foot[1] * wa.SS, sc * wa.SS, lw * wa.SS)
                 if st.shake:
                     pen.ox += math.sin(t * 40) * 0.004 * W * wa.SS
                 fig.draw(pen, st)
