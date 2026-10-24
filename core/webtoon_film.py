@@ -96,23 +96,19 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict[str, Path]:
     """Đọc từng câu (mỗi nhân vật một giọng cố định). {id cảnh quay: file wav}."""
     import soundfile as sf
     from . import voice
-    from .story import _voice_ref
     lang = st.get("language") or "ko"
     chars = {c["id"]: c for c in st.get("characters") or []}
     todo = all_lines(st)
     adir = pdir / AUDIO_DIR
     adir.mkdir(parents=True, exist_ok=True)
-    out, refs = {}, {}
+    if progress and todo:
+        progress(0.0, "chọn giọng riêng cho từng nhân vật")
+    voices = cast_voices(st, pdir, lang, {ln["who"] for _s, ln in todo})
+    out = {}
     for k, (s, ln) in enumerate(todo):
         who = ln["who"]
         c = chars.get(who) or {}
-        if who == "narr":
-            cfg = st.get("narrator") or {"instruct": "male, adult, low pitch"}
-        else:
-            cfg = c.get("voice") or {"instruct": _instruct_of(c)}
-        if who not in refs:
-            refs[who] = _voice_ref(pdir, f"wt_{who}", lang, cfg)
-        ref = refs[who]
+        cfg, ref = voices.get(who) or ({"instruct": _instruct_of(c)}, {})
         key = hashlib.md5(json.dumps([ln["text"], ref.get("ref"), cfg.get("instruct")],
                                      ensure_ascii=False).encode("utf-8")).hexdigest()[:12]
         path = adir / f"{s['id']}_{key}.wav"
@@ -132,12 +128,43 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict[str, Path]:
     return out
 
 
+def _voice_cfg(c: dict) -> dict:
+    """Giọng chị chọn (Thư viện / mô tả); để trống thì tool tự mô tả theo tuổi, giới."""
+    v = c.get("voice") or {}
+    if v.get("voice") or (v.get("instruct") or "").strip():
+        return {"voice": v.get("voice") or "", "instruct": (v.get("instruct") or "").strip()}
+    return {"instruct": _instruct_of(c)}
+
+
+def cast_voices(st: dict, pdir: Path, lang: str, speakers: set) -> dict:
+    """Mỗi nhân vật một giọng KHÁC NHAU, cố định cả truyện (dùng chung cách chọn giọng của
+    tab Phim): hai người cùng mô tả thì đổi cao độ, đo cao độ giọng mẫu và tạo lại khi hai
+    giọng nghe giống nhau; đàn ông không ra giọng cao như nữ / trẻ con; người kể khác hẳn
+    nhân vật. Trả về {id | "narr": (cfg, ref)}."""
+    from . import film_render
+    chars = st.get("characters") or []
+    shim = {"characters": [{"id": c["id"], "voice": _voice_cfg(c),
+                            "kit": {"species": "human", **(c.get("look") or {})}} for c in chars],
+            "narrator": st.get("narrator") or {}}
+    ids = [c["id"] for c in chars if c["id"] in speakers]
+    got = film_render.cast(shim, pdir, lang, ids, narr="narr" in speakers)
+    out = {cid: got[f"nv_{cid}"] for cid in ids if f"nv_{cid}" in got}
+    if "nguoi_ke" in got:
+        out["narr"] = got["nguoi_ke"]
+    return out
+
+
 def _instruct_of(c: dict) -> str:
+    """Mô tả giọng OmniVoice (chỉ dùng từ khoá OmniVoice hiểu) theo tuổi, giới."""
     lk = c.get("look") or {}
     sex = "female" if lk.get("sex") == "female" else "male"
-    age = {"child": "child", "teen": "teenager", "young": "young adult", "adult": "adult",
-           "middle": "middle-aged", "old": "elderly"}.get(lk.get("age"), "adult")
-    pitch = "low pitch" if sex == "male" and age in ("middle-aged", "elderly", "adult") else "moderate pitch"
+    a = lk.get("age") or "adult"
+    age = {"child": "child", "teen": "teenager", "young": "young adult", "adult": "young adult",
+           "middle": "middle-aged", "old": "elderly"}.get(a, "young adult")
+    if sex == "female":
+        pitch = "high pitch" if a in ("child", "teen", "young") else "moderate pitch"
+    else:
+        pitch = {"child": "high pitch", "teen": "moderate pitch", "young": "moderate pitch"}.get(a, "low pitch")
     return f"{sex}, {age}, {pitch}"
 
 

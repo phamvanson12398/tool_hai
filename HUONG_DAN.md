@@ -1015,7 +1015,11 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
    tin nhắn, cuộc gọi, danh sách wifi, thông báo, cảnh báo chữ đỏ có đếm ngược, gọi video
    (thấy mặt người bên kia), nhiễu sóng, màn hình khoá, đang tải. **↑** đưa lên, **✕** bỏ,
    **+ Cảnh quay** thêm. Bấm **Lưu**; bấm ảnh nhỏ để xem lớn.
-5. **Dựng video**: OmniVoice đọc từng câu (mỗi nhân vật một giọng cố định), tool vẽ từng khung.
+5. **Dựng video**: OmniVoice đọc từng câu, tool vẽ từng khung. **Mỗi nhân vật một giọng
+   khác nhau**, giữ nguyên cả truyện: ô Giọng để trống thì tool tự chọn theo tuổi, giới; hai
+   người cùng tuổi cùng giới thì tool đổi cao độ, đo giọng mẫu và tạo lại nếu hai giọng nghe
+   giống nhau; đàn ông không bị giọng cao như nữ; người kể khác hẳn giọng nhân vật. Muốn giọng
+   cụ thể thì gõ mô tả (vd `male, elderly, very low pitch`) hoặc chọn giọng trong Thư viện.
 
 ### Ảnh nhân vật vẽ bằng AI (mục 2b, không bắt buộc)
 Muốn nhân vật đẹp như tranh thật thì dùng ảnh vẽ bằng Gemini / ChatGPT; mỗi cảnh là một
