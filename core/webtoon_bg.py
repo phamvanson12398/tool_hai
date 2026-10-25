@@ -19,6 +19,9 @@ import numpy as np
 from PIL import Image
 
 DIR = "webtoon_bg"
+STYLE_2D = ("flat 2D Korean webtoon illustration background like Korean YouTube story-animation channels "
+            "(썰 animation), clean thin dark outlines, flat soft muted pastel colors, minimal simple shading, "
+            "tidy and cozy, modern South Korea")
 STYLE = ("3D animated movie background, stylized 3D render like a modern animated film, "
          "soft global illumination, cinematic lighting, gentle depth of field, highly detailed, "
          "realistic modern South Korea")
@@ -45,9 +48,10 @@ def look_of(place: dict) -> str:
     return f"{base} in Seoul, South Korea ({place.get('name')})" if place.get("name") else f"{base} in Seoul, South Korea"
 
 
-def prompt(place: dict, time: str, for_chat: bool = False) -> str:
-    """Câu lệnh vẽ nền. for_chat: bản cho Gemini / ChatGPT (dặn thêm khổ ngang, không người)."""
-    p = ", ".join([STYLE, look_of(place), LIGHT.get(time, LIGHT["ngay"]), EMPTY])
+def prompt(place: dict, time: str, for_chat: bool = False, style: str = "2d") -> str:
+    """Câu lệnh vẽ nền. style "2d": tranh phẳng kiểu webtoon (như video mẫu), "3d": nền 3D.
+    for_chat: bản cho Gemini / ChatGPT (dặn thêm khổ ngang, không người)."""
+    p = ", ".join([STYLE if style == "3d" else STYLE_2D, look_of(place), LIGHT.get(time, LIGHT["ngay"]), EMPTY])
     if for_chat:
         p = ("Create a background image for an animated video. " + p +
              ". Landscape 16:9 image, no characters, no people, no text.")
@@ -72,13 +76,15 @@ def needed(st: dict) -> list[tuple[dict, str]]:
         if s.get("type") == "black":
             continue
         p = places.get(s.get("place"))
-        if not p:
+        if not p or p.get("kind") == "spot":             # nền trơn kể chuyện: tool tự vẽ
             continue
         k = (p["id"], shot_time(st, s))
         if k not in seen:
             seen.add(k)
             out.append((p, k[1]))
     for p in st.get("places") or []:                 # địa điểm chưa có cảnh nào: vẫn liệt kê
+        if p.get("kind") == "spot":
+            continue
         k = (p["id"], "dem" if p.get("time") == "dem" else "ngay")
         if k not in seen:
             seen.add(k)
@@ -92,8 +98,12 @@ def status(st: dict, pdir: Path | None) -> list[dict]:
     for p, t in needed(st):
         have = bool(pdir) and path_for(pdir, p["id"], t).exists()
         out.append({"place": p["id"], "name": p.get("name") or p["id"], "time": t, "have": have,
-                    "look": look_of(p), "prompt": prompt(p, t, for_chat=True)})
+                    "look": look_of(p), "prompt": prompt(p, t, for_chat=True, style=style_of(st))})
     return out
+
+
+def style_of(st: dict) -> str:
+    return "3d" if st.get("bg_mode") == "3d" else "2d"
 
 
 def save_upload(src: Path, dst: Path, size=(1920, 1080)) -> None:
@@ -120,10 +130,10 @@ def draw(st: dict, pdir: Path, only: list[str] | None = None, force: bool = Fals
             p["bg3d_seed"] = (old * 7919 + 13) % 1000003
             reseeded.add(p["id"])
         seed = int(p.get("bg3d_seed") or zlib.crc32(p["id"].encode()) % 100000)
-        jobs.append({"prompt": prompt(p, t), "size": [1344, 768], "seed": seed, "path": str(path)})
+        jobs.append({"prompt": prompt(p, t, style=style_of(st)), "size": [1344, 768], "seed": seed, "path": str(path)})
         labels.append(f"{p.get('name')}" + (" (đêm)" if t == "dem" else ""))
         made.append(path.name)
-    labels = [f"vẽ nền 3D {i + 1}/{len(jobs)}: {lb}" for i, lb in enumerate(labels)]
+    labels = [f"vẽ nền {i + 1}/{len(jobs)}: {lb}" for i, lb in enumerate(labels)]
     bg3d.run_jobs(jobs, progress, labels)                # chương trình con: không làm hỏng OmniVoice
     return made
 

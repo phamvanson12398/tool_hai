@@ -41,11 +41,16 @@ AUDIO_DIR = "webtoon_audio"
 SHOT_TYPES = ("close", "medium", "wide", "two", "phone", "black")
 CAMERAS = ("push_in", "pull_out", "pan_left", "pan_right", "shake", "still")
 
-PLACE_KINDS = {**{k: v["label"] for k, v in scene_art.KINDS.items()}}
+PLACE_KINDS = {"spot": "Nền trơn có vòng sáng (lúc kể chuyện)",
+               **{k: v["label"] for k, v in scene_art.KINDS.items()}}
+STYLES = {"saeon": "Kể chuyện 사연 (nhân vật chính tự kể + thoại, như kênh 썰)",
+          "drama": "Toàn thoại (rất ít lời kể)"}
+FRONTS = ("table", "bed")
 
 
 def default_story() -> dict:
-    return {"title": "", "brief": "", "genre": "thriller", "language": "ko", "minutes": 4,
+    return {"title": "", "brief": "", "genre": "marriage", "language": "ko", "minutes": 4, "style": "saeon",
+            "bg_mode": "2d",
             "part": 1, "subtitles": True, "characters": [], "places": [], "shots": []}
 
 
@@ -81,6 +86,7 @@ def clean_shot(s: dict, ids: set, k: int) -> dict:
                      "text": str(ln["text"]).strip()[:300]}
     else:
         s["line"] = {}
+    s["front"] = s.get("front") if s.get("front") in FRONTS else ""
     s["extras"] = [x for x in (s.get("extras") or []) if x in ("sweat", "tears", "blush", "bags",
                                                                "bruise", "shadow")]
     return s
@@ -103,10 +109,11 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict[str, Path]:
     adir.mkdir(parents=True, exist_ok=True)
     if progress and todo:
         progress(0.0, "chọn giọng riêng cho từng nhân vật")
-    voices = cast_voices(st, pdir, lang, {ln["who"] for _s, ln in todo})
+    nid = narrator_id(st)
+    voices = cast_voices(st, pdir, lang, {(nid if ln["who"] == "narr" and nid else ln["who"]) for _s, ln in todo})
     out = {}
     for k, (s, ln) in enumerate(todo):
-        who = ln["who"]
+        who = nid if ln["who"] == "narr" and nid else ln["who"]     # lời kể = giọng nhân vật chính
         c = chars.get(who) or {}
         cfg, ref = voices.get(who) or ({"instruct": _instruct_of(c)}, {})
         key = hashlib.md5(json.dumps([ln["text"], ref.get("ref"), cfg.get("instruct")],
@@ -126,6 +133,12 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict[str, Path]:
             sf.write(str(path), wav, sr)
         out[s["id"]] = path
     return out
+
+
+def narrator_id(st: dict) -> str:
+    """Kiểu 사연: người kể chính là nhân vật chính (đọc bằng giọng của nhân vật đó, nhép miệng)."""
+    nid = st.get("narrator_id") or ""
+    return nid if nid in {c["id"] for c in st.get("characters") or []} else ""
 
 
 def _voice_cfg(c: dict) -> dict:
@@ -216,10 +229,16 @@ def background(st: dict, s: dict, size, pdir: Path | None = None) -> Image.Image
     stamp = (p3.stat().st_mtime if p3 and p3.exists() else
              (webtoon_bg.path_for(pdir, s.get("place") or "", "ngay").stat().st_mtime
               if pdir and webtoon_bg.path_for(pdir, s.get("place") or "", "ngay").exists() else 0))
-    key = (kind, time, size, blur, s.get("place"), str(pdir), stamp)
+    if pl.get("kind") == "spot":
+        key = ("spot", size)
+        if key not in _BG_CACHE:
+            _BG_CACHE[key] = spot_bg(size)
+        return _BG_CACHE[key]
+    key = (kind, time, size, blur, s.get("place"), str(pdir), stamp, st.get("bg_mode"))
     if key not in _BG_CACHE:
         seed = zlib.crc32(str(s.get("place") or kind).encode()) % 1000
-        img = webtoon_bg.image_for(pdir, s.get("place") or "", time, (W, H))
+        img = (webtoon_bg.image_for(pdir, s.get("place") or "", time, (W, H))
+               if st.get("bg_mode") != "draw" else None)
         if img is None:
             img = scene_art.render_scene(kind, time, size=(W, H), seed=seed).convert("RGB")
         if blur:
@@ -229,6 +248,54 @@ def background(st: dict, s: dict, size, pdir: Path | None = None) -> Image.Image
             _BG_CACHE.pop(next(iter(_BG_CACHE)))
         _BG_CACHE[key] = img
     return _BG_CACHE[key]
+
+
+def spot_bg(size) -> Image.Image:
+    """Nền trơn lúc nhân vật chính kể chuyện (như video mẫu): tím pastel nhạt, vòng sáng trắng
+    lớn phía sau nhân vật."""
+    W, H = size
+    img = Image.new("RGB", (W, H), (244, 242, 252))
+    S = 2
+    big = Image.new("L", (W * S, H * S), 0)
+    ImageDraw.Draw(big).ellipse([W * S * 0.07, H * S * 0.14, W * S * 0.93, H * S * 1.95], fill=255)
+    mask = big.resize((W, H), Image.LANCZOS).filter(ImageFilter.GaussianBlur(W / 900))
+    img.paste((255, 255, 255), (0, 0), mask)
+    return img
+
+
+def draw_front(img: Image.Image, kind: str, xs: list, lw: float) -> None:
+    """Vật che phía trước nhân vật (nét đen, màu phẳng như video mẫu): "table" mép bàn + cốc
+    cà phê trước mỗi người; "bed" chăn đắp ngang người."""
+    W, H = img.size
+    S = 2
+    lay = Image.new("RGBA", (W * S, H * S), (0, 0, 0, 0))
+    d = ImageDraw.Draw(lay)
+    L = max(2, int(lw * S * 1.1))
+    ink = (28, 26, 30, 255)
+    if kind == "table":
+        y0 = H * S * 0.8
+        d.rectangle([-L, y0, W * S + L, H * S + L], fill=(196, 176, 152, 255), outline=ink, width=L)
+        for x in xs:
+            cx, cw, ch = x * W * S, W * S * 0.042, H * S * 0.12        # cốc nhỏ, cao vừa
+            top = y0 - ch * 0.78
+            hx = cx + cw
+            d.ellipse([hx - cw * 0.25, top + ch * 0.18, hx + cw * 0.55, top + ch * 0.62], outline=ink, width=L)
+            d.rounded_rectangle([cx - cw, top, cx + cw, top + ch], radius=cw * 0.5, fill=(255, 255, 255, 255),
+                                outline=ink, width=L)
+            d.rectangle([cx - cw + L, top, cx + cw - L, top + ch * 0.4], fill=(255, 255, 255, 255))
+            d.ellipse([cx - cw, top - ch * 0.1, cx + cw, top + ch * 0.1], fill=(255, 255, 255, 255), outline=ink, width=L)
+            d.ellipse([cx - cw * 0.82, top - ch * 0.055, cx + cw * 0.82, top + ch * 0.065], fill=(78, 52, 40, 255))
+    elif kind == "bed":
+        y0 = H * S * 0.66
+        pts = [(-L, H * S + L), (-L, y0 + H * S * 0.06)]
+        for i in range(21):
+            u = i / 20
+            pts.append((W * S * u, y0 - math.sin(math.pi * u) * H * S * 0.05 + (H * S * 0.03 if u in (0, 1) else 0)))
+        pts += [(W * S + L, y0 + H * S * 0.06), (W * S + L, H * S + L)]
+        d.polygon(pts, fill=(246, 236, 226, 255))
+        d.line(pts[1:-1], fill=ink, width=L, joint="curve")
+        d.line([(0, y0 + H * S * 0.14), (W * S, y0 + H * S * 0.12)], fill=(220, 206, 192, 255), width=L)
+    img.alpha_composite(lay.resize((W, H), Image.LANCZOS))
 
 
 def _ease(u):
@@ -252,12 +319,12 @@ class Shot:
             self.env = self.env / (float(np.percentile(self.env, 95)) + 1e-6)
         self.prev = prev or {}
         self.lw = max(2.0, self.W / 640)
-        self.font = wp.font(int(self.H * 0.045), True, self.lang)
+        self.font = wp.font(int(self.H * 0.062), True, self.lang)
 
     # --- nhép miệng
     def _mouth(self, cid: str, t: float) -> float:
         ln = self.s.get("line") or {}
-        if ln.get("who") != cid:
+        if ln.get("who") != cid and not (ln.get("who") == "narr" and cid and cid == narrator_id(self.st)):
             return 0.0
         a0, a1 = LEAD, LEAD + self.row["audio_dur"]
         if not (a0 <= t < a1):
@@ -368,6 +435,14 @@ class Shot:
             kind = s["type"] if s["type"] != "wide" or len(cast) < 2 else "wide"
             if s["type"] == "close":
                 cast = cast[:1]
+            if s.get("front") == "bed":                   # đầu giường + gối phía sau người
+                bd = ImageDraw.Draw(img)
+                L = max(2, int(self.lw * 1.1))
+                bd.rounded_rectangle([W * 0.07, H * 0.26, W * 0.93, H * 0.9], radius=W * 0.02,
+                                     fill=(204, 182, 160, 255), outline=(28, 26, 30, 255), width=L)
+                for x in xs[:max(1, len(cast))]:
+                    bd.rounded_rectangle([x * W - W * 0.17, H * 0.4, x * W + W * 0.17, H * 0.6], radius=W * 0.04,
+                                         fill=(250, 248, 244, 255), outline=(28, 26, 30, 255), width=L)
             layer = Image.new("RGBA", (W * wa.SS, H * wa.SS), (0, 0, 0, 0))
             for i, cid in enumerate(cast):
                 if not cid:
@@ -389,6 +464,8 @@ class Shot:
                     pen.ox += math.sin(t * 40) * 0.004 * W * wa.SS
                 fig.draw(pen, st)
             img.alpha_composite(layer.reduce(wa.SS))
+            if s.get("front") in FRONTS:
+                draw_front(img, s["front"], [xs[min(i, len(xs) - 1)] for i in range(len(cast))], self.lw)
         arr = np.asarray(img.convert("RGB"))
         arr = self._camera(arr, t)
         return arr
@@ -417,20 +494,21 @@ class Shot:
         return cv2.warpAffine(arr, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
 
     def subtitle(self, arr: np.ndarray, t: float, name: str = "") -> np.ndarray:
+        """Phụ đề như video mẫu: chữ trắng to, viền đen dày, không nền."""
         ln = self.s.get("line") or {}
         if not ln.get("text") or not self.st.get("subtitles", True):
             return arr
         img = Image.fromarray(arr)
         d = ImageDraw.Draw(img)
         f = self.font
-        lines = wp._wrap(d, ln["text"], f, self.W * 0.8)
-        lh = int(self.H * 0.058)
-        y = self.H - int(self.H * 0.07) - lh * len(lines)
+        lines = wp._wrap(d, ln["text"], f, self.W * 0.86)
+        lh = int(self.H * 0.078)
+        sw = max(2, int(self.H * 0.0075))
+        y = self.H - int(self.H * 0.06) - lh * len(lines)
         for k, l in enumerate(lines):
             w = d.textlength(l, font=f)
             x = (self.W - w) / 2
-            d.rectangle([x - 10, y + k * lh - 4, x + w + 10, y + k * lh + lh - 6], fill=(10, 10, 12))
-            d.text((x, y + k * lh), l, font=f, fill=(255, 255, 255))
+            d.text((x, y + k * lh), l, font=f, fill=(255, 255, 255), stroke_width=sw, stroke_fill=(20, 20, 22))
         return np.asarray(img)
 
 
@@ -523,6 +601,7 @@ def preview(st: dict, shot_idx: int, size=(960, 540), t: float = 0.6, pdir: Path
 # ---------------------------------------------------------------- AI viết
 
 GENRES = {
+    "marriage": "Hôn nhân / nhà chồng (사연: mẹ chồng, vợ chồng, việc nhà, tiền bạc, 사이다)",
     "thriller": "Giật gân / lừa đảo công nghệ (hack, lừa qua điện thoại, bắt cóc giả...)",
     "horror": "Kinh dị đời thường (nhà trọ lạ, tin nhắn lúc nửa đêm...)",
     "comedy": "Hài đời thường (hiểu lầm, sĩ diện, gia đình lầy...)",
@@ -556,7 +635,8 @@ IDEA_ANGLES = (
 )
 
 
-def ideas(genre: str = "", lang: str = "ko", avoid: list | None = None, count: int = 6) -> list[dict]:
+def ideas(genre: str = "", lang: str = "ko", avoid: list | None = None, count: int = 6,
+          style: str = "saeon") -> list[dict]:
     """AI nghĩ một loạt ý tưởng truyện để tham khảo; mỗi lần một góc nhìn ngẫu nhiên khác,
     tránh lặp các ý đã gợi ý (avoid = tên các ý trước)."""
     import random
@@ -568,7 +648,12 @@ def ideas(genre: str = "", lang: str = "ko", avoid: list | None = None, count: i
     data = claude_cli._run_json(claude_cli._load_prompt(
         "webtoon_ideas", lang_label=LANGS.get(lang, lang), genre=g, count=str(max(3, min(10, count))),
         angles="\n".join(f"- {a}" for a in angles), avoid="\n".join(f"- {a}" for a in avoid) or "(chưa có)",
-        genre_ids=" | ".join(GENRES)), task="story", timeout=300)
+        genre_ids=" | ".join(GENRES),
+        style_hint=("Kiểu 사연: NHÂN VẬT CHÍNH tự kể chuyện đời mình (ngôi thứ nhất, tâm sự với người xem) — "
+                    "chuyện hôn nhân, nhà chồng / nhà vợ, con cái, tiền bạc, công việc, bạn bè, hàng xóm...; "
+                    "nhiều chuyện nhỏ có thật leo thang dần, cao trào nhân vật chính lên tiếng thẳng thắn (사이다), "
+                    "kết có hậu cho nhân vật chính và một câu ngẫm nghĩ." if style == "saeon" else "")),
+        task="story", timeout=300)
     out = []
     for it in (data.get("ideas") if isinstance(data, dict) else None) or []:
         if not isinstance(it, dict) or not it.get("brief"):
@@ -635,6 +720,11 @@ def write(st: dict, progress=None) -> dict:
     cat = _catalog()
     part = int(st.get("part") or 1)
     prev = (st.get("prev_summary") or "").strip()
+    saeon = (st.get("style") or "saeon") == "saeon"
+    style_block = claude_cli._load_prompt("webtoon_style_saeon") if saeon else ""
+    narrator_rule = ('id của NHÂN VẬT CHÍNH — người tự kể chuyện (bắt buộc, nhân vật chính đặt ĐẦU danh sách '
+                     '"characters"; phần sau của series giữ đúng người kể cũ).' if saeon else
+                     "true nếu cần người kể dẫn chuyện (ít câu), false nếu toàn thoại.")
     say(0.03, "AI nghĩ câu chuyện, nhân vật, địa điểm")
     plan_ = claude_cli._run_json(claude_cli._load_prompt(
         "webtoon_plan", minutes=f"{minutes:g}", part=str(part), lang_label=LANGS.get(lang, lang),
@@ -646,6 +736,7 @@ def write(st: dict, progress=None) -> dict:
                    + _cast_block(st),
         ending_rule=("Đoạn cuối DỪNG ở cao trào / cú sốc, bỏ lửng cho người xem chờ phần sau."
                      if st.get("cliffhanger", True) else "Đoạn cuối kết trọn vẹn."),
+        style_block=style_block, narrator_rule=narrator_rule,
         **cat), task="story", timeout=600)
     if not isinstance(plan_, dict) or not plan_.get("segments"):
         raise RuntimeError("AI không lập được dàn ý.")
@@ -659,7 +750,7 @@ def write(st: dict, progress=None) -> dict:
                         for c in plan_.get("characters") or [] if isinstance(c, dict)][:6]
     # làm series: nhân vật cũ giữ nguyên ngoại hình, giọng (ảnh AI, giọng mẫu gắn theo id)
     st["places"] = [{"id": wa_slug(p.get("id") or p.get("name")), "name": str(p.get("name") or ""),
-                     "kind": p.get("kind") if p.get("kind") in scene_art.KINDS else "phong_khach",
+                     "kind": p.get("kind") if p.get("kind") in PLACE_KINDS else "phong_khach",
                      "time": "dem" if p.get("time") == "dem" else "ngay",
                      "look": str(p.get("look") or "")[:500]}
                     for p in plan_.get("places") or [] if isinstance(p, dict)][:8]
@@ -672,6 +763,15 @@ def write(st: dict, progress=None) -> dict:
         st["places"] = [old_p[p["id"]] if p["id"] in old_p else p for p in st["places"]]
         st["places"] += [p for pid, p in old_p.items() if pid not in {x["id"] for x in st["places"]}]
         st["places"] = st["places"][:10]
+    if saeon:
+        if not any(p["id"] == "spot" for p in st["places"]):        # nền trơn có vòng sáng lúc kể chuyện
+            st["places"].insert(0, {"id": "spot", "name": "Nền kể chuyện", "kind": "spot", "time": "ngay", "look": ""})
+        ids0 = [c["id"] for c in st["characters"]]
+        n = wa_slug(plan_.get("narrator")) if isinstance(plan_.get("narrator"), str) else ""
+        keep = st.get("narrator_id") if prev and st.get("narrator_id") in ids0 else ""
+        st["narrator_id"] = keep or (n if n in ids0 else (ids0[0] if ids0 else ""))
+    else:
+        st["narrator_id"] = ""
     segs = [s for s in plan_.get("segments") or [] if isinstance(s, dict)][:20]
     st["segments"] = segs
     st["summary"] = episode_summary(st)
@@ -680,6 +780,21 @@ def write(st: dict, progress=None) -> dict:
                           f"{c['look']['hair']}, áo {c['look']['top_color']} — ở {c.get('home') or '?'}"
                           for c in st["characters"])
     places_txt = "\n".join(f"- {p['id']}: {p['name']} — {p['kind']}, {p['time']}" for p in st["places"])
+    nid = st.get("narrator_id") or ""
+    nname = next((c["name"] for c in st["characters"] if c["id"] == nid), nid)
+    if saeon and nid:
+        style_rule = (f"- KIỂU 사연: người kể là NHÂN VẬT CHÍNH {nname} (id {nid}), tự kể ở ngôi thứ nhất (저는..., đuôi -요), "
+                      f"câu kể ghi \"line\":{{\"who\":\"narr\",...}}; khoảng 35–45% số câu là lời kể, xen kẽ với thoại — "
+                      "kể một hai câu rồi cho nhân vật nói, không kể một mạch dài.\n"
+                      f"- Câu kể: cảnh cận / nửa người {nname} (\"who\":\"{nid}\") với nét mặt đúng cảm xúc câu kể, HOẶC cảnh minh hoạ "
+                      "đúng chuyện đang kể (ai đang làm gì, ở đâu). Mở đầu video và mỗi khi bắt đầu chuyện mới (tự giới thiệu, "
+                      f"nhận xét, ngẫm nghĩ) dùng \"place\":\"spot\" (nền trơn có vòng sáng) cận {nname}.\n"
+                      "- Hai người ngồi bàn (quán cà phê, bàn ăn) đối đáp: \"type\":\"two\", \"front\":\"table\"; "
+                      "trên giường: \"front\":\"bed\".")
+    else:
+        style_rule = '- Người kể ("who":"narr") rất ít.'
+    if nid:
+        chars_txt = chars_txt.replace(f"- {nid}: ", f"- {nid} (NHÂN VẬT CHÍNH, người kể): ", 1)
     outline = "\n".join(f"{i + 1}. {s.get('summary')}" for i, s in enumerate(segs))
     per = minutes * 60 / max(1, len(segs))
     shots: list = []
@@ -695,7 +810,7 @@ def write(st: dict, progress=None) -> dict:
                          (" Đây là đoạn CUỐI: dừng ở cú sốc, cảnh cuối là một câu bỏ lửng."
                           if i == len(segs) - 1 and st.get("cliffhanger", True) else ""),
             before_block=("### Thoại ngay trước đó (nối tiếp, không lặp lại)\n" + "\n".join(before)) if before else "",
-            **cat), task="story", timeout=600)
+            style_rule=style_rule, **cat), task="story", timeout=600)
         got = data.get("shots") if isinstance(data, dict) else None
         if not got:
             raise RuntimeError(f"AI không phân cảnh được đoạn {i + 1}.")

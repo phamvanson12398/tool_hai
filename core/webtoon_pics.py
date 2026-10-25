@@ -61,9 +61,11 @@ EXPR_EN = {
     "relieved": "relieved expression, soft smile, mouth closed",
     "desperate": "desperate expression, eyebrows raised, eyes teary, mouth slightly open",
 }
-STYLE_EN = ("Korean webtoon style like Korean YouTube story-animation channels (\"썰\" animation): "
-            "clean uniform black outlines, flat cel-shaded colors, no gradients, no textures, "
-            "simple realistic adult proportions, slightly large head, clean smooth anime-like face.")
+STYLE_EN = ("Korean webtoon style exactly like Korean YouTube story-animation channels (\"썰\" / 사연 animation): "
+            "clean bold uniform black outlines, flat pastel colors, NO shading, no gradients, no textures, "
+            "simple neat line art, natural adult proportions, large oval solid black pupils with a small white "
+            "highlight, eyebrows as simple dark strokes, nose as one small line, small simple mouth, "
+            "hair drawn as flat color with a few black strand lines, clothes with simple fold lines.")
 
 
 def key_of(pose: str, expr: str = "") -> str:

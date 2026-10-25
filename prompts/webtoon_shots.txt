@@ -17,7 +17,8 @@ Khoảng {{seconds}} giây ≈ {{shots}} cảnh quay. {{segment_rule}}
 Mọi câu thoại ("line.text") và mọi chữ hiện trên màn hình điện thoại (tên người nhắn, tin nhắn, thông báo, cảnh báo, tên wifi...) viết bằng {{lang_label}}, đúng cách nói của người bản xứ (tiếng Hàn: kính ngữ / nói trống không đúng quan hệ, KakaoTalk, đơn vị won).
 
 ### Luật phân cảnh
-- MỖI câu thoại là MỘT cảnh quay ("line"), câu ngắn tự nhiên (dưới 22 chữ), đối đáp nhanh như nói thật; không để khoảng trống dài. Người kể ("who":"narr") rất ít.
+{{style_rule}}
+- MỖI câu thoại / câu kể là MỘT cảnh quay ("line"), câu ngắn tự nhiên (dưới 22 chữ), đối đáp nhanh như nói thật; không để khoảng trống dài.
 - Phần lớn là CẬN MẶT ("close") người đang nói, nét mặt đổi theo cảm xúc từng câu. Xen "medium" (nửa người, thấy tay làm gì), "two" (hai người cùng chỗ đối đáp), "wide" (toàn cảnh khi mở cảnh mới / đi vào: "enter":"left"|"right").
 - Gọi điện / nhắn tin: hai người ở HAI NƠI, mỗi câu cận mặt người nói ở ĐÚNG NƠI CỦA NGƯỜI ĐÓ ("place" là nơi người nói đang đứng, KHÔNG phải nơi người nghe), "pose":"phone_ear" khi nghe gọi, "phone_look" khi xem điện thoại.
 - Chèn MÀN HÌNH ĐIỆN THOẠI ("type":"phone") mỗi khi điện thoại quan trọng (tin nhắn đến, cuộc gọi đến, thông báo, danh sách wifi, màn hình lạ...), có thể kèm câu thoại của người đang nhìn; không có thoại thì "dur" 1.5–2.5.
@@ -35,6 +36,7 @@ Mọi câu thoại ("line.text") và mọi chữ hiện trên màn hình điện
 - Thêm ("extras"): sweat, tears, blush, bags (quầng thâm), bruise (vết bầm), shadow (mặt tái)
 - Góc máy ("camera"): push_in, pull_out, pan_left, pan_right, shake, still
 - "look": left | right | down | up | "" (hướng nhìn, cận mặt thì nhìn về phía người kia)
+- "front" (vật che phía trước, tuỳ chọn): "table" (hai người ngồi đối diện bên bàn, có cốc cà phê / bát cơm trước mặt — quán cà phê, bàn ăn), "bed" (nằm / ngồi trên giường, chăn đắp ngang người), "" (không có).
 - Đúng người, đúng nơi: người nói phải ở đúng địa điểm của cảnh; "with" chỉ dùng cho "two"/"wide" (người cùng đứng đó).
 
 Output JSON đúng dạng này, không có gì khác:
@@ -42,5 +44,6 @@ Output JSON đúng dạng này, không có gì khác:
  {"type":"wide","place":"ga","who":"bo","pose":"phone_ear","expr":"neutral","enter":"left","camera":"pan_right","line":{"who":"bo","text":"..."}},
  {"type":"close","place":"phong","who":"con","expr":"happy","pose":"phone_ear","look":"left","line":{"who":"con","text":"..."}},
  {"type":"phone","place":"ga","phone":{"screen":"notice","data":{"title":"...","text":"...","time":"21:40"}},"dur":2.0},
- {"type":"close","place":"ga","who":"bo","expr":"shocked","pose":"phone_look","look":"down","camera":"shake","extras":["sweat"],"line":{"who":"bo","text":"..."}}
+ {"type":"close","place":"ga","who":"bo","expr":"shocked","pose":"phone_look","look":"down","camera":"shake","extras":["sweat"],"line":{"who":"bo","text":"..."}},
+ {"type":"two","place":"quan","who":"vo","with":["chong"],"front":"table","expr":"angry","line":{"who":"vo","text":"..."}}
 ]}

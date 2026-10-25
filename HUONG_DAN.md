@@ -1025,6 +1025,22 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
    giống nhau; đàn ông không bị giọng cao như nữ; người kể khác hẳn giọng nhân vật. Muốn giọng
    cụ thể thì gõ mô tả (vd `male, elderly, very low pitch`) hoặc chọn giọng trong Thư viện.
 
+### Cách kể: 사연 (mặc định) hoặc toàn thoại
+- **Kể chuyện 사연** (như các kênh 썰 Hàn): nhân vật chính tự kể chuyện đời mình ở ngôi thứ
+  nhất ("저는 결혼 4년차...", đuôi -요), lời kể chiếm khoảng 35–45% số câu, xen kẽ thoại của
+  nhiều người (mẹ chồng, chồng, đồng nghiệp...). Truyện có nhiều chuyện nhỏ leo thang → nhân
+  vật chính lên tiếng (사이다) → kết và một câu ngẫm nghĩ. **Lời kể đọc bằng chính giọng nhân
+  vật chính** và nhân vật đó nhép miệng khi kể.
+- Mở đầu / chuyển chuyện mới: cảnh cận nhân vật chính trên **nền trơn có vòng sáng** (địa
+  điểm "Nền kể chuyện", tool tự vẽ). Hai người ngồi bàn: **mép bàn + cốc cà phê** che phía
+  trước; trên giường: **đầu giường, gối, chăn đắp**.
+- **Toàn thoại**: kiểu cũ, gần như chỉ có thoại.
+- Thể loại mới **Hôn nhân / nhà chồng (사연)**; ô Ý tưởng tham khảo cũng gợi ý theo kiểu kể đã chọn.
+- Ô **Nền** mặc định **Tranh nền 2D kiểu webtoon** (phẳng, nét mảnh, màu pastel như video
+  mẫu); chọn *Nền 3D* nếu muốn. Đổi kiểu nền thì vẽ lại ảnh nền.
+- Câu lệnh vẽ ảnh nhân vật (mục 2b) đã dặn đúng nét như video mẫu: viền đen rõ, màu phẳng,
+  mắt bầu dục đen to, không đổ bóng. Phụ đề: chữ trắng to viền đen.
+
 ### Làm series (phần 2, 3...)
 - Viết xong truyện, ô **Nội dung tập này** tự có tóm tắt tập đó (tên tập, diễn biến, tập dừng
   ở đâu, nhân vật). Chị sửa thêm được. Tập làm từ bản cũ chưa có thì bấm **Tóm tắt bằng AI**.

@@ -2680,6 +2680,7 @@ def _webtoon_view(pid: str, data: dict) -> dict:
     out["video_ready"] = (config.PROJECTS / pid / "out" / "video.mp4").exists()
     out["options"] = {
         "genres": [[k, v] for k, v in wf.GENRES.items()], "langs": [[k, v] for k, v in wf.LANGS.items()],
+        "styles": [[k, v] for k, v in wf.STYLES.items()],
         "types": list(wf.SHOT_TYPES), "cameras": list(wf.CAMERAS), "exprs": list(wa.EXPRS),
         "poses": list(wa.POSES), "hairs": list(wa.HAIRS), "hair_colors": list(wa.HAIR),
         "tops": list(wa.TOPS), "colors": list(wa.CLOTH), "skins": list(wa.SKIN),
@@ -2695,7 +2696,7 @@ def api_webtoon_new():
     body = request.get_json(silent=True) or {}
     pid = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
     wt = wf.default_story()
-    for k in ("brief", "genre", "language"):
+    for k in ("brief", "genre", "language", "style"):
         if body.get(k):
             wt[k] = body[k]
     data = {"id": pid, "mode": "webtoon", "title": (body.get("title") or "").strip(),
@@ -2714,7 +2715,8 @@ def api_webtoon_ideas():
     body = request.get_json(silent=True) or {}
     try:
         items = wf.ideas(str(body.get("genre") or ""), str(body.get("language") or "ko"),
-                         body.get("avoid") if isinstance(body.get("avoid"), list) else [])
+                         body.get("avoid") if isinstance(body.get("avoid"), list) else [],
+                         style=str(body.get("style") or "saeon"))
     except Exception as e:  # noqa: BLE001
         traceback.print_exc()
         return _err(f"AI gợi ý lỗi: {_short_err(e, 300)}")
@@ -2768,8 +2770,10 @@ def api_webtoon_save(pid):
     for k in ("subtitles", "cliffhanger"):
         if k in body:
             wt[k] = bool(body[k])
-    if body.get("bg_mode") in ("draw", "3d"):
+    if body.get("bg_mode") in ("draw", "3d", "2d"):
         wt["bg_mode"] = body["bg_mode"]
+    if body.get("style") in wf.STYLES:
+        wt["style"] = body["style"]
     if isinstance(body.get("narrator"), dict):
         wt["narrator"] = {"voice": str(body["narrator"].get("voice") or ""),
                           "instruct": str(body["narrator"].get("instruct") or "")}
@@ -2861,7 +2865,8 @@ def api_webtoon_next(pid):
         return _err("Tập này chưa có nội dung tóm tắt — bấm 'Tóm tắt bằng AI' hoặc tự gõ vào ô Nội dung tập này.")
     nid = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
     nw = wf.default_story()
-    for k in ("genre", "language", "minutes", "subtitles", "cliffhanger", "narrator", "bg_mode", "pics"):
+    for k in ("genre", "language", "minutes", "subtitles", "cliffhanger", "narrator", "bg_mode", "pics", "style",
+              "narrator_id"):
         if k in wt:
             nw[k] = json.loads(json.dumps(wt[k]))
     nw["characters"] = json.loads(json.dumps(wt.get("characters") or []))
@@ -3196,7 +3201,7 @@ def api_webtoon_render(pid):
         stage = "chuẩn bị"
         try:
             pdir = config.project_dir(pid)
-            if wt.get("bg_mode") == "3d":
+            if wt.get("bg_mode", "2d") in ("2d", "3d"):
                 from core import bg3d, webtoon_bg
                 if bg3d.installed():                       # nền 3D còn thiếu: vẽ trước
                     try:

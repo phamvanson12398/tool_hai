@@ -4,6 +4,7 @@ Bạn là biên kịch cho kênh YouTube truyện tranh động kiểu webtoon H
 {{brief}}
 Thể loại: {{genre}}
 {{prev_block}}
+{{style_block}}
 
 NGÔN NGỮ: tên tập ("title"), móc câu ("hook"), tên nhân vật và mọi câu thoại đều viết bằng {{lang_label}} (bối cảnh, con người, đời sống đúng nước đó; tiếng Hàn thì người Hàn, tên Hàn, KakaoTalk, won...). "summary" của các đoạn viết bằng tiếng Việt cho người làm phim đọc.
 
@@ -12,15 +13,15 @@ NGÔN NGỮ: tên tập ("title"), móc câu ("hook"), tên nhân vật và mọ
 2. "title": tên tập ngắn, gây tò mò (kiểu "Đáng lẽ tôi không nên kết nối wifi miễn phí").
 3. "hook": 1–2 câu mở video gây tò mò ngay giây đầu.
 4. "segments": chia video thành các đoạn liên tiếp (mỗi đoạn khoảng 1 phút, đủ {{minutes}} phút), mỗi đoạn tóm tắt 2–4 câu: chuyện gì xảy ra, ai nói với ai, ở đâu. {{ending_rule}}
-5. "characters": mọi nhân vật (tối đa 5), mỗi người: "id" ngắn không dấu, "name" (tên theo ngôn ngữ thoại), "look" CHỌN ĐÚNG giá trị:
+5. "characters": mọi nhân vật (tối đa 6), mỗi người: "id" ngắn không dấu, "name" (tên theo ngôn ngữ thoại), "look" CHỌN ĐÚNG giá trị:
    sex: male | female; age: child | teen | young | adult | middle | old;
    skin: light | fair | tan | dark; hair: {{hairs}}; hair_color: {{hair_colors}};
    top: {{tops}}; top_color / bottom_color: {{colors}}; glasses: true | false; beard: "" | stubble | mustache | full.
    Các nhân vật phải trông KHÁC NHAU rõ (tóc, màu áo, tuổi).
 6. "places": các địa điểm (tối đa 6): "id", "name", "kind" (mẫu bối cảnh gần nhất: {{kinds}}), "time" (ngay | dem). Người nói chuyện qua điện thoại / nhắn tin ở chỗ khác (kẻ gọi điện, người nhà ở xa...) phải có địa điểm RIÊNG của họ.
-   Mỗi địa điểm thêm "look": tả bối cảnh ĐÚNG như trong truyện bằng TIẾNG ANH, 1–2 câu cụ thể để AI vẽ nền 3D: loại nơi chốn, đất nước / thành phố, đồ vật đặc trưng, chất liệu, ánh sáng, không khí (vd "a small public restroom inside a Seoul subway station, white tiled walls, metal stall doors, a mirror with a crack, flickering fluorescent ceiling light"). KHÔNG tả người.
+   Mỗi địa điểm thêm "look": tả bối cảnh ĐÚNG như trong truyện bằng TIẾNG ANH, 1–2 câu cụ thể để AI vẽ nền: loại nơi chốn, đất nước / thành phố, đồ vật đặc trưng, chất liệu, ánh sáng, không khí (vd "a small public restroom inside a Seoul subway station, white tiled walls, metal stall doors, a mirror with a crack, flickering fluorescent ceiling light"). KHÔNG tả người.
    Mỗi nhân vật thêm "home": id địa điểm người đó thường ở trong truyện.
-7. "narrator": true nếu cần người kể dẫn chuyện (ít câu), false nếu toàn thoại.
+7. "narrator": {{narrator_rule}}
 
 Output JSON đúng dạng này, không có gì khác:
 {"title":"...","hook":"...","segments":[{"summary":"..."}],

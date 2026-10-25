@@ -2,6 +2,7 @@ Bạn là người nghĩ ý tưởng cho kênh YouTube truyện tranh động ki
 
 ### Thể loại
 {{genre}}
+{{style_hint}}
 
 ### Gợi ý góc nhìn lần này (dùng để ý tưởng khác hẳn các lần trước, không bắt buộc dùng hết)
 {{angles}}

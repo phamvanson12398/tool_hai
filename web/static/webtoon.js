@@ -105,6 +105,7 @@
   function collect() {
     var b = {
       title: $("wt-title").value.trim(), brief: $("wt-brief").value.trim(), genre: $("wt-genre").value,
+      style: $("wt-style").value,
       language: $("wt-lang").value, minutes: parseFloat($("wt-minutes").value) || 4,
       part: parseInt($("wt-part").value, 10) || 1, cliffhanger: $("wt-cliff").value === "1",
       subtitles: $("wt-subs").value === "1", prev_summary: $("wt-prev").value,
@@ -171,7 +172,8 @@
 
   function render() {
     var d = W.data || {}, w = wt(), o = opts();
-    fillSelect("wt-genre", o.genres, w.genre || "thriller");
+    fillSelect("wt-genre", o.genres, w.genre || "marriage");
+    fillSelect("wt-style", o.styles || STYLE_LIST, w.style || "saeon");
     fillSelect("wt-lang", o.langs, w.language || "ko");
     $("wt-brief").value = w.brief || "";
     $("wt-title").value = w.title || "";
@@ -244,20 +246,21 @@
     var bgs = (W.data && W.data.bgs) || [], has3d = W.data && W.data.bg3d_installed;
     var top = el("div", "wt-bg-top");
     top.appendChild(el("b", null, "Nền"));
-    var mode = sel([["3d", "Nền 3D (ảnh tool vẽ trên máy hoặc chị tải lên)"], ["draw", "Nền vẽ tay của tool (2D)"]],
-                   w.bg_mode || "3d");
+    var mode = sel([["2d", "Tranh nền 2D kiểu webtoon (như video mẫu)"], ["3d", "Nền 3D"],
+                    ["draw", "Nền vẽ tay đơn giản của tool"]], w.bg_mode || "2d");
+    mode.title = "Tranh nền 2D / 3D: ảnh tool vẽ trên máy hoặc chị vẽ bằng Gemini rồi tải lên. Đổi kiểu thì vẽ lại nền.";
     mode.id = "wt-bgmode";
     mode.addEventListener("change", function () { save(true); });
     top.appendChild(mode);
     if (has3d) {
-      var all = el("button", "btn btn-sm btn-primary", "Vẽ nền 3D cho mọi địa điểm còn thiếu");
+      var all = el("button", "btn btn-sm btn-primary", "Tool vẽ nền cho mọi địa điểm còn thiếu");
       all.type = "button";
       all.addEventListener("click", function () { drawBg(null, false); });
       top.appendChild(all);
     }
     top.appendChild(el("span", "muted", has3d
-      ? "Máy có card vẽ 3D: tool tự vẽ (20–60 giây mỗi ảnh), hoặc chị tự vẽ bằng Gemini rồi tải lên."
-      : "Máy chưa cài vẽ 3D: bấm 'Chép câu lệnh nền', vẽ bằng Gemini / ChatGPT rồi 'Tải ảnh nền'. (Muốn tool tự vẽ: chạy cai_3d.bat, cần card NVIDIA.)"));
+      ? "Máy có phần vẽ ảnh AI: tool tự vẽ (20–60 giây mỗi ảnh), hoặc chị tự vẽ bằng Gemini rồi tải lên. Địa điểm 'Nền kể chuyện' tool tự vẽ, không cần ảnh."
+      : "Máy chưa cài phần vẽ ảnh AI: bấm 'Chép câu lệnh nền', vẽ bằng Gemini / ChatGPT rồi 'Tải ảnh nền'. (Muốn tool tự vẽ: chạy cai_3d.bat, cần card NVIDIA.) Địa điểm 'Nền kể chuyện' tool tự vẽ, không cần ảnh."));
     pb.appendChild(top);
     (w.places || []).forEach(function (p) {
       var row = el("div", "wt-place");
@@ -271,7 +274,7 @@
       f.appendChild(k); f.appendChild(tm);
       var lk = document.createElement("textarea");
       lk.className = "look"; lk.rows = 3; lk.value = p.look || "";
-      lk.placeholder = "Tả bối cảnh bằng tiếng Anh để vẽ nền 3D, vd: a small public restroom inside a Seoul subway station, white tiled walls, flickering fluorescent light";
+      lk.placeholder = "Tả bối cảnh bằng tiếng Anh để vẽ nền, vd: a small public restroom inside a Seoul subway station, white tiled walls, flickering fluorescent light";
       lk.title = "Tả đúng bối cảnh trong truyện (tiếng Anh). Sửa xong bấm Lưu rồi vẽ lại nền.";
       f.appendChild(lk);
       row.appendChild(f);
@@ -285,7 +288,7 @@
           img.addEventListener("click", function () { window.open(bgUrl(p.id, b.time) + ".png", "_blank"); });
           cell.appendChild(img);
         } else {
-          cell.appendChild(el("div", "ph", "Chưa có nền 3D — đang dùng nền vẽ tay"));
+          cell.appendChild(el("div", "ph", "Chưa có ảnh nền — đang dùng nền vẽ tay"));
         }
         var acts = el("div", "acts");
         var cp = el("button", "btn btn-sm", "Chép câu lệnh nền");
@@ -312,7 +315,7 @@
         });
         acts.appendChild(file); acts.appendChild(up);
         if (has3d) {
-          var dr = el("button", "btn btn-sm", b.have ? "Tool vẽ lại" : "Tool vẽ 3D");
+          var dr = el("button", "btn btn-sm", b.have ? "Tool vẽ lại" : "Tool vẽ nền");
           dr.type = "button";
           dr.addEventListener("click", function () { drawBg([p.id], b.have); });
           acts.appendChild(dr);
@@ -742,6 +745,8 @@
 
   /* ---------------------------- ý tưởng tham khảo ---------------------------- */
   var LS_IDEAS = "tool_hai_webtoon_ideas_seen";
+  var STYLE_LIST = [["saeon", "Kể chuyện 사연 (nhân vật chính tự kể + thoại, như kênh 썰)"],
+                    ["drama", "Toàn thoại (rất ít lời kể)"]];
   var GENRE_VI = {};
 
   function seenIdeas() {
@@ -752,7 +757,8 @@
     btn.disabled = true; btn.textContent = "AI đang nghĩ...";
     $("wt-ideas-state").textContent = "Khoảng 20–60 giây.";
     api("/api/webtoon/ideas", { method: "POST", body: {
-      genre: $("wt-idea-genre").value, language: $("wt-lang").value || "ko", avoid: seenIdeas() } })
+      genre: $("wt-idea-genre").value, language: $("wt-lang").value || "ko", avoid: seenIdeas(),
+      style: $("wt-style").value || "saeon" } })
       .then(function (d) {
         var list = d.ideas || [];
         try {
@@ -844,10 +850,11 @@
       copyText($("wt-summary").value || "").then(function () { toast("ok", "Đã chép nội dung tập này"); });
     });
     // lựa chọn thể loại / ngôn ngữ có sẵn cả khi chưa mở tập
-    var g = [["thriller", "Giật gân / lừa đảo"], ["horror", "Kinh dị"], ["comedy", "Hài"], ["romance", "Tình cảm"],
+    var g = [["marriage", "Hôn nhân / nhà chồng (사연)"], ["thriller", "Giật gân / lừa đảo"], ["horror", "Kinh dị"], ["comedy", "Hài"], ["romance", "Tình cảm"],
              ["family", "Gia đình"], ["revenge", "Trả thù thoả mãn"], ["office", "Công sở"],
              ["school", "Học đường"], ["mystery", "Bí ẩn"]];
-    fillSelect("wt-genre", g, "thriller");
+    fillSelect("wt-genre", g, "marriage");
+    fillSelect("wt-style", STYLE_LIST, "saeon");
     g.forEach(function (kv) { GENRE_VI[kv[0]] = kv[1]; });
     fillSelect("wt-idea-genre", [["", "Mọi thể loại"]].concat(g), "");
     $("wt-ideas-btn").addEventListener("click", moreIdeas);
