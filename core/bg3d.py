@@ -164,8 +164,15 @@ def run_jobs(jobs: list[dict], progress=None, labels: list[str] | None = None) -
         code = proc.wait()
         if code != 0:
             err.seek(0)
-            tail = [ln for ln in err.read().splitlines() if ln.strip()][-6:]
-            raise RuntimeError("Vẽ 3D lỗi: " + (" | ".join(tail) or f"mã {code}"))
+            text = err.read()
+            try:                                   # ghi đủ lỗi để gửi lại cho người sửa
+                config.LOGS.mkdir(parents=True, exist_ok=True)
+                (config.LOGS / "bg3d_loi.log").write_text(text, encoding="utf-8")
+            except OSError:
+                pass
+            lines = [ln for ln in text.splitlines() if ln.strip()]
+            last = lines[-1] if lines else f"mã {code}"      # dòng cuối = tên lỗi thật
+            raise RuntimeError(f"Vẽ 3D lỗi: {last.strip()} (chi tiết: data/logs/bg3d_loi.log)")
 
 
 def download() -> None:
@@ -190,19 +197,87 @@ def prompt_for(place: dict, time: str, era: str = "") -> str:
     return ", ".join(p.strip().rstrip(".") for p in parts if p and p.strip())
 
 
+NEGATIVE = "people, person, character, text, watermark, blurry, lowres"
+
+
 def generate(prompt: str, size: tuple[int, int], seed: int) -> Image.Image:
     import torch
     with _LOCK:
         pipe = _load()
         _model, _r, lfile, steps = _settings()
         w, h = size
+        cfg = 0.0 if lfile else 6.0
         g = torch.Generator("cpu").manual_seed(int(seed))
-        out = pipe(prompt=prompt, width=w, height=h, num_inference_steps=steps,
-                   guidance_scale=0.0 if lfile else 6.0,
-                   negative_prompt=None if lfile else
-                   "people, person, character, text, watermark, blurry, lowres",
-                   generator=g)
+        try:
+            out = pipe(prompt=prompt, width=w, height=h, num_inference_steps=steps,
+                       guidance_scale=cfg, negative_prompt=None if lfile else NEGATIVE, generator=g)
+        except Exception as e:  # noqa: BLE001
+            if "token" not in repr(e).lower() and "encode" not in "".join(_tb(e)).lower():
+                raise
+            # bộ tách chữ của transformers lỗi (vài bản transformers 5): tự tách chữ, tự tính
+            # vector câu lệnh rồi đưa thẳng vào SDXL
+            logger.warning("Bộ tách chữ transformers lỗi (%s), dùng bộ tách chữ riêng.", e)
+            g = torch.Generator("cpu").manual_seed(int(seed))
+            emb, pooled = _embed(pipe, prompt)
+            kw = {}
+            if cfg > 1.0:
+                kw["negative_prompt_embeds"], kw["negative_pooled_prompt_embeds"] = _embed(pipe, NEGATIVE)
+            out = pipe(prompt_embeds=emb, pooled_prompt_embeds=pooled, width=w, height=h,
+                       num_inference_steps=steps, guidance_scale=cfg, generator=g, **kw)
         return out.images[0]
+
+
+def _tb(e: BaseException) -> list[str]:
+    import traceback
+    return traceback.format_exception(type(e), e, e.__traceback__)
+
+
+_TOKS: dict = {}
+
+
+def _clip_tokenizers():
+    """Hai bộ tách chữ CLIP của SDXL đọc thẳng từ file mô hình (không qua transformers)."""
+    if _TOKS:
+        return _TOKS["a"], _TOKS["b"]
+    import json as _json
+    from huggingface_hub import hf_hub_download
+    from .clip_tok import ClipTokenizer
+    model = _settings()[0]
+    out = []
+    for sub in ("tokenizer", "tokenizer_2"):
+        def get(name, sub=sub):
+            try:
+                return hf_hub_download(model, f"{sub}/{name}", local_files_only=True)
+            except Exception:  # noqa: BLE001
+                return hf_hub_download(model, f"{sub}/{name}")
+        tok = ClipTokenizer(get("vocab.json"), get("merges.txt"))
+        try:
+            pad = _json.loads(Path(get("special_tokens_map.json")).read_text("utf-8")).get("pad_token")
+            pad = pad.get("content") if isinstance(pad, dict) else pad
+            if pad in tok.encoder:
+                tok.pad = tok.encoder[pad]
+        except Exception:  # noqa: BLE001
+            pass
+        out.append(tok)
+    _TOKS["a"], _TOKS["b"] = out
+    return out[0], out[1]
+
+
+def _embed(pipe, text: str):
+    """(prompt_embeds, pooled_prompt_embeds) của SDXL tính bằng bộ tách chữ riêng."""
+    import torch
+    ta, tb = _clip_tokenizers()
+    dev = getattr(pipe, "_execution_device", None) or pipe.device
+    embs, pooled = [], None
+    with torch.no_grad():
+        for tok, enc in ((ta, pipe.text_encoder), (tb, pipe.text_encoder_2)):
+            ids = torch.tensor([tok(text)], dtype=torch.long, device=dev)
+            o = enc(ids, output_hidden_states=True)
+            embs.append(o.hidden_states[-2])
+            if enc is pipe.text_encoder_2:
+                pooled = o[0]
+    emb = torch.cat(embs, dim=-1).to(dtype=pipe.unet.dtype)
+    return emb, pooled.to(dtype=pipe.unet.dtype)
 
 
 # ------------------------------------------------------------ theo truyện
