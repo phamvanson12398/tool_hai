@@ -45,7 +45,7 @@ PLACE_KINDS = {"spot": "Nền trơn có vòng sáng (lúc kể chuyện)",
                **{k: v["label"] for k, v in scene_art.KINDS.items()}}
 STYLES = {"saeon": "Kể chuyện 사연 (nhân vật chính tự kể + thoại, như kênh 썰)",
           "drama": "Toàn thoại (rất ít lời kể)"}
-FRONTS = ("table", "bed")
+FRONTS = ("table", "dining", "bed", "car", "desk", "sofa")
 
 
 def default_story() -> dict:
@@ -282,6 +282,40 @@ def spot_bg(size) -> Image.Image:
     return img
 
 
+def draw_back(img: Image.Image, kind: str, xs: list, lw: float) -> None:
+    """Đồ nằm SAU nhân vật: đầu giường + gối (bed), lưng ghế xe + khung cửa kính (car),
+    lưng ghế sofa (sofa)."""
+    W, H = img.size
+    d = ImageDraw.Draw(img)
+    L = max(2, int(lw * 1.1))
+    ink = (28, 26, 30, 255)
+    if kind == "bed":
+        d.rounded_rectangle([W * 0.07, H * 0.26, W * 0.93, H * 0.9], radius=W * 0.02,
+                            fill=(204, 182, 160, 255), outline=ink, width=L)
+        for x in xs:
+            d.rounded_rectangle([x * W - W * 0.17, H * 0.4, x * W + W * 0.17, H * 0.6], radius=W * 0.04,
+                                fill=(250, 248, 244, 255), outline=ink, width=L)
+    elif kind == "car":
+        # trong xe: khung cửa kính hai bên, trần xe, lưng ghế + tựa đầu sau mỗi người
+        d.rectangle([0, 0, W, H * 0.12], fill=(70, 72, 80, 255), outline=ink, width=L)
+        for x0, x1 in ((0, W * 0.06), (W * 0.94, W)):
+            d.rectangle([x0, 0, x1, H], fill=(70, 72, 80, 255), outline=ink, width=L)
+        for x in xs:
+            cx = x * W
+            d.rounded_rectangle([cx - W * 0.15, H * 0.36, cx + W * 0.15, H + L * 4], radius=W * 0.05,
+                                fill=(92, 88, 96, 255), outline=ink, width=L)
+            d.rounded_rectangle([cx - W * 0.075, H * 0.2, cx + W * 0.075, H * 0.35], radius=W * 0.03,
+                                fill=(92, 88, 96, 255), outline=ink, width=L)
+            d.rectangle([cx - W * 0.02, H * 0.34, cx + W * 0.02, H * 0.37], fill=(150, 150, 156, 255))
+    elif kind == "sofa":
+        x0, x1 = min(xs) * W - W * 0.26, max(xs) * W + W * 0.26
+        d.rounded_rectangle([x0, H * 0.42, x1, H + L * 4], radius=W * 0.05, fill=(160, 176, 196, 255),
+                            outline=ink, width=L)
+        for ax in (x0 - W * 0.05, x1 - W * 0.02):                      # tay vịn
+            d.rounded_rectangle([ax, H * 0.58, ax + W * 0.07, H + L * 4], radius=W * 0.03,
+                                fill=(148, 164, 186, 255), outline=ink, width=L)
+
+
 def draw_front(img: Image.Image, kind: str, xs: list, lw: float) -> None:
     """Vật che phía trước nhân vật (nét đen, màu phẳng như video mẫu): "table" mép bàn + cốc
     cà phê trước mỗi người; "bed" chăn đắp ngang người."""
@@ -291,7 +325,55 @@ def draw_front(img: Image.Image, kind: str, xs: list, lw: float) -> None:
     d = ImageDraw.Draw(lay)
     L = max(2, int(lw * S * 1.1))
     ink = (28, 26, 30, 255)
-    if kind == "table":
+    if kind == "dining":
+        y0 = H * S * 0.78
+        d.rectangle([-L, y0, W * S + L, H * S + L], fill=(186, 150, 112, 255), outline=ink, width=L)
+        for x in xs:                                     # mỗi người: bát cơm, bát canh, đũa
+            cx = x * W * S
+            for bx, bw, col in ((cx - W * S * 0.05, W * S * 0.05, (252, 252, 250, 255)),
+                                (cx + W * S * 0.06, W * S * 0.045, (150, 98, 60, 255))):
+                by = y0 + H * S * 0.035
+                d.chord([bx - bw, by - H * S * 0.07, bx + bw, by + H * S * 0.07], 0, 180, fill=col, outline=ink, width=L)
+                d.line([(bx - bw, by), (bx + bw, by)], fill=ink, width=L)
+                if col[0] > 240:                              # cơm trắng nhô lên
+                    d.chord([bx - bw * 0.85, by - H * S * 0.035, bx + bw * 0.85, by + H * S * 0.03], 180, 360,
+                            fill=(255, 255, 255, 255), outline=ink, width=L)
+                else:
+                    d.ellipse([bx - bw * 0.9, by - H * S * 0.012, bx + bw * 0.9, by + H * S * 0.012], fill=(196, 120, 70, 255))
+            sx = cx + W * S * 0.12
+            for k in (0, 1):
+                d.line([(sx + k * W * S * 0.008, y0 + H * S * 0.02), (sx + W * S * 0.015 + k * W * S * 0.008,
+                        y0 + H * S * 0.15)], fill=(120, 86, 60, 255), width=max(2, L // 1))
+        if len(xs) >= 2:                                  # đĩa thức ăn ở giữa
+            mx = sum(xs) / len(xs) * W * S
+            d.ellipse([mx - W * S * 0.08, y0 + H * S * 0.04, mx + W * S * 0.08, y0 + H * S * 0.12],
+                      fill=(252, 252, 250, 255), outline=ink, width=L)
+            d.ellipse([mx - W * S * 0.05, y0 + H * S * 0.055, mx + W * S * 0.05, y0 + H * S * 0.1],
+                      fill=(196, 92, 70, 255))
+    elif kind == "desk":
+        y0 = H * S * 0.8
+        d.rectangle([-L, y0, W * S + L, H * S + L], fill=(222, 222, 226, 255), outline=ink, width=L)
+        for x in xs:                                     # lưng laptop đang mở trước mỗi người
+            cx = x * W * S
+            d.polygon([(cx - W * S * 0.11, y0 + L), (cx + W * S * 0.11, y0 + L), (cx + W * S * 0.1, y0 - H * S * 0.19),
+                       (cx - W * S * 0.1, y0 - H * S * 0.19)], fill=(176, 180, 190, 255), outline=ink)
+            d.line([(cx - W * S * 0.11, y0 + L), (cx - W * S * 0.1, y0 - H * S * 0.19), (cx + W * S * 0.1, y0 - H * S * 0.19),
+                    (cx + W * S * 0.11, y0 + L)], fill=ink, width=L)
+            d.ellipse([cx - W * S * 0.012, y0 - H * S * 0.11, cx + W * S * 0.012, y0 - H * S * 0.08], fill=(230, 232, 236, 255))
+    elif kind == "car":
+        y0 = H * S * 0.82                                # táp-lô + vô lăng trước người lái (người đầu)
+        d.rectangle([-L, y0, W * S + L, H * S + L], fill=(58, 60, 68, 255), outline=ink, width=L)
+        cx, r = xs[0] * W * S, W * S * 0.12
+        d.ellipse([cx - r, y0 - r * 0.55, cx + r, y0 + r * 1.45], outline=ink, width=L * 7)
+        d.ellipse([cx - r, y0 - r * 0.55, cx + r, y0 + r * 1.45], outline=(70, 72, 80, 255), width=L * 5)
+        d.ellipse([cx - r * 0.3, y0 + r * 0.25, cx + r * 0.3, y0 + r * 0.65], fill=(70, 72, 80, 255), outline=ink, width=L)
+    elif kind == "sofa":
+        y0 = H * S * 0.88                                # bàn trà thấp phía trước
+        d.rectangle([W * S * 0.12, y0, W * S * 0.88, H * S + L], fill=(196, 168, 132, 255), outline=ink, width=L)
+        mx = W * S * 0.62
+        d.rounded_rectangle([mx - W * S * 0.02, y0 - H * S * 0.07, mx + W * S * 0.02, y0], radius=W * S * 0.008,
+                            fill=(255, 255, 255, 255), outline=ink, width=L)
+    elif kind == "table":
         y0 = H * S * 0.8
         d.rectangle([-L, y0, W * S + L, H * S + L], fill=(196, 176, 152, 255), outline=ink, width=L)
         for x in xs:
@@ -449,14 +531,8 @@ class Shot:
         self.cast = cast[:1] if s["type"] == "close" else cast
         self.xs = xs
         base = self.bg.convert("RGBA")
-        if s.get("front") == "bed" and s["type"] not in ("phone", "black"):   # đầu giường + gối sau người
-            bd = ImageDraw.Draw(base)
-            L = max(2, int(self.lw * 1.1))
-            bd.rounded_rectangle([W * 0.07, H * 0.26, W * 0.93, H * 0.9], radius=W * 0.02,
-                                 fill=(204, 182, 160, 255), outline=(28, 26, 30, 255), width=L)
-            for x in xs[:max(1, len(self.cast))]:
-                bd.rounded_rectangle([x * W - W * 0.17, H * 0.4, x * W + W * 0.17, H * 0.6], radius=W * 0.04,
-                                     fill=(250, 248, 244, 255), outline=(28, 26, 30, 255), width=L)
+        if s.get("front") in FRONTS and s["type"] not in ("phone", "black"):     # đồ phía sau người
+            draw_back(base, s["front"], [xs[min(i, len(xs) - 1)] for i in range(max(1, len(self.cast)))], self.lw)
         self.base = base
         self.front = None
         if s.get("front") in FRONTS and s["type"] not in ("phone", "black"):

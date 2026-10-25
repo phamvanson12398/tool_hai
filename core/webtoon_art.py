@@ -39,7 +39,8 @@ TOPS = ("sweater", "tshirt", "shirt", "jacket", "hoodie", "suit", "blouse", "dre
 EXPRS = ("neutral", "worried", "shocked", "scared", "sad", "crying", "angry", "happy",
          "laughing", "smirk", "tired", "thinking", "relieved", "desperate")
 POSES = ("down", "phone_ear", "phone_look", "hand_head", "hands_head", "cross",
-         "point", "wave", "hands_face", "hands_hips", "shrug", "fist", "hold_out")
+         "point", "wave", "hands_face", "hands_hips", "shrug", "fist", "hold_out",
+         "hold_baby", "hold_cup", "hold_paper")
 
 
 @dataclass
@@ -272,6 +273,12 @@ def _arm_targets(pose: str, side: str, b: dict) -> tuple:
         return rel(sh[0] + 0.3, sh[1] + 1.1), rel(sh[0] + 0.05, sh[1] + 0.35)
     if pose == "hold_out":
         return rel(sh[0] + 0.15, sh[1] + 1.15), rel(0.25, sh[1] + 1.35)
+    if pose == "hold_baby":                       # hai tay ôm con trước ngực
+        return rel(sh[0] + 0.1, sh[1] + 1.12), rel(0.5, sh[1] + 1.12)
+    if pose == "hold_cup" and side == "r":        # cầm cốc trước ngực
+        return rel(sh[0] + 0.18, sh[1] + 1.1), rel(0.36, sh[1] + 0.78)
+    if pose == "hold_paper":                      # hai tay cầm tờ giấy trước người
+        return rel(sh[0] + 0.12, sh[1] + 1.1), rel(0.74, sh[1] + 0.98)
     return down
 
 
@@ -444,6 +451,8 @@ class Figure:
             after = lambda: self._phone(p, wr, side, st)      # điện thoại trước lòng bàn tay
         elif pose in ("hand_head", "hands_head", "wave", "hands_face", "shrug", "hold_out"):
             kind = "open"
+        elif pose in ("hold_baby", "hold_cup", "hold_paper"):
+            kind = "grip"
         elif pose in ("fist", "cross"):
             kind = "fist"
         else:
@@ -826,18 +835,58 @@ class Figure:
     def draw(self, p: Pen, st: State):
         raised = {"phone_ear": ("r",), "hand_head": ("l",), "hands_head": ("l", "r"),
                   "hands_face": ("l", "r")}
-        chest = {"phone_look": ("r",), "cross": ("l", "r"), "fist": ("r",), "hold_out": ("l", "r")}
+        chest = {"phone_look": ("r",), "cross": ("l", "r"), "fist": ("r",), "hold_out": ("l", "r"),
+                 "hold_baby": ("l", "r"), "hold_cup": ("r",), "hold_paper": ("l", "r")}
         up = set(raised.get(st.pose, ())) | set(raised.get(st.pose_from, ()))
         front = (set(chest.get(st.pose, ())) | set(chest.get(st.pose_from, ()))) - up
         def under(sy_):                              # cánh tay sau thân áo: không lộ đường vai
             for side in ("l", "r"):
                 self._arm(p, st, side, sy_, "back", hand=side not in up and side not in front)
         sy, shift = self._body(p, st, under)
+        held = st.pose if st.pose_k > 0.5 else st.pose_from
+        if held in ("hold_baby", "hold_paper"):      # đồ ôm / cầm bằng hai tay: vẽ trước tay
+            self._held(p, held, sy)
         for side in front:                           # cẳng tay đưa ra trước ngực
             self._arm(p, st, side, sy, "front")
+        if held == "hold_cup":                       # cốc nằm trước các ngón tay
+            self._held(p, held, sy)
         self._head(p, st, shift)
         for side in up:                              # tay đưa lên mặt / đầu: vẽ đè lên đầu
             self._arm(p, st, side, sy, "front")
+
+
+    def _held(self, p: Pen, kind: str, sy: float) -> None:
+        """Đồ cầm trên tay: em bé quấn chăn, cốc, tờ giấy (nét đen, màu phẳng)."""
+        if kind == "hold_baby":
+            cx, cy = 0.02, sy + 0.86
+            p.poly(_crs([(cx - 0.62, cy - 0.12), (cx - 0.3, cy - 0.36), (cx + 0.35, cy - 0.3), (cx + 0.62, cy - 0.05),
+                         (cx + 0.45, cy + 0.25), (cx - 0.1, cy + 0.33), (cx - 0.55, cy + 0.15)], 8),
+                   (250, 236, 186, 255))                                   # chăn quấn
+            p.line(_crs([(cx - 0.2, cy - 0.3), (cx + 0.05, cy - 0.05), (cx + 0.4, cy + 0.15)], 6, closed=False),
+                   width=p.lw * 0.7)
+            hx, hy = cx - 0.36, cy - 0.16                                     # đầu em bé
+            p.poly(_ellipse(hx, hy, 0.23, 0.22, 28), self.skin)
+            p.poly(_crs([(hx - 0.17, hy - 0.06), (hx - 0.05, hy - 0.2), (hx + 0.12, hy - 0.16), (hx + 0.02, hy - 0.1)], 5),
+                   self.hair if self.look.hair_color in ("black", "brown") else (60, 50, 46, 255), width=p.lw * 0.6)
+            for ex in (hx - 0.07, hx + 0.06):                              # mắt nhắm ngủ
+                p.line(_crs([(ex - 0.035, hy + 0.02), (ex, hy + 0.04), (ex + 0.035, hy + 0.02)], 4, closed=False),
+                       width=p.lw * 0.7)
+            p.poly(_ellipse(hx + 0.1, hy + 0.08, 0.035, 0.022, 12), (244, 170, 170, 200), line=False)
+        elif kind == "hold_paper":
+            x0, x1, y0, y1 = -0.52, 0.52, sy + 0.45, sy + 1.3
+            p.poly([(x0, y0), (x1, y0 + 0.02), (x1 - 0.01, y1), (x0 + 0.01, y1 - 0.02)], (252, 252, 250, 255))
+            p.line([(x0 + 0.1, y0 + 0.12), (x1 - 0.12, y0 + 0.13)], width=p.lw * 1.4)
+            for k in range(5):
+                yy = y0 + 0.26 + k * 0.1
+                p.line([(x0 + 0.08, yy), (x1 - 0.1 - (0.18 if k == 4 else 0), yy + 0.005)], width=p.lw * 0.55,
+                       fill=(120, 120, 126, 255))
+        elif kind == "hold_cup":
+            b = self.b
+            cx, cy = -0.36 + 0.2 + 0 * b["sh_w"], sy + 0.6               # trong lòng bàn tay phải
+            w_, h_ = 0.13, 0.3
+            p.poly(_ellipse(cx + w_ + 0.03, cy + 0.12, 0.07, 0.08, 16), None)
+            p.poly([(cx - w_, cy), (cx + w_, cy), (cx + w_ * 0.9, cy + h_), (cx - w_ * 0.9, cy + h_)], (255, 255, 255, 255))
+            p.poly(_ellipse(cx, cy, w_, 0.04, 18), (120, 82, 60, 255), width=p.lw * 0.8)
 
 
 def _shade(c, k):

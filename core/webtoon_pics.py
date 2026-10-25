@@ -44,6 +44,9 @@ POSE_EN = {
     "shrug": "shrugging with both palms up",
     "fist": "one fist clenched and raised in front of the chest",
     "hold_out": "holding both hands out in front, offering something",
+    "hold_baby": "holding a sleeping baby wrapped in a soft yellow blanket in both arms in front of the chest",
+    "hold_cup": "holding a white coffee mug in one hand in front of the chest",
+    "hold_paper": "holding a sheet of paper / document with both hands in front of the chest, looking at it",
 }
 EXPR_EN = {
     "neutral": "calm neutral expression, mouth closed",

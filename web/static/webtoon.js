@@ -14,7 +14,8 @@
     thinking: "Suy nghĩ", relieved: "Nhẹ nhõm", desperate: "Tuyệt vọng" };
   var POSE_VI = { down: "Tay buông", phone_ear: "Áp điện thoại", phone_look: "Xem điện thoại",
     hand_head: "Ôm đầu", hands_head: "Hai tay ôm đầu", cross: "Khoanh tay", point: "Chỉ tay", wave: "Vẫy tay",
-    hands_face: "Hai tay che mặt", hands_hips: "Chống nạnh", shrug: "Nhún vai", fist: "Nắm tay", hold_out: "Chìa tay" };
+    hands_face: "Hai tay che mặt", hands_hips: "Chống nạnh", shrug: "Nhún vai", fist: "Nắm tay", hold_out: "Chìa tay",
+    hold_baby: "Bế con", hold_cup: "Cầm cốc", hold_paper: "Cầm giấy tờ" };
   var TYPE_VI = { close: "Cận mặt", medium: "Nửa người", wide: "Toàn cảnh", two: "Hai người", phone: "Màn hình ĐT",
     black: "Màn đen" };
   var CAM_VI = { push_in: "Đẩy vào", pull_out: "Lùi ra", pan_left: "Lia trái", pan_right: "Lia phải",
@@ -651,6 +652,9 @@
         add("expr", o.exprs || [], EXPR_VI);
         add("pose", o.poses || [], POSE_VI);
         add("look", [["", "Nhìn thẳng"], ["left", "Nhìn trái"], ["right", "Nhìn phải"], ["down", "Nhìn xuống"], ["up", "Nhìn lên"]]);
+        add("front", [["", "Không đạo cụ"], ["table", "Bàn cà phê + cốc"], ["dining", "Bàn ăn (cơm canh)"],
+                      ["bed", "Giường + chăn"], ["car", "Trong xe (vô lăng)"], ["desk", "Bàn làm việc + laptop"],
+                      ["sofa", "Ghế sofa + bàn trà"]]).title = "Đạo cụ quanh người";
       }
       add("camera", o.cameras || [], CAM_VI);
       var ln = s.line || {};

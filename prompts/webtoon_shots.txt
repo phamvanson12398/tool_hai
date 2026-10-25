@@ -36,7 +36,9 @@ Mọi câu thoại ("line.text") và mọi chữ hiện trên màn hình điện
 - Thêm ("extras"): sweat, tears, blush, bags (quầng thâm), bruise (vết bầm), shadow (mặt tái)
 - Góc máy ("camera"): push_in, pull_out, pan_left, pan_right, shake, still
 - "look": left | right | down | up | "" (hướng nhìn, cận mặt thì nhìn về phía người kia)
-- "front" (vật che phía trước, tuỳ chọn): "table" (hai người ngồi đối diện bên bàn, có cốc cà phê / bát cơm trước mặt — quán cà phê, bàn ăn), "bed" (nằm / ngồi trên giường, chăn đắp ngang người), "" (không có).
+- ĐẠO CỤ cho đủ, đúng chuyện đang kể (đang ăn thì có bàn ăn, đang lái xe thì có vô lăng, đang bế con thì bế con...):
+  "front" (đồ quanh người ngồi, tuỳ chọn): "table" (bàn quán cà phê + cốc), "dining" (bàn ăn: bát cơm, bát canh, đũa, đĩa thức ăn — bữa cơm gia đình / nhà chồng), "bed" (giường: đầu giường, gối, chăn đắp), "car" (trong xe: ghế, khung cửa, người đầu tiên cầm vô lăng), "desk" (bàn làm việc + laptop — công ty), "sofa" (ghế sofa phòng khách + bàn trà), "" (không có).
+  Đồ cầm tay qua "pose": "hold_baby" (bế con quấn chăn), "hold_cup" (cầm cốc), "hold_paper" (cầm giấy tờ: đơn ly hôn, hoá đơn, giấy báo...), "phone_ear" / "phone_look" (điện thoại).
 - Đúng người, đúng nơi: người nói phải ở đúng địa điểm của cảnh; "with" chỉ dùng cho "two"/"wide" (người cùng đứng đó).
 
 Output JSON đúng dạng này, không có gì khác:

@@ -1037,6 +1037,11 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
 - Mở đầu / chuyển chuyện mới: cảnh cận nhân vật chính trên **nền trơn có vòng sáng** (địa
   điểm "Nền kể chuyện", tool tự vẽ). Hai người ngồi bàn: **mép bàn + cốc cà phê** che phía
   trước; trên giường: **đầu giường, gối, chăn đắp**.
+- **Đạo cụ** (AI tự chọn đúng chuyện đang kể; sửa ở ô *Đạo cụ* của từng cảnh quay):
+  bàn cà phê + cốc, **bàn ăn** (bát cơm, bát canh, đũa, đĩa thức ăn), **giường** (đầu giường,
+  gối, chăn), **trong xe** (ghế, khung cửa, vô lăng trước người lái), **bàn làm việc + laptop**,
+  **ghế sofa + bàn trà**. Đồ cầm tay qua tư thế: **bế con**, **cầm cốc**, **cầm giấy tờ**,
+  áp / xem điện thoại. Câu lệnh vẽ ảnh AI nhân vật cũng có các tư thế này.
 - **Toàn thoại**: kiểu cũ, gần như chỉ có thoại.
 - Thể loại mới **Hôn nhân / nhà chồng (사연)**; ô Ý tưởng tham khảo cũng gợi ý theo kiểu kể đã chọn.
 - Ô **Nền** mặc định **Tranh nền 2D kiểu webtoon** (phẳng, nét mảnh, màu pastel như video
