@@ -97,26 +97,26 @@ class State:
 # ---------------------------------------------------------------- hình học
 
 def _crs(pts: list, n: int = 10, closed: bool = True) -> list:
-    """Đường cong Catmull-Rom đi qua các điểm."""
-    P = [np.array(p, float) for p in pts]
-    if len(P) < 3:
-        return [tuple(p) for p in P]
-    out = []
+    """Đường cong Catmull-Rom đi qua các điểm (tính gộp bằng numpy cho nhanh)."""
+    P = np.asarray(pts, dtype=float).reshape(-1, 2)
     m = len(P)
-    rng = range(m) if closed else range(m - 1)
-    for i in rng:
-        p0 = P[(i - 1) % m] if closed or i > 0 else P[0]
-        p1 = P[i]
-        p2 = P[(i + 1) % m]
-        p3 = P[(i + 2) % m] if closed or i + 2 < m else P[-1]
-        for k in range(n):
-            t = k / n
-            t2, t3 = t * t, t * t * t
-            q = 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
-                       (-p0 + 3 * p1 - 3 * p2 + p3) * t3)
-            out.append((q[0], q[1]))
+    if m < 3:
+        return [tuple(p) for p in P]
+    i = np.arange(m) if closed else np.arange(m - 1)
+    if closed:
+        p0, p1, p2, p3 = P[(i - 1) % m], P[i], P[(i + 1) % m], P[(i + 2) % m]
+    else:
+        p0 = P[np.maximum(i - 1, 0)]
+        p1, p2 = P[i], P[i + 1]
+        p3 = P[np.minimum(i + 2, m - 1)]
+    t = (np.arange(n) / n)[None, :, None]
+    t2, t3 = t * t, t * t * t
+    p0, p1, p2, p3 = (x[:, None, :] for x in (p0, p1, p2, p3))
+    q = 0.5 * ((2 * p1) + (-p0 + p2) * t + (2 * p0 - 5 * p1 + 4 * p2 - p3) * t2 +
+               (-p0 + 3 * p1 - 3 * p2 + p3) * t3)
+    out = [tuple(v) for v in q.reshape(-1, 2).tolist()]
     if not closed:
-        out.append(tuple(P[-1]))
+        out.append(tuple(P[-1].tolist()))
     return out
 
 

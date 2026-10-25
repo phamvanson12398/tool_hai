@@ -320,6 +320,7 @@ class Shot:
         self.prev = prev or {}
         self.lw = max(2.0, self.W / 640)
         self.font = wp.font(int(self.H * 0.062), True, self.lang)
+        self._layout()
 
     # --- nhép miệng
     def _mouth(self, cid: str, t: float) -> float:
@@ -411,10 +412,45 @@ class Shot:
         pic.draw(img, cx, ey, d, st, max(self.lw, d * 0.02), bottom)
         return True
 
+    def _layout(self) -> None:
+        """Phần đứng yên suốt cảnh quay, tính / vẽ một lần (dựng nhanh): vị trí người, nền RGBA
+        (kèm đầu giường, gối), lớp vật che phía trước đã cắt sát."""
+        W, H = self.W, self.H
+        s = self.s
+        cast = [s.get("who")] + list(s.get("with") or [])
+        if s["type"] == "close":
+            xs = [0.5 + {"left": 0.06, "right": -0.06}.get(s.get("look"), 0.0)]
+        elif s["type"] == "two" or len(cast) == 2:
+            xs = [0.32, 0.68]
+        elif len(cast) == 3:
+            xs = [0.22, 0.5, 0.78]
+        else:
+            xs = [0.5]
+        self.kind = s["type"] if s["type"] != "wide" or len(cast) < 2 else "wide"
+        self.cast = cast[:1] if s["type"] == "close" else cast
+        self.xs = xs
+        base = self.bg.convert("RGBA")
+        if s.get("front") == "bed" and s["type"] not in ("phone", "black"):   # đầu giường + gối sau người
+            bd = ImageDraw.Draw(base)
+            L = max(2, int(self.lw * 1.1))
+            bd.rounded_rectangle([W * 0.07, H * 0.26, W * 0.93, H * 0.9], radius=W * 0.02,
+                                 fill=(204, 182, 160, 255), outline=(28, 26, 30, 255), width=L)
+            for x in xs[:max(1, len(self.cast))]:
+                bd.rounded_rectangle([x * W - W * 0.17, H * 0.4, x * W + W * 0.17, H * 0.6], radius=W * 0.04,
+                                     fill=(250, 248, 244, 255), outline=(28, 26, 30, 255), width=L)
+        self.base = base
+        self.front = None
+        if s.get("front") in FRONTS and s["type"] not in ("phone", "black"):
+            fl = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            draw_front(fl, s["front"], [xs[min(i, len(xs) - 1)] for i in range(len(self.cast))], self.lw)
+            bb = fl.getbbox()
+            if bb:
+                self.front = (fl.crop(bb), bb[:2])
+
     def frame(self, t: float) -> np.ndarray:
         W, H = self.W, self.H
         s = self.s
-        img = self.bg.copy().convert("RGBA")
+        img = self.base.copy()
         if s["type"] == "black":
             img = Image.new("RGBA", (W, H), (0, 0, 0, 255))
         elif s["type"] == "phone":
@@ -423,27 +459,8 @@ class Shot:
                             self.lang, t, self.figs)
             img.alpha_composite(wp.held(scr, (W, H), lw=self.lw, tilt=0.6 * math.sin(t * 0.7)))
         else:
-            cast = [s.get("who")] + list(s.get("with") or [])
-            if s["type"] == "close":
-                xs = [0.5 + {"left": 0.06, "right": -0.06}.get(s.get("look"), 0.0)]
-            elif s["type"] == "two" or len(cast) == 2:
-                xs = [0.32, 0.68]
-            elif len(cast) == 3:
-                xs = [0.22, 0.5, 0.78]
-            else:
-                xs = [0.5]
-            kind = s["type"] if s["type"] != "wide" or len(cast) < 2 else "wide"
-            if s["type"] == "close":
-                cast = cast[:1]
-            if s.get("front") == "bed":                   # đầu giường + gối phía sau người
-                bd = ImageDraw.Draw(img)
-                L = max(2, int(self.lw * 1.1))
-                bd.rounded_rectangle([W * 0.07, H * 0.26, W * 0.93, H * 0.9], radius=W * 0.02,
-                                     fill=(204, 182, 160, 255), outline=(28, 26, 30, 255), width=L)
-                for x in xs[:max(1, len(cast))]:
-                    bd.rounded_rectangle([x * W - W * 0.17, H * 0.4, x * W + W * 0.17, H * 0.6], radius=W * 0.04,
-                                         fill=(250, 248, 244, 255), outline=(28, 26, 30, 255), width=L)
-            layer = Image.new("RGBA", (W * wa.SS, H * wa.SS), (0, 0, 0, 0))
+            cast, xs, kind = self.cast, self.xs, self.kind
+            layer = None
             for i, cid in enumerate(cast):
                 if not cid:
                     continue
@@ -453,6 +470,8 @@ class Shot:
                 if not got:
                     continue
                 fig, foot, sc = got
+                if layer is None:
+                    layer = Image.new("RGBA", (W * wa.SS, H * wa.SS), (0, 0, 0, 0))
                 st = self._state(cid, t, i == 0)
                 if len(cast) >= 2 and i > 0:      # người thứ hai quay sang người nói
                     st.yaw = -0.4 if xs[i] > 0.5 else 0.4
@@ -463,12 +482,18 @@ class Shot:
                 if st.shake:
                     pen.ox += math.sin(t * 40) * 0.004 * W * wa.SS
                 fig.draw(pen, st)
-            img.alpha_composite(layer.reduce(wa.SS))
-            if s.get("front") in FRONTS:
-                draw_front(img, s["front"], [xs[min(i, len(xs) - 1)] for i in range(len(cast))], self.lw)
-        arr = np.asarray(img.convert("RGB"))
+            if layer is not None:                          # chỉ thu nhỏ vùng có người (nhanh hơn cả khung)
+                bb = layer.getbbox()
+                if bb:
+                    k = wa.SS
+                    x0, y0 = bb[0] // k * k, bb[1] // k * k
+                    x1, y1 = min(layer.width, -(-bb[2] // k) * k), min(layer.height, -(-bb[3] // k) * k)
+                    img.alpha_composite(layer.crop((x0, y0, x1, y1)).reduce(k), (x0 // k, y0 // k))
+            if self.front:
+                img.alpha_composite(self.front[0], self.front[1])
+        arr = np.asarray(img)[:, :, :3]
         arr = self._camera(arr, t)
-        return arr
+        return np.ascontiguousarray(arr)
 
     def _camera(self, arr: np.ndarray, t: float) -> np.ndarray:
         import cv2
@@ -491,73 +516,150 @@ class Shot:
             return arr
         W, H = self.W, self.H
         M = np.float32([[z, 0, W / 2 - z * W / 2 + dx], [0, z, H / 2 - z * H / 2 + dy]])
-        return cv2.warpAffine(arr, M, (W, H), flags=cv2.INTER_LINEAR, borderMode=cv2.BORDER_REFLECT)
+        return cv2.warpAffine(np.ascontiguousarray(arr), M, (W, H), flags=cv2.INTER_LINEAR,
+                              borderMode=cv2.BORDER_REFLECT)
 
     def subtitle(self, arr: np.ndarray, t: float, name: str = "") -> np.ndarray:
-        """Phụ đề như video mẫu: chữ trắng to, viền đen dày, không nền."""
+        """Phụ đề như video mẫu: chữ trắng to, viền đen dày, không nền. Chữ cả cảnh như nhau
+        nên vẽ một lần rồi chỉ trộn vào vùng chữ ở mỗi khung (dựng nhanh)."""
         ln = self.s.get("line") or {}
         if not ln.get("text") or not self.st.get("subtitles", True):
             return arr
-        img = Image.fromarray(arr)
-        d = ImageDraw.Draw(img)
-        f = self.font
-        lines = wp._wrap(d, ln["text"], f, self.W * 0.86)
-        lh = int(self.H * 0.078)
-        sw = max(2, int(self.H * 0.0075))
-        y = self.H - int(self.H * 0.06) - lh * len(lines)
-        for k, l in enumerate(lines):
-            w = d.textlength(l, font=f)
-            x = (self.W - w) / 2
-            d.text((x, y + k * lh), l, font=f, fill=(255, 255, 255), stroke_width=sw, stroke_fill=(20, 20, 22))
-        return np.asarray(img)
+        if not hasattr(self, "_sub"):
+            lay = Image.new("RGBA", (self.W, self.H), (0, 0, 0, 0))
+            d = ImageDraw.Draw(lay)
+            f = self.font
+            lines = wp._wrap(d, ln["text"], f, self.W * 0.86)
+            lh = int(self.H * 0.078)
+            sw = max(2, int(self.H * 0.0075))
+            y = self.H - int(self.H * 0.06) - lh * len(lines)
+            for k, l in enumerate(lines):
+                w = d.textlength(l, font=f)
+                d.text(((self.W - w) / 2, y + k * lh), l, font=f, fill=(255, 255, 255), stroke_width=sw,
+                       stroke_fill=(20, 20, 22))
+            bb = lay.getbbox()
+            if bb:
+                a = np.asarray(lay.crop(bb)).astype(np.float32)
+                self._sub = (bb, a[:, :, :3], a[:, :, 3:4] / 255.0)
+            else:
+                self._sub = None
+        if not self._sub:
+            return arr
+        (x0, y0, x1, y1), rgb, al = self._sub
+        out = np.array(arr, copy=True)
+        reg = out[y0:y1, x0:x1].astype(np.float32)
+        out[y0:y1, x0:x1] = (reg * (1 - al) + rgb * al).astype(np.uint8)
+        return out
 
 
 # ---------------------------------------------------------------- dựng video
 
-def render(st: dict, pdir: Path, size=(1920, 1080), audio: dict | None = None, progress=None,
-           out_name: str = "webtoon.mp4") -> Path:
-    import soundfile as sf
-    audio = audio or {}
+_ENC: dict = {}
+NVENC = ["-c:v", "h264_nvenc", "-preset", "fast", "-rc", "vbr", "-cq", "21", "-b:v", "0", "-pix_fmt", "yuv420p"]
+X264 = ["-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p", "-preset", "veryfast"]
+
+
+def gpu_encode(ff: str) -> bool:
+    """Card NVIDIA nén được video (NVENC) không — thử nén một khung (một lần). Cài đặt
+    "video_encoder": "cpu" thì luôn nén bằng CPU."""
+    if ff in _ENC:
+        return _ENC[ff]
+    ok = False
+    try:
+        from . import config
+        if str(config.load_settings().get("video_encoder") or "auto").lower() != "cpu":
+            r = subprocess.run([ff, "-hide_banner", "-loglevel", "error", "-f", "lavfi", "-i",
+                                "color=c=black:s=320x240:d=0.2", *NVENC, "-f", "null", "-"],
+                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=30)
+            ok = r.returncode == 0
+    except Exception:  # noqa: BLE001
+        ok = False
+    _ENC[ff] = ok
+    logger.info("Nén video bằng %s", "card NVIDIA (NVENC)" if ok else "CPU (libx264)")
+    return ok
+
+
+def _ffmpeg_writer(ff: str, size, out: Path, gpu: bool | None = None):
     W, H = size
-    rows = plan(st, audio)
+    enc = NVENC if (gpu_encode(ff) if gpu is None else gpu) else X264
+    return subprocess.Popen(
+        [ff, "-y", "-f", "rawvideo", "-pixel_format", "rgb24", "-video_size", f"{W}x{H}",
+         "-framerate", str(FPS), "-i", "-", *enc, str(out)],
+        stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+
+
+def prev_poses(rows: list[dict]) -> list[dict]:
+    """Tư thế mỗi người ngay trước từng cảnh quay (để tay chuyển dần sang tư thế mới)."""
+    out, cur = [], {}
+    for r in rows:
+        out.append(dict(cur))
+        s = r["shot"]
+        if s.get("who"):
+            cur[s["who"]] = s.get("pose", "down")
+    return out
+
+
+def render_range(st: dict, pdir: Path | None, size, rows: list[dict], prevs: list[dict], fi0: int, fi1: int,
+                 write, tick=None) -> None:
+    """Dựng các khung fi0..fi1-1 (khung thứ fi ở giây fi / FPS), mỗi khung gọi write(bytes)."""
+    import bisect
     figs = figures(st)
     pics = wpic.load(st, pdir)
+    starts = [r["start"] for r in rows]
+    cur, shot = -1, None
+    for fi in range(fi0, fi1):
+        t = fi / FPS
+        i = max(0, bisect.bisect_right(starts, t) - 1)
+        if i != cur:
+            cur, shot = i, Shot(st, rows[i], size, figs, dict(prevs[i]), pics, pdir)
+        lt = t - rows[i]["start"]
+        write(shot.subtitle(shot.frame(lt), lt).tobytes())
+        if tick and (fi - fi0) % 24 == 23:
+            tick(24)
+
+
+def workers_for(n_frames: int) -> int:
+    """Số chương trình con dựng song song: theo số nhân CPU, video ngắn thì một."""
+    import os
+    if n_frames < FPS * 40:
+        return 1
+    return max(1, min(8, (os.cpu_count() or 2) - 1, n_frames // (FPS * 20)))
+
+
+def render(st: dict, pdir: Path, size=(1920, 1080), audio: dict | None = None, progress=None,
+           out_name: str = "webtoon.mp4") -> Path:
+    """Dựng video: chia các khung cho nhiều chương trình con chạy song song trên các nhân CPU
+    (mỗi đoạn một file), ghép lại, rồi trộn tiếng."""
+    import soundfile as sf
+    audio = audio or {}
+    rows = plan(st, audio)
     total = sum(r["dur"] for r in rows) + 0.5
     out_dir = pdir / "out"
     out_dir.mkdir(parents=True, exist_ok=True)
     raw = out_dir / "webtoon_video.mp4"
     ff = video._ffmpeg_path()
-    proc = subprocess.Popen(
-        [ff, "-y", "-f", "rawvideo", "-pixel_format", "rgb24", "-video_size", f"{W}x{H}",
-         "-framerate", str(FPS), "-i", "-", "-c:v", "libx264", "-crf", "20", "-pix_fmt", "yuv420p",
-         "-preset", "veryfast", str(raw)],
-        stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    prev_pose: dict = {}
     n = int(total * FPS)
-    i, shot = 0, None
-    try:
-        for fi in range(n):
-            t = fi / FPS
-            while i < len(rows) - 1 and t >= rows[i + 1]["start"]:
-                i += 1
-                shot = None
-            if not rows:
-                break
-            row = rows[i]
-            if shot is None:
-                shot = Shot(st, row, size, figs, dict(prev_pose), pics, pdir)
-                s = row["shot"]
-                if s.get("who"):
-                    prev_pose[s["who"]] = s.get("pose", "down")
-            lt = t - row["start"]
-            frame = shot.frame(lt)
-            frame = shot.subtitle(frame, lt)
-            proc.stdin.write(frame.tobytes())
-            if progress and fi % 48 == 0:
-                progress(fi / max(1, n), f"dựng hình {fi}/{n}")
-    finally:
-        proc.stdin.close()
-        proc.wait()
+    prevs = prev_poses(rows)
+    gpu = gpu_encode(ff)
+    k = workers_for(n) if rows else 1
+    if gpu:
+        k = min(k, 3)                     # card GeForce chỉ cho vài luồng NVENC cùng lúc
+    if k <= 1 or not rows:
+        proc = _ffmpeg_writer(ff, size, raw)
+        done = [0]
+
+        def tick(m):
+            done[0] += m
+            if progress and done[0] % 48 == 0:
+                progress(done[0] / max(1, n), f"dựng hình {done[0]}/{n}")
+        try:
+            if rows:
+                render_range(st, pdir, size, rows, prevs, 0, n, proc.stdin.write, tick)
+        finally:
+            proc.stdin.close()
+            proc.wait()
+    else:
+        _render_parallel(st, pdir, size, rows, prevs, n, k, raw, ff, progress, gpu)
     # tiếng: mọi câu đặt đúng mốc
     sr = 24000
     mix = np.zeros(int(total * sr) + sr, dtype=np.float32)
@@ -582,6 +684,63 @@ def render(st: dict, pdir: Path, size=(1920, 1080), audio: dict | None = None, p
                    stderr=subprocess.DEVNULL, check=True)
     raw.unlink(missing_ok=True)
     return out
+
+
+def _render_parallel(st, pdir, size, rows, prevs, n, k, raw: Path, ff: str, progress, gpu: bool = False) -> None:
+    import os
+    import sys
+    import tempfile
+    import threading
+    work = Path(tempfile.mkdtemp(prefix="wt_render_", dir=str(raw.parent)))
+    bounds = [n * j // k for j in range(k + 1)]
+    rows_j = [{"shot": r["shot"], "start": r["start"], "dur": r["dur"],
+               "audio": str(r["audio"]) if r.get("audio") else None, "audio_dur": r.get("audio_dur", 0.0)}
+              for r in rows]
+    done = [0] * k
+    procs, errs = [], []
+    root = Path(__file__).resolve().parent.parent
+    for j in range(k):
+        job = work / f"job_{j}.json"
+        job.write_text(json.dumps({"st": st, "pdir": str(pdir), "size": list(size), "rows": rows_j, "prevs": prevs,
+                                   "fi0": bounds[j], "fi1": bounds[j + 1], "out": str(work / f"seg_{j:02d}.mp4"),
+                                   "ffmpeg": ff, "gpu": gpu}, ensure_ascii=False), encoding="utf-8")
+        ef = open(work / f"err_{j}.txt", "w", encoding="utf-8", errors="replace")
+        errs.append(ef)
+        procs.append(subprocess.Popen([sys.executable, "-m", "core.webtoon_render_worker", str(job)], cwd=str(root),
+                                      stdout=subprocess.PIPE, stderr=ef, text=True))
+
+    def reader(j, p):
+        for line in p.stdout:
+            if line.startswith("F "):
+                try:
+                    done[j] = int(line.split()[1])
+                except ValueError:
+                    pass
+    threads = [threading.Thread(target=reader, args=(j, p), daemon=True) for j, p in enumerate(procs)]
+    for th in threads:
+        th.start()
+    import time
+    while any(p.poll() is None for p in procs):
+        if progress:
+            got = sum(done)
+            progress(got / max(1, n), f"dựng hình {got}/{n} ({k} luồng song song"
+                     + (", nén bằng card NVIDIA)" if gpu else ")"))
+        time.sleep(1.0)
+    for th in threads:
+        th.join(timeout=5)
+    for ef in errs:
+        ef.close()
+    bad = [j for j, p in enumerate(procs) if p.returncode != 0]
+    if bad:
+        tail = (work / f"err_{bad[0]}.txt").read_text(encoding="utf-8", errors="replace").strip().splitlines()[-4:]
+        raise RuntimeError("Dựng hình lỗi: " + " | ".join(tail))
+    lst = work / "list.txt"
+    lst.write_text("".join(f"file '{(work / f'seg_{j:02d}.mp4').as_posix()}'\n" for j in range(k)), encoding="utf-8")
+    subprocess.run([ff, "-y", "-f", "concat", "-safe", "0", "-i", str(lst), "-c", "copy", str(raw)],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
+    for p_ in work.iterdir():
+        p_.unlink(missing_ok=True)
+    os.rmdir(work)
 
 
 def preview(st: dict, shot_idx: int, size=(960, 540), t: float = 0.6, pdir: Path | None = None) -> Image.Image:

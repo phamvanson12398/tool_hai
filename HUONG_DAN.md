@@ -1103,6 +1103,10 @@ khung tranh đứng yên, tool chỉ **nhép miệng** theo giọng và **chớp
 - Gọi điện: mỗi câu cận mặt người đang nói ở đúng nơi của người đó.
 
 ### Lưu ý
-- Video 4 phút 1080p dựng khoảng 10–15 phút (sau khi đọc giọng).
+- **Dựng nhanh:** tool chia video cho nhiều nhân CPU vẽ song song (tối đa 8), rồi ghép lại;
+  máy có card NVIDIA thì **nén video bằng card (NVENC)** cho CPU rảnh để vẽ (khi đó tối đa 3
+  luồng vì card GeForce chỉ cho vài luồng nén cùng lúc). Muốn luôn nén bằng CPU: đặt
+  `"video_encoder": "cpu"` trong data/settings.json. Phần vẽ nhân vật / nét vẽ luôn chạy
+  trên CPU. Cảnh dùng ảnh AI nhân vật dựng nhanh hơn hẳn nhân vật tool tự vẽ.
 - Bối cảnh dùng các mẫu vẽ có sẵn của tool (phòng khách, phòng ngủ, văn phòng, đường phố,
   công viên...). Thứ chưa có (ga tàu, bệnh viện, xe hơi...) thì chọn mẫu gần nhất.
