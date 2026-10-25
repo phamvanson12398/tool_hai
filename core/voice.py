@@ -55,6 +55,22 @@ def _model():
     return _MODEL
 
 
+def unload() -> None:
+    """Bỏ OmniVoice khỏi card (lần đọc sau tự nạp lại) — nhường card cho vẽ 3D."""
+    global _MODEL
+    if _MODEL is None:
+        return
+    with _LOCK:
+        _MODEL = None
+    import gc
+    gc.collect()
+    try:
+        import torch
+        torch.cuda.empty_cache()
+    except Exception:  # noqa: BLE001
+        pass
+
+
 def load_asr():
     global _ASRLoaded
     m = _model()

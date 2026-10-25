@@ -3193,6 +3193,7 @@ def api_webtoon_render(pid):
         JOBS[pid] = {"state": "rendering", "progress": 0.0, "message": "bắt đầu", "log": []}
 
     def work():
+        stage = "chuẩn bị"
         try:
             pdir = config.project_dir(pid)
             if wt.get("bg_mode") == "3d":
@@ -3209,8 +3210,10 @@ def api_webtoon_render(pid):
                                                  "chỗ còn thiếu dùng nền vẽ tay.")
                     finally:
                         bg3d.unload()                      # trả bộ nhớ card cho OmniVoice
+            stage = "đọc giọng (OmniVoice)"
             audio = wf.narrate(wt, pdir, progress=lambda f, m: _set_status(
                 pid, progress=round(0.35 * float(f), 3), message=str(m)))
+            stage = "dựng hình"
             mp4 = wf.render(wt, pdir, (1920, 1080), audio, out_name="video.mp4",
                             progress=lambda f, m: _set_status(pid, progress=round(0.35 + 0.65 * float(f), 3),
                                                               message=str(m)))
@@ -3220,7 +3223,7 @@ def api_webtoon_render(pid):
             _set_status(pid, state="done", progress=1.0, message="xong")
         except Exception as e:  # noqa: BLE001
             traceback.print_exc()
-            _set_status(pid, state="error", message=f"Dựng video lỗi: {_short_err(e, 400)}")
+            _set_status(pid, state="error", message=f"Dựng video lỗi ở bước {stage}: {_short_err(e, 400)}")
 
     threading.Thread(target=work, daemon=True).start()
     return jsonify({"ok": True})

@@ -134,6 +134,40 @@ def unload() -> None:
         pass
 
 
+def run_jobs(jobs: list[dict], progress=None, labels: list[str] | None = None) -> None:
+    """Vẽ nhiều ảnh trong một chương trình con (core/bg3d_worker) rồi cho nó thoát, để
+    Stable Diffusion không làm hỏng OmniVoice chạy sau trong chương trình chính (lỗi
+    "Tensor on device meta..."), và trả sạch bộ nhớ card. jobs: [{prompt, size, seed, path}]."""
+    import json
+    import subprocess
+    import sys
+    import tempfile
+    if not jobs:
+        return
+    try:                                   # nhường card: bỏ OmniVoice đang nạp sẵn (lần đọc sau tự nạp lại)
+        from . import voice
+        voice.unload()
+    except Exception:  # noqa: BLE001
+        pass
+    root = Path(__file__).resolve().parent.parent
+    with tempfile.TemporaryFile(mode="w+", encoding="utf-8", errors="replace") as err:
+        proc = subprocess.Popen([sys.executable, "-m", "core.bg3d_worker"], cwd=str(root),
+                                stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=err,
+                                text=True, encoding="utf-8", errors="replace")
+        proc.stdin.write(json.dumps(jobs, ensure_ascii=False))
+        proc.stdin.close()
+        for line in proc.stdout:
+            parts = line.split()
+            if len(parts) == 2 and parts[0] == "START" and parts[1].isdigit() and progress:
+                i = int(parts[1])
+                progress(i / len(jobs), (labels or [])[i] if labels and i < len(labels) else f"vẽ ảnh {i + 1}/{len(jobs)}")
+        code = proc.wait()
+        if code != 0:
+            err.seek(0)
+            tail = [ln for ln in err.read().splitlines() if ln.strip()][-6:]
+            raise RuntimeError("Vẽ 3D lỗi: " + (" | ".join(tail) or f"mã {code}"))
+
+
 def download() -> None:
     """Tải sẵn mô hình (cai_3d.bat gọi)."""
     _load()
@@ -211,21 +245,22 @@ def draw_story(st: dict, pdir: Path, fmt_size, only: list[str] | None = None,
                  if p["id"] in only and p["id"] not in have]
     made, reseeded = [], set()
     size = gen_size(fmt_size)
+    jobs, labels = [], []
     for k, (p, t) in enumerate(todo):
         path = path_for(pdir, p["id"], t)
         if path.exists() and not force:
             continue
-        if progress:
-            progress(k / max(1, len(todo)), f"vẽ bối cảnh 3D {k + 1}/{len(todo)}: {p.get('name')}"
-                     + (" (đêm)" if t == "dem" else ""))
         if force and p["id"] not in reseeded:      # vẽ lại: đổi hạt giống (ngày, đêm dùng chung)
             old = int(p.get("bg3d_seed") or zlib.crc32(p["id"].encode()) % 100000)
             p["bg3d_seed"] = (old * 7919 + 13) % 1000003
             reseeded.add(p["id"])
         seed = int(p.get("bg3d_seed") or zlib.crc32(p["id"].encode()) % 100000)
-        img = generate(prompt_for(p, t, st.get("era") or ""), size, seed)
-        img.save(path)
+        jobs.append({"prompt": prompt_for(p, t, st.get("era") or ""), "size": list(size), "seed": seed,
+                     "path": str(path)})
+        labels.append(f"vẽ bối cảnh 3D {len(jobs)}/?: {p.get('name')}" + (" (đêm)" if t == "dem" else ""))
         made.append(path.name)
+    labels = [lb.replace("/?", f"/{len(jobs)}") for lb in labels]
+    run_jobs(jobs, progress, labels)
     return made
 
 

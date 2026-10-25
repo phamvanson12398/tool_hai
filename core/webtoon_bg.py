@@ -110,22 +110,21 @@ def draw(st: dict, pdir: Path, only: list[str] | None = None, force: bool = Fals
     from . import bg3d
     todo = [(p, t) for p, t in needed(st) if not only or p["id"] in only]
     made, reseeded = [], set()
-    for k, (p, t) in enumerate(todo):
+    jobs, labels = [], []
+    for p, t in todo:
         path = path_for(pdir, p["id"], t)
         if path.exists() and not force:
             continue
-        if progress:
-            progress(k / max(1, len(todo)), f"vẽ nền 3D {k + 1}/{len(todo)}: {p.get('name')}"
-                     + (" (đêm)" if t == "dem" else ""))
         if force and p["id"] not in reseeded:
             old = int(p.get("bg3d_seed") or zlib.crc32(p["id"].encode()) % 100000)
             p["bg3d_seed"] = (old * 7919 + 13) % 1000003
             reseeded.add(p["id"])
         seed = int(p.get("bg3d_seed") or zlib.crc32(p["id"].encode()) % 100000)
-        img = bg3d.generate(prompt(p, t), (1344, 768), seed)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        img.save(path)
+        jobs.append({"prompt": prompt(p, t), "size": [1344, 768], "seed": seed, "path": str(path)})
+        labels.append(f"{p.get('name')}" + (" (đêm)" if t == "dem" else ""))
         made.append(path.name)
+    labels = [f"vẽ nền 3D {i + 1}/{len(jobs)}: {lb}" for i, lb in enumerate(labels)]
+    bg3d.run_jobs(jobs, progress, labels)                # chương trình con: không làm hỏng OmniVoice
     return made
 
 

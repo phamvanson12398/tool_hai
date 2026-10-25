@@ -272,20 +272,22 @@ def draw(st: dict, pdir: Path, fmt_size, only: list[str] | None = None, force: b
     todo = [sc for _ci, sc in story.all_scenes(st)
             if (not only or sc["id"] in only) and (force or sc["id"] not in have)]
     size = bg3d.gen_size(fmt_size)
-    made = []
+    made, jobs, labels = [], [], []
+    d = story.image_dir(pdir)
     for k, sc in enumerate(todo):
-        if progress:
-            progress(k / max(1, len(todo)), f"vẽ ảnh {k + 1}/{len(todo)} (câu {sc['id']})")
         seed = zlib.crc32((sc.get("prompt") or sc["id"]).encode()) % 100000
         if force:
             seed = (seed + int(sc.get("redraw", 0)) * 7919 + 1) % 1000003
             sc["redraw"] = int(sc.get("redraw", 0)) + 1
-        img = bg3d.generate(full_prompt(st, sc, fmt_size), size, seed)
-        d = story.image_dir(pdir)
-        for old in d.glob(f"scene_{sc['id']}.*"):
-            old.unlink(missing_ok=True)
-        img.save(d / f"scene_{sc['id']}.png")
+        jobs.append({"prompt": full_prompt(st, sc, fmt_size), "size": list(size), "seed": seed,
+                     "path": str(d / f"scene_{sc['id']}.png")})
+        labels.append(f"vẽ ảnh {k + 1}/{len(todo)} (câu {sc['id']})")
         made.append(sc["id"])
+    bg3d.run_jobs(jobs, progress, labels)       # chương trình con: không làm hỏng OmniVoice
+    for sid in made:                            # ảnh cũ khác đuôi (chị tải lên) bỏ đi khi đã vẽ xong
+        for old in d.glob(f"scene_{sid}.*"):
+            if old.suffix.lower() != ".png":
+                old.unlink(missing_ok=True)
     return made
 
 
