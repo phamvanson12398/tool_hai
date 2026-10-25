@@ -105,7 +105,7 @@
   function collect() {
     var b = {
       title: $("wt-title").value.trim(), brief: $("wt-brief").value.trim(), genre: $("wt-genre").value,
-      style: $("wt-style").value,
+      style: $("wt-style").value, narrator_voice: $("wt-narrv").value,
       language: $("wt-lang").value, minutes: parseFloat($("wt-minutes").value) || 4,
       part: parseInt($("wt-part").value, 10) || 1, cliffhanger: $("wt-cliff").value === "1",
       subtitles: $("wt-subs").value === "1", prev_summary: $("wt-prev").value,
@@ -174,6 +174,7 @@
     var d = W.data || {}, w = wt(), o = opts();
     fillSelect("wt-genre", o.genres, w.genre || "marriage");
     fillSelect("wt-style", o.styles || STYLE_LIST, w.style || "saeon");
+    fillSelect("wt-narrv", o.narr_voices || NARRV_LIST, w.narrator_voice || "own");
     fillSelect("wt-lang", o.langs, w.language || "ko");
     $("wt-brief").value = w.brief || "";
     $("wt-title").value = w.title || "";
@@ -747,6 +748,8 @@
   var LS_IDEAS = "tool_hai_webtoon_ideas_seen";
   var STYLE_LIST = [["saeon", "Kể chuyện 사연 (nhân vật chính tự kể + thoại, như kênh 썰)"],
                     ["drama", "Toàn thoại (rất ít lời kể)"]];
+  var NARRV_LIST = [["own", "Giọng riêng cho người kể (khác mọi nhân vật)"],
+                    ["self", "Lời kể dùng giọng nhân vật chính (nhép miệng khi kể)"]];
   var GENRE_VI = {};
 
   function seenIdeas() {
@@ -855,6 +858,7 @@
              ["school", "Học đường"], ["mystery", "Bí ẩn"]];
     fillSelect("wt-genre", g, "marriage");
     fillSelect("wt-style", STYLE_LIST, "saeon");
+    fillSelect("wt-narrv", NARRV_LIST, "own");
     g.forEach(function (kv) { GENRE_VI[kv[0]] = kv[1]; });
     fillSelect("wt-idea-genre", [["", "Mọi thể loại"]].concat(g), "");
     $("wt-ideas-btn").addEventListener("click", moreIdeas);

@@ -109,7 +109,7 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict[str, Path]:
     adir.mkdir(parents=True, exist_ok=True)
     if progress and todo:
         progress(0.0, "chọn giọng riêng cho từng nhân vật")
-    nid = narrator_id(st)
+    nid = narrator_self(st)
     voices = cast_voices(st, pdir, lang, {(nid if ln["who"] == "narr" and nid else ln["who"]) for _s, ln in todo})
     out = {}
     for k, (s, ln) in enumerate(todo):
@@ -136,9 +136,19 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict[str, Path]:
 
 
 def narrator_id(st: dict) -> str:
-    """Kiểu 사연: người kể chính là nhân vật chính (đọc bằng giọng của nhân vật đó, nhép miệng)."""
+    """Kiểu 사연: id nhân vật chính — người tự kể chuyện."""
     nid = st.get("narrator_id") or ""
     return nid if nid in {c["id"] for c in st.get("characters") or []} else ""
+
+
+NARR_VOICES = {"own": "Giọng riêng cho người kể (khác mọi nhân vật)",
+               "self": "Lời kể dùng giọng nhân vật chính (nhép miệng khi kể)"}
+
+
+def narrator_self(st: dict) -> str:
+    """Lời kể đọc bằng chính giọng nhân vật chính (và nhân vật đó nhép miệng) — chỉ khi chị
+    chọn "self"; mặc định người kể có giọng riêng. Trả id nhân vật chính hoặc ""."""
+    return narrator_id(st) if st.get("narrator_voice") == "self" else ""
 
 
 def _voice_cfg(c: dict) -> dict:
@@ -156,9 +166,18 @@ def cast_voices(st: dict, pdir: Path, lang: str, speakers: set) -> dict:
     nhân vật. Trả về {id | "narr": (cfg, ref)}."""
     from . import film_render
     chars = st.get("characters") or []
+    narr = dict(st.get("narrator") or {})
+    main = next((c for c in chars if c["id"] == narrator_id(st)), None)
+    if main and not narr.get("voice") and not (narr.get("instruct") or "").strip():
+        # 사연 có giọng kể riêng: lời kể vẫn là "저는..." của nhân vật chính nên cùng giới, cùng tuổi,
+        # nhưng cao độ / chất giọng khác hẳn giọng thoại (tool còn đo cao độ để không trùng ai)
+        base = _instruct_of(main)
+        sex, age = base.split(", ")[:2]
+        own = "low pitch" if "high pitch" in base else ("moderate pitch" if "low pitch" in base else "low pitch")
+        narr["instruct"] = f"{sex}, {age}, {own}, soft calm storytelling voice"
     shim = {"characters": [{"id": c["id"], "voice": _voice_cfg(c),
                             "kit": {"species": "human", **(c.get("look") or {})}} for c in chars],
-            "narrator": st.get("narrator") or {}}
+            "narrator": narr}
     ids = [c["id"] for c in chars if c["id"] in speakers]
     got = film_render.cast(shim, pdir, lang, ids, narr="narr" in speakers)
     out = {cid: got[f"nv_{cid}"] for cid in ids if f"nv_{cid}" in got}
@@ -325,7 +344,7 @@ class Shot:
     # --- nhép miệng
     def _mouth(self, cid: str, t: float) -> float:
         ln = self.s.get("line") or {}
-        if ln.get("who") != cid and not (ln.get("who") == "narr" and cid and cid == narrator_id(self.st)):
+        if ln.get("who") != cid and not (ln.get("who") == "narr" and cid and cid == narrator_self(self.st)):
             return 0.0
         a0, a1 = LEAD, LEAD + self.row["audio_dur"]
         if not (a0 <= t < a1):

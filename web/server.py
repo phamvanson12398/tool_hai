@@ -2681,6 +2681,7 @@ def _webtoon_view(pid: str, data: dict) -> dict:
     out["options"] = {
         "genres": [[k, v] for k, v in wf.GENRES.items()], "langs": [[k, v] for k, v in wf.LANGS.items()],
         "styles": [[k, v] for k, v in wf.STYLES.items()],
+        "narr_voices": [[k, v] for k, v in wf.NARR_VOICES.items()],
         "types": list(wf.SHOT_TYPES), "cameras": list(wf.CAMERAS), "exprs": list(wa.EXPRS),
         "poses": list(wa.POSES), "hairs": list(wa.HAIRS), "hair_colors": list(wa.HAIR),
         "tops": list(wa.TOPS), "colors": list(wa.CLOTH), "skins": list(wa.SKIN),
@@ -2774,6 +2775,8 @@ def api_webtoon_save(pid):
         wt["bg_mode"] = body["bg_mode"]
     if body.get("style") in wf.STYLES:
         wt["style"] = body["style"]
+    if body.get("narrator_voice") in wf.NARR_VOICES:
+        wt["narrator_voice"] = body["narrator_voice"]
     if isinstance(body.get("narrator"), dict):
         wt["narrator"] = {"voice": str(body["narrator"].get("voice") or ""),
                           "instruct": str(body["narrator"].get("instruct") or "")}
@@ -2866,7 +2869,7 @@ def api_webtoon_next(pid):
     nid = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
     nw = wf.default_story()
     for k in ("genre", "language", "minutes", "subtitles", "cliffhanger", "narrator", "bg_mode", "pics", "style",
-              "narrator_id"):
+              "narrator_id", "narrator_voice"):
         if k in wt:
             nw[k] = json.loads(json.dumps(wt[k]))
     nw["characters"] = json.loads(json.dumps(wt.get("characters") or []))

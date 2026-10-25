@@ -1030,7 +1030,10 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
   nhất ("저는 결혼 4년차...", đuôi -요), lời kể chiếm khoảng 35–45% số câu, xen kẽ thoại của
   nhiều người (mẹ chồng, chồng, đồng nghiệp...). Truyện có nhiều chuyện nhỏ leo thang → nhân
   vật chính lên tiếng (사이다) → kết và một câu ngẫm nghĩ. **Lời kể đọc bằng chính giọng nhân
-  vật chính** và nhân vật đó nhép miệng khi kể.
+  vật chính** và nhân vật đó nhép miệng khi kể — nếu ô **Giọng lời kể** chọn *Lời kể dùng giọng
+  nhân vật chính*. Mặc định là *Giọng riêng cho người kể*: người kể có giọng riêng khác hẳn mọi
+  nhân vật (cùng giới, cùng tuổi với nhân vật chính vì vẫn kể "저는...", nhưng cao độ / chất
+  giọng khác; tool đo cao độ để không trùng ai), lúc kể nhân vật không nhép miệng (như lồng tiếng).
 - Mở đầu / chuyển chuyện mới: cảnh cận nhân vật chính trên **nền trơn có vòng sáng** (địa
   điểm "Nền kể chuyện", tool tự vẽ). Hai người ngồi bàn: **mép bàn + cốc cà phê** che phía
   trước; trên giường: **đầu giường, gối, chăn đắp**.
