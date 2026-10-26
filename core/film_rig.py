@@ -290,11 +290,27 @@ CHAR_STYLES = {
               "limb": 0.68, "eyes": "big", "outline": 0.65, "wobble": 0.25},
     "simple": {"label": "Tối giản mắt chấm (kiểu meme)", "head": 0.24, "body": 0.95, "leg": 0.16,
                "arm": 1.05, "limb": 0.95, "eyes": "line", "outline": 1.1, "wobble": 1.2},
+    # hai kiểu cho người Hàn xem hoạt hình (썰툰 / 사연)
+    "mochi": {"label": "Mochi 둥글이 — đầu bánh gạo, má hồng (đời thường, hài, gia đình, cổ tích)",
+              "head": 0.32, "body": 1.16, "leg": 0.06, "arm": 1.0, "limb": 1.25, "eyes": "dot",
+              "outline": 1.05, "wobble": 0.0, "face": "mochi", "head_shape": "mochi"},
+    "webtoon": {"label": "Webtoon 웹툰 — người mảnh, mắt to (tình cảm, nhà chồng, công sở, học đường)",
+                "head": 0.13, "body": 0.58, "leg": 0.46, "arm": 1.4, "limb": 0.62, "eyes": "big",
+                "outline": 0.5, "wobble": 0.0, "face": "webtoon", "head_shape": "v", "neck": 0.55},
 }
-_RANGES = {"head": (0.12, 0.36), "body": (0.6, 1.3), "leg": (0.06, 0.38), "arm": (0.7, 2.0),
+# thể loại truyện -> kiểu nhân vật hợp (gợi ý khi chọn kiểu)
+GENRE_STYLES = {
+    "mochi": ("đời thường", "hài", "gia đình", "cổ tích", "bài học", "thú cưng", "trẻ con", "thiếu nhi"),
+    "webtoon": ("nhà chồng", "mẹ chồng", "tình cảm", "công sở", "tài phiệt", "học đường", "phốt",
+                "cảm động", "ngoại tình", "báo thù", "drama"),
+}
+_RANGES = {"head": (0.12, 0.36), "body": (0.5, 1.3), "leg": (0.06, 0.5), "arm": (0.7, 2.0),
            "limb": (0.5, 1.4), "outline": (0.4, 1.6), "wobble": (0.0, 1.6), "belly": (0.0, 1.0),
-           "ears": (0.0, 1.0), "spread": (0.0, 35.0)}
+           "ears": (0.0, 1.0), "spread": (0.0, 35.0), "neck": (0.0, 0.8)}
 EYES = ("dot", "round", "big", "line", "ring")
+FACES = ("default", "mochi", "webtoon")       # bộ mặt vẽ riêng (mắt, mũi, miệng, má hồng)
+HEAD_SHAPES = ("round", "mochi", "v")          # tròn / bánh gạo bè ngang / trái xoan cằm V
+MOUTH_Y = {"round": 0.53, "mochi": 0.36, "v": 0.72}   # miệng dưới tâm đầu (x bán kính)
 NOSES = ("line", "round", "dot")
 MOUTHS = ("line", "lips")
 
@@ -302,7 +318,8 @@ MOUTHS = ("line", "lips")
 def clean_style(d: dict | None) -> dict:
     """Thông số kiểu nhân vật hợp lệ (thiếu thì lấy kiểu con nhộng)."""
     out = {k: v for k, v in CHAR_STYLES["capsule"].items() if k != "label"}
-    out.update(belly=0.0, ears=0.0, spread=0.0, nose="line", mouth="line")
+    out.update(belly=0.0, ears=0.0, spread=0.0, nose="line", mouth="line", neck=0.0, face="default",
+               head_shape="round")
     for k, (lo, hi) in _RANGES.items():
         try:
             out[k] = max(lo, min(hi, float((d or {}).get(k, out[k]))))
@@ -314,7 +331,19 @@ def clean_style(d: dict | None) -> dict:
         out["nose"] = d["nose"]
     if (d or {}).get("mouth") in MOUTHS:
         out["mouth"] = d["mouth"]
+    if (d or {}).get("face") in FACES:
+        out["face"] = d["face"]
+    if (d or {}).get("head_shape") in HEAD_SHAPES:
+        out["head_shape"] = d["head_shape"]
     return out
+
+
+def suggest_style(text: str) -> str | None:
+    """Kiểu nhân vật hợp với thể loại / nội dung truyện (None nếu không đoán được)."""
+    t = (text or "").lower()
+    hits = {k: sum(w in t for w in words) for k, words in GENRE_STYLES.items()}
+    best = max(hits, key=hits.get)
+    return best if hits[best] else None
 
 
 def style_of(st: dict) -> dict:
@@ -343,7 +372,8 @@ class Rig:
         self.leg = T * sty["leg"] * (0.87 if child else 1.0)
         self.hip_h = self.leg * 0.82                      # hông cao hơn đất
         self.head_y = -T + R                              # tâm đầu (đất = 0)
-        self.body_top = self.head_y + 0.78 * R
+        self.neck = sty.get("neck", 0.0) * R               # cổ (kiểu webtoon)
+        self.body_top = self.head_y + 0.78 * R + self.neck
         self.body_bot = -self.hip_h + R * 0.12
         female = self.kit["sex"] == "female"
         Rb = self.Rb
@@ -351,6 +381,8 @@ class Rig:
         wb = Rb * (0.98 if self.kit["top"] == "dress" else (0.84 if female else 0.86))
         if child:
             wt, wb = wt * 0.92, wb * 0.92
+        if sty.get("face") == "webtoon" and self.kit["top"] != "dress":   # vai rộng, eo thon
+            wt, wb = wt * 1.12, wb * 0.92
         wb *= 1 + 0.3 * sty.get("belly", 0.0)            # bụng tròn: hông rộng ra, vai hẹp lại
         wt *= 1 - 0.18 * sty.get("belly", 0.0)
         self.wt, self.wb = wt, wb
@@ -368,7 +400,11 @@ class Rig:
             doodle.CLOTH[self.kit["bottom_color"]]
         self.short_sleeve = self.kit["top"] == "tshirt"          # áo cộc tay: cẳng tay màu da
         self.shorts = self.kit.get("bottom") == "shorts"        # quần soóc: cẳng chân màu da
-        barefoot = self.kit["top"] in ("ao_nau", "ao_ba_ba") or self.kit["age"] == "child" or self.shorts
+        self.skirt = self.kit.get("bottom") == "skirt" and not long_bottom
+        if self.skirt:                                          # chân váy: chân màu da, đi giày
+            self.pants = self.skin
+        barefoot = (self.kit["top"] in ("ao_nau", "ao_ba_ba") or self.shorts or
+                    (self.kit["age"] == "child" and sty.get("face", "default") == "default")) and not self.skirt
         self.foot = self.skin if barefoot else (70, 58, 54)
         self._cache: dict = {}
 
@@ -387,7 +423,7 @@ class Rig:
         kit = self.kit
         face_dir = 1 if look > 0.15 else (-1 if look < -0.15 else 0)
         # đầu + tóc trước + mũ (gốc = cổ)
-        W, H = int(R * 3.6), int(R * 4.0)
+        W, H = int(R * 3.6), int(R * 4.6)          # cao dư cho tóc dài chấm lưng
         cx, hy = W / 2, R * 2.1
         head = Image.new("RGBA", (W, H), (0, 0, 0, 0))
         hb = Image.new("RGBA", (W, H), (0, 0, 0, 0))
@@ -399,12 +435,12 @@ class Rig:
         doodle._draw_head_parts(pb, kit, cx, hy, R, "back")
         doodle._draw_hair_back(pb, kit, cx, hy, R, face_dir or 1)
         doodle.draw_ears(pen, kit, cx, hy, R)
-        pen.ell(cx, hy, R, R * 0.97, self.skin)
+        doodle.draw_head(pen, kit, cx, hy, R)
         doodle._draw_face(pen, kit, cx, hy, R, look, expr, mouth, blink)
         doodle._draw_hair_front(pen, kit, cx, hy, R, face_dir or 1)
         doodle._draw_hat(pen, kit, cx, hy, R)
         doodle._draw_head_parts(pen, kit, cx, hy, R, "front")
-        neck = (cx, hy + 0.78 * R)
+        neck = (cx, hy + 0.78 * R + self.neck * S)
         sz = (int(W / doodle.SS), int(H / doodle.SS))
         head_m = _aff(_tr(0, self.body_top), _aff(_sc(1 / kq), _tr(-neck[0] / doodle.SS,
                                                                       -neck[1] / doodle.SS)))
@@ -443,7 +479,8 @@ class Rig:
         G = _aff(cam, G)
         # ngồi: hông hạ xuống ghế thấp, đùi đưa ngang
         seat = pose.get("seat_h")              # ngồi trên đồ đạc của cảnh (chõng, giường...)
-        drop = sit * (self.hip_h - (seat if seat is not None else T * 0.07))
+        stool = max(T * 0.07, self.legd[1] * 0.85)   # ghế đẩu cao tới gối (người chân dài)
+        drop = sit * (self.hip_h - (seat if seat is not None else stool))
         hip = (0.0, -self.hip_h + drop)
         B = _aff(G, _aff(_tr(hip[0], hip[1]), _aff(_rot(pose.get("lean", 0.0) * d),
                                                   _sc(1.0, pose.get("sy", 1.0)))))
@@ -453,7 +490,7 @@ class Rig:
         lw = max(1, int(T * zoom * 0.016))
         if sit > 0.05 and seat is None:                      # ghế đẩu tre
             col = (176, 150, 96)
-            p0 = _pt(G, -self.wb * 1.0, -T * 0.07)
+            p0 = _pt(G, -self.wb * 1.0, -stool)
             p1 = _pt(G, self.wb * 1.0, 0)
             x0, y0, x1, y1 = int(min(p0[0], p1[0])), int(min(p0[1], p1[1])), int(max(p0[0], p1[0])), int(max(p0[1], p1[1]))
             if sit > 0.5:
@@ -516,6 +553,8 @@ class Rig:
         paste(canvas, spr["body"][0], _aff(Bl, spr["body"][1]), night)
         if sit > 0.5:
             draw_legs()                      # ngồi: đùi nằm trên lòng, thấy rõ
+        if self.skirt:
+            self._skirt(canvas, Bl, zoom, sit)
         # tay (trước thân, kể cả che mặt khi khóc); giơ dụng cụ quá vai thì tay ra sau đầu
         hands, elbows = [], []
 
@@ -550,7 +589,8 @@ class Rig:
         """Góc (vai, khuỷu) để tay đưa đồ đang cầm chạm đúng miệng (IK hai đoạn)."""
         R = self.R
         H = _aff(_tr(0, self.body_top), _aff(_rot(pose.get("head", 0.0) * d), _tr(0, -self.body_top)))
-        mx, my = _pt(H, pose.get("look", 0.3 * d) * 0.18 * R, self.head_y + 0.53 * R)
+        my0 = MOUTH_Y.get(self.sty.get("head_shape"), 0.53)
+        mx, my = _pt(H, pose.get("look", 0.3 * d) * 0.18 * R, self.head_y + my0 * R)
         fwd, down = self.MOUTH_HOLD.get(held, self.MOUTH_HOLD[None])
         tx, ty = mx + d * fwd * R, my + down * self.T
         sx, sy = (1 if i == 0 else -1) * d * self.shoulder[0], self.shoulder[1]
@@ -626,6 +666,24 @@ class Rig:
             cv2.ellipse(canvas, (int(fx * 4), int(fy * 4)), (rx * 4, ry * 4), ang, 0, 360,
                         self.foot, -1, cv2.LINE_AA, shift=2)
         return end
+
+    def _skirt(self, canvas, Bl, zoom, sit):
+        """Chân váy xếp ly loe ra dưới hông (ngồi thì phủ ngắn trên đùi)."""
+        import cv2
+        T = self.T
+        lw = max(1, int(T * zoom * 0.012 * self.sty["outline"]))
+        y0 = self.body_bot - 0.05 * T
+        L = 0.04 * T if sit > 0.5 else 0.12 * T
+        wb = self.wb
+        q = [_pt(Bl, x, y) for x, y in ((-wb * 0.95, y0), (wb * 0.95, y0), (wb * 1.3, y0 + L), (-wb * 1.3, y0 + L))]
+        P = np.array([[int(x * 4), int(y * 4)] for x, y in q], np.int32)
+        col = doodle.CLOTH[self.kit["bottom_color"]]
+        cv2.fillPoly(canvas, [P], col, cv2.LINE_AA, shift=2)
+        for k in (-0.6, -0.2, 0.2, 0.6):
+            a, b = _pt(Bl, k * wb * 0.95, y0 + 0.01 * T), _pt(Bl, k * wb * 1.3, y0 + L)
+            cv2.line(canvas, (int(a[0] * 4), int(a[1] * 4)), (int(b[0] * 4), int(b[1] * 4)),
+                     doodle._shade(col, 0.7), max(1, lw // 2 + 1), cv2.LINE_AA, shift=2)
+        cv2.polylines(canvas, [P], True, OUT, lw, cv2.LINE_AA, shift=2)
 
     def _pole(self, canvas, Bl, zoom, d):
         """Đòn gánh trên vai, hai thúng treo hai đầu."""

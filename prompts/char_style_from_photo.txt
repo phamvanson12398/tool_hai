@@ -9,8 +9,8 @@ Tool vẽ nhân vật hoạt hình 2D bằng bộ ghép có tham số. Hãy ch�
 
 ### Tham số nét vẽ ("style")
 - "head": bán kính đầu / chiều cao cả người (0.12–0.36). Người thật ~0.13, anime ~0.2, kiểu con nhộng Hàn 0.25, chibi đầu to 0.3+.
-- "body": bề ngang thân so với kiểu con nhộng (0.6 gầy – 1.3 béo).
-- "leg": chiều dài chân / chiều cao (0.06 chân rất ngắn – 0.38 chân dài).
+- "body": bề ngang thân so với kiểu con nhộng (0.5 gầy – 1.3 béo).
+- "leg": chiều dài chân / chiều cao (0.06 chân rất ngắn – 0.5 chân rất dài kiểu webtoon).
 - "arm": độ dài tay (0.7 ngắn cũn – 2.0 dài).
 - "limb": độ dày tay chân (0.5 mảnh – 1.4 mập).
 - "eyes": "dot" (mắt bầu dục nhỏ, mí nặng kiểu vẽ tay Hàn), "round" (mắt tròn to chibi), "big" (mắt anime to có đốm sáng), "line" (mắt chấm đen kiểu meme), "ring" (mắt tròn trắng viền đen, con ngươi chấm đen ở giữa).
@@ -21,6 +21,9 @@ Tool vẽ nhân vật hoạt hình 2D bằng bộ ghép có tham số. Hãy ch�
 - "spread": tay buông dang ra hai bên bao nhiêu độ (0 tay sát người – 35 dang rộng).
 - "nose": "line" (mũi một nét cong nhỏ), "round" (mũi tròn to có hai lỗ mũi), "dot" (chấm nhỏ).
 - "mouth": "line" (miệng một nét), "lips" (môi hồng dày tô màu).
+- "face": "default" (mặt theo eyes/nose/mouth ở trên), "mochi" (mắt chấm đen có đốm sáng, má hồng luôn có, miệng mèo ω, không mũi — kiểu 썰툰 tròn mũm mĩm), "webtoon" (mắt to tròng nâu long lanh mí đậm, lông mày mảnh, mũi một nét, miệng nhỏ — kiểu webtoon Hàn).
+- "head_shape": "round" (đầu tròn), "mochi" (đầu bè ngang như bánh gạo), "v" (mặt trái xoan cằm nhọn chữ V).
+- "neck": độ dài cổ lộ ra (0 không thấy cổ – 0.8 cổ dài); kiểu webtoon thường 0.5.
 
 ### Bộ ghép ngoại hình của nhân vật trong ảnh ("kit") — chỉ dùng giá trị trong danh mục
 {{catalog}}

@@ -20,7 +20,7 @@ from PIL import Image, ImageDraw
 from . import config, doodle, film_act, film_rig, style_lib
 
 DIR = config.PREVIEWS / "kieu"
-VERSION = 3
+VERSION = 4
 BG = (238, 228, 206)
 FLOOR = (214, 196, 160)
 
@@ -36,6 +36,38 @@ OTHERS = [
     {"species": "human", "age": "child", "sex": "male", "skin": "fair", "hair": "bangs",
      "hair_color": "black", "top": "shirt", "top_color": "yellow", "bottom_color": "blue"},
 ]
+# dàn nhân vật riêng của kiểu vẽ sẵn (giống bản mẫu đã duyệt); phần tử đầu = nhân vật chính
+PRESET_CAST = {
+    "mochi": [
+        {"sex": "male", "age": "adult", "hair": "side_part", "top": "shirt_tie", "top_color": "white",
+         "bottom_color": "navy", "expr": "neutral"},
+        {"sex": "female", "age": "young", "hair": "long", "hair_color": "brown", "top": "shirt",
+         "top_color": "pink", "bottom_color": "cream", "expr": "happy"},
+        {"sex": "female", "age": "adult", "hair": "perm", "top": "shirt", "top_color": "purple",
+         "bottom_color": "darkgray", "expr": "angry"},
+        {"sex": "male", "age": "child", "hair": "bowl", "top": "hoodie", "top_color": "yellow",
+         "bottom_color": "blue", "expr": "shocked"},
+        {"sex": "male", "age": "old", "hair": "bald", "hair_color": "gray", "glasses": "round", "top": "shirt",
+         "top_color": "beige", "bottom_color": "darkbrown", "expr": "cry"},
+    ],
+    "webtoon": [
+        {"sex": "male", "age": "young", "hair": "twoblock", "top": "shirt_tie", "top_color": "white",
+         "bottom_color": "navy", "expr": "neutral"},
+        {"sex": "female", "age": "young", "hair": "longbang", "hair_color": "darkbrown", "top": "cardigan",
+         "top_color": "cream", "bottom": "skirt", "bottom_color": "beige", "expr": "happy"},
+        {"sex": "male", "age": "child", "hair": "twoblock", "hair_color": "darkbrown", "top": "blazer",
+         "top_color": "navy", "bottom_color": "navy", "expr": "shocked"},
+        {"sex": "female", "age": "adult", "hair": "bob", "hair_color": "brown", "top": "apron",
+         "top_color": "pink", "bottom_color": "brown", "expr": "angry"},
+        {"sex": "male", "age": "adult", "hair": "slick", "glasses": "square", "top": "suit",
+         "top_color": "black", "bottom_color": "black", "expr": "neutral"},
+    ],
+}
+for _c in PRESET_CAST.values():
+    for _k in _c:
+        _k.setdefault("species", "human")
+        _k.setdefault("skin", "light")
+        _k.setdefault("hair_color", "black")
 # chuỗi hành động trong ảnh động: (hành động, giây, ngồi?)
 SEQ = [("idle", 1.2), ("walk", 1.6), ("wave", 1.4), ("talk", 1.6), ("jump", 1.6),
        ("sit", 1.6), ("cry", 1.6), ("think", 1.4), ("laugh", 1.4)]
@@ -56,6 +88,8 @@ def items() -> list[dict]:
 
 def cast_kits(sid: str) -> list[dict] | None:
     """Các nhân vật trong ảnh mẫu (Claude liệt kê khi tạo kiểu): [{kit..., expr}]."""
+    if sid in PRESET_CAST:
+        return PRESET_CAST[sid]
     if sid.startswith("lib:"):
         got = style_lib.get(sid[4:]) or {}
         if isinstance(got.get("cast"), list) and got["cast"]:
@@ -66,7 +100,8 @@ def cast_kits(sid: str) -> list[dict] | None:
 def resolve(sid: str) -> tuple[dict, dict] | None:
     """(thông số nét vẽ, bộ ghép nhân vật chính) của một kiểu."""
     if sid in film_rig.CHAR_STYLES:
-        return film_rig.clean_style(film_rig.CHAR_STYLES[sid]), doodle.clean_kit(DEFAULT_MAIN)
+        main = PRESET_CAST[sid][0] if sid in PRESET_CAST else DEFAULT_MAIN
+        return film_rig.clean_style(film_rig.CHAR_STYLES[sid]), doodle.clean_kit(main)
     if sid.startswith("lib:"):
         got = style_lib.get(sid[4:])
         if got:

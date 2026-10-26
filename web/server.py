@@ -1778,6 +1778,7 @@ def _story_view(pid: str, data: dict) -> dict:
     from core import doodle_parts, film as film_m, film_rig
     out["mode"] = st.get("mode", "story")
     out["char_styles"] = _char_style_options()
+    out["style_genres"] = film_rig.GENRE_STYLES
     smp = st.get("char_sample") or {}
     out["char_sample"] = {"note": smp.get("note", ""), "has": bool(smp.get("image")),
                           "lib": smp.get("lib") or ""}
@@ -2006,7 +2007,8 @@ def api_style_delete(sid):
 @app.get("/api/story/options")
 def api_story_options():
     """Lựa chọn dùng khi chưa mở truyện nào (ô Kiểu nhân vật)."""
-    return jsonify({"char_styles": _char_style_options()})
+    from core import film_rig
+    return jsonify({"char_styles": _char_style_options(), "style_genres": film_rig.GENRE_STYLES})
 
 
 @app.get("/api/story/trash")

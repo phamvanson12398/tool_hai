@@ -995,3 +995,7 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 .wt-bg .ph { width: 220px; aspect-ratio: 16 / 9; display: flex; align-items: center; justify-content: center; text-align: center; padding: 6px; background: var(--bg-soft, #f3f3f3); border-radius: 4px; color: var(--text-faint); }
 .wt-bg .sub { color: var(--text-faint); }
 .wt-bg .acts { display: flex; flex-wrap: wrap; gap: 4px; }
+
+/* gợi ý kiểu nhân vật theo thể loại truyện */
+.st-cs-hint { margin: 6px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
+.st-cs-hint[hidden] { display: none; }

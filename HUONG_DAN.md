@@ -681,9 +681,12 @@ Tab riêng trên thanh trên cùng, gồm:
   lỗ mũi / chấm, miệng một nét / môi hồng dày, tai hai bên, tóc (ngắn, mái, rối, rẽ ngôi,
   búi, dài, ngang vai, hói, bồng, bát úp, xoăn bồng, trọc có chỏm), áo (nâu, bà ba, cánh,
   váy, khoác, sơ mi, len, thụng, áo dài, phông cộc tay phồng), quần dài / soóc gấu tua rua,
-  bụng tròn, tay dang ra hai bên. Ảnh mẫu có nhiều nhân vật thì Claude ghi từng người (kèm
+  bụng tròn, tay dang ra hai bên, mặt Mochi / Webtoon, đầu bánh gạo / cằm V, cổ dài ngắn.
+  Ảnh mẫu có nhiều nhân vật thì Claude ghi từng người (kèm
   biểu cảm) để dàn nhân vật xem trước giống đúng ảnh.
 - Kiểu có sẵn **"Bé bụng phệ áo phông quần soóc"** vẽ lại từ ảnh mẫu đã gửi (6 bạn).
+- Kiểu **Mochi** và **Webtoon** có dàn nhân vật mẫu riêng (nhân viên văn phòng, cô gái,
+  아줌마 / mẹ chồng, học sinh, ông nội / sếp) giống bản mẫu đã duyệt.
 - **Thẻ từng kiểu** (kiểu vẽ sẵn, kiểu có sẵn, kiểu chị tự tạo): ảnh động nhân vật diễn
   đủ hành động (đứng, đi, vẫy tay, nói, nhảy mừng, ngồi, khóc, suy nghĩ, cười), ảnh mẫu
   gốc và **dàn nhân vật** cùng nét (người già, người trẻ, trẻ con, con chó) để xem các
@@ -696,7 +699,24 @@ Tab riêng trên thanh trên cùng, gồm:
 Ô **Kiểu nhân vật**:
 - Chọn sẵn một kiểu: **Con nhộng tay chân ngắn** (vẽ tay Hàn, mặc định), **Chibi
   đầu thật to, mắt tròn**, **Người tỉ lệ cao** (đầu nhỏ, chân tay dài), **Anime mắt
-  to, nét mảnh**, **Tối giản mắt chấm** (kiểu meme).
+  to, nét mảnh**, **Tối giản mắt chấm** (kiểu meme), và hai kiểu cho người Hàn xem
+  hoạt hình:
+  - **Mochi 둥글이** (kiểu 썰툰 / 사연): đầu bánh gạo bè ngang, mắt chấm đen có đốm sáng,
+    má hồng luôn có, miệng mèo ω, không mũi, thân nhỏ tay mũm mĩm, viền mềm. Hợp truyện
+    đời thường, hài, gia đình, cổ tích, bài học, thú cưng, truyện cho trẻ con.
+  - **Webtoon 웹툰** (kiểu kênh 사연 / drama Hàn): người mảnh, chân dài, mặt trái xoan cằm V,
+    có cổ, mắt to tròng nâu long lanh (nữ có lông mi), lông mày mảnh, mũi một nét, nét
+    viền mảnh, áo đổ bóng một mảng. Hợp truyện nhà chồng – mẹ chồng, tình cảm, công sở,
+    tài phiệt, học đường, phốt, báo thù, cảm động.
+  Hai kiểu này có thêm đồ hiện đại: sơ mi + cà vạt, vest công sở, đồng phục học sinh
+  (blazer có phù hiệu), áo len cài cúc, hoodie, tạp dề, chân váy xếp ly; tóc two-block
+  nam Hàn, tóc dài mái thưa, vuốt ngược, xoăn ngắn kiểu 아줌마. Đủ biểu cảm (bình thường,
+  vui, buồn, khóc có nước mắt, giận, sốc, lo, ngủ, lim dim, suy nghĩ) và mọi hành động
+  của Phim (đi, ngồi, nằm, uống trà / hút thuốc chạm đúng miệng...). Người chân dài ngồi
+  ghế đẩu cao tới gối.
+- **Gợi ý theo thể loại**: gõ tên truyện / yêu cầu / nguyên văn có chữ như "nhà chồng",
+  "công sở", "học đường" → dưới ô Kiểu nhân vật hiện gợi ý **Webtoon**; "cổ tích", "gia
+  đình", "hài", "thú cưng" → gợi ý **Mochi**. Bấm **Dùng kiểu này** để đổi (không tự đổi).
 - Chưa chọn kiểu → chọn **"Chưa chọn kiểu — theo ảnh nhân vật mẫu"** rồi tải ảnh
   một nhân vật mẫu lên: Claude xem ảnh, rút ra nét vẽ (tỉ lệ đầu – thân – chân – tay,
   độ dày tay chân, kiểu mắt, nét viền, độ run nét) và ngoại hình nhân vật đó. Khi

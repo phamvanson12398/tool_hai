@@ -294,11 +294,13 @@
     var cs = $("st-charstyle");
     cs.innerHTML = "";
     (d.char_styles || []).forEach(function (kv) { cs.appendChild(new Option(kv[1], kv[0])); });
+    if (d.style_genres) GENRES = d.style_genres;
     var smp = d.char_sample || {};
     if (s.char_style === "sample" && !smp.lib)        // truyện cũ: ảnh mẫu tải lên trước khi có tab riêng
       cs.appendChild(new Option("Theo ảnh nhân vật mẫu của truyện này", "sample"));
     cs.value = (s.char_style === "sample" && smp.lib) ? "lib:" + smp.lib : (s.char_style || "capsule");
     if (!cs.value) cs.value = s.char_style === "sample" ? "sample" : "capsule";
+    suggestStyle();
     if (smp.has) {
       $("st-sample-img").src = "/api/story/" + encodeURIComponent(d.id) + "/char_sample.png?v=" + Date.now();
       $("st-sample-img").hidden = false;
@@ -1120,6 +1122,40 @@
     });
   }
 
+  // gợi ý kiểu nhân vật theo thể loại truyện (từ tên truyện, yêu cầu, nguyên văn)
+  var GENRES = null;
+  function suggestStyle() {
+    var hint = $("st-cs-hint"), cs = $("st-charstyle");
+    if (!hint || !cs || !GENRES) return;
+    var t = ($("st-title").value + " " + $("st-brief").value + " " +
+             ($("st-source").value || "").slice(0, 2000)).toLowerCase();
+    var best = null, n = 0, words = [];
+    Object.keys(GENRES).forEach(function (k) {
+      var got = GENRES[k].filter(function (w) { return t.indexOf(w) >= 0; });
+      if (got.length > n) { n = got.length; best = k; words = got; }
+    });
+    var opt = best && cs.querySelector('option[value="' + best + '"]');
+    if (!opt || cs.value === best) { hint.hidden = true; return; }
+    hint.innerHTML = "";
+    hint.appendChild(document.createTextNode("Gợi ý: truyện " + words.slice(0, 2).join(", ") + " hợp kiểu “" +
+                                             opt.textContent.split(" — ")[0] + "”. "));
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "btn btn-sm";
+    b.textContent = "Dùng kiểu này";
+    b.addEventListener("click", function () {
+      cs.value = best;
+      cs.dispatchEvent(new Event("change"));
+      hint.hidden = true;
+    });
+    hint.appendChild(b);
+    hint.hidden = false;
+  }
+  ["st-title", "st-brief", "st-source"].forEach(function (id) {
+    document.addEventListener("input", function (e) { if (e.target && e.target.id === id) suggestStyle(); });
+  });
+  document.addEventListener("change", function (e) { if (e.target && e.target.id === "st-charstyle") suggestStyle(); });
+
   // vừa tạo / xoá kiểu ở tab Kiểu nhân vật: cập nhật ô Kiểu nhân vật
   document.addEventListener("stylesChanged", function () {
     if (st.id) { open(st.id); return; }
@@ -1145,8 +1181,10 @@
       var cs = $("st-charstyle");
       if (cs.options.length) return;
       (d.char_styles || []).forEach(function (kv) { cs.appendChild(new Option(kv[1], kv[0])); });
+      if (d.style_genres) GENRES = d.style_genres;
       cs.value = "capsule";
       applyVisual();
+      suggestStyle();
     }).catch(function () {});
     loadVoices().then(function () { return loadList(last); }).then(function () {
       var ids = Array.prototype.map.call($("st-pick").options, function (o) { return o.value; });

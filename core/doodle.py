@@ -40,13 +40,13 @@ SPECIES = ("human", "dog", "cat")
 AGES = ("child", "young", "adult", "old")
 SEXES = ("male", "female")
 HAIRS = ("short", "bangs", "messy", "side_part", "bun", "long", "bob", "bald", "balding",
-         "wavy", "bowl", "curly", "curl_top")
+         "wavy", "bowl", "curly", "curl_top", "perm", "twoblock", "longbang", "slick")
 HATS = ("none", "non_la", "khan_van", "khan_dau", "hat")
 GLASSES = ("none", "round", "square")
 FACIAL = ("none", "mustache", "beard", "stubble", "goatee")
 TOPS = ("ao_nau", "ao_ba_ba", "ao_cach", "dress", "jacket", "shirt", "sweater", "robe",
-        "ao_dai", "tshirt")
-BOTTOMS = ("pants", "shorts")          # quần dài / quần soóc (lộ chân)
+        "ao_dai", "tshirt", "shirt_tie", "suit", "blazer", "cardigan", "hoodie", "apron")
+BOTTOMS = ("pants", "shorts", "skirt")  # quần dài / quần soóc (lộ chân) / chân váy xếp ly
 EXPRESSIONS = ("neutral", "happy", "sad", "cry", "angry", "shocked", "worried", "sleep",
                "sly", "think")
 
@@ -203,8 +203,20 @@ def kit_from_look(name: str, look: str) -> dict:
         k["top"] = "ao_ba_ba"
     elif re.search(r"áo dài|ao dai|tunic|long robe|robe", t):
         k["top"] = "ao_dai" if "dai" in t or "dài" in t else "robe"
-    elif re.search(r"skirt|dress", t) and k["sex"] == "female":
+    elif re.search(r"\bsuit\b|business attire", t):
+        k["top"] = "suit"
+    elif re.search(r"school uniform|blazer", t):
+        k["top"] = "blazer"
+    elif "cardigan" in t:
+        k["top"] = "cardigan"
+    elif "hoodie" in t:
+        k["top"] = "hoodie"
+    elif "apron" in t:
+        k["top"] = "apron"
+    elif re.search(r"\bdress\b", t) and k["sex"] == "female":
         k["top"] = "dress"
+    elif "skirt" in t and k["sex"] == "female":
+        k["top"] = "shirt"
     elif re.search(r"jacket|uniform|coat|blazer", t):
         k["top"] = "jacket"
     elif re.search(r"sweater|knit", t):
@@ -224,6 +236,8 @@ def kit_from_look(name: str, look: str) -> dict:
     bm = re.search(r"([\w -]{0,25}?)(trousers|pants|skirt|shorts)", t)
     k["bottom_color"] = (_color_in(bm.group(0)) if bm else None) or \
         (k["top_color"] if k["top"] in ("dress", "robe", "ao_dai") else "black")
+    if "skirt" in t and k["sex"] == "female" and k["top"] not in ("dress", "robe", "ao_dai", "ao_cach"):
+        k["bottom"] = "skirt"
     k["patched"] = bool(re.search(r"patch|torn|ragged|worn", t))
     return k
 
@@ -305,6 +319,68 @@ def _shade(c, k):
     return tuple(max(0, min(255, int(v * k))) for v in c)
 
 
+def _mix(c, d, u):
+    """Pha màu c với d (u = 0..1 phần d) — dùng thay màu trong suốt (ảnh RGBA vẽ đè không pha)."""
+    return tuple(int(a + (b - a) * u) for a, b in zip(c, d))
+
+
+def _qbez(p0, c, p1, n=10):
+    """Đường cong bậc hai p0 -> p1, điểm điều khiển c."""
+    out = []
+    for i in range(n + 1):
+        t = i / n
+        out.append(((1 - t) ** 2 * p0[0] + 2 * (1 - t) * t * c[0] + t * t * p1[0],
+                    (1 - t) ** 2 * p0[1] + 2 * (1 - t) * t * c[1] + t * t * p1[1]))
+    return out
+
+
+def _qpath(start, segs, n=10):
+    """Nối các đoạn: (điểm điều khiển, điểm cuối) là đường cong, (x, y) là đoạn thẳng."""
+    pts, cur = [start], start
+    for seg in segs:
+        if isinstance(seg[0], tuple):
+            pts += _qbez(cur, seg[0], seg[1], n)[1:]
+            cur = seg[1]
+        else:
+            pts.append(seg)
+            cur = seg
+    return pts
+
+
+def _sty(kit) -> dict:
+    return kit.get("_sty") or {}
+
+
+def head_pts(cx, hy, R, shape="round"):
+    """Khuôn mặt: tròn (mặc định), bánh gạo (mochi: bè ngang), trái xoan cằm V (webtoon)."""
+    if shape == "mochi":
+        return _ellipse_pts(cx, hy, R, 0.92 * R)
+    if shape == "v":
+        def P(x, y):
+            return (cx + x * R, hy + y * R)
+        return _qpath(P(-0.92, -0.15), [(P(-0.95, 0.55), P(-0.45, 0.95)), (P(0, 1.22), P(0.45, 0.95)),
+                                        (P(0.95, 0.55), P(0.92, -0.15)), (P(0.9, -1.0), P(0, -1.0)),
+                                        (P(-0.9, -1.0), P(-0.92, -0.15))], 8)
+    return _ellipse_pts(cx, hy, R, R * 0.97)
+
+
+def draw_head(pen: "_Pen", kit, cx, hy, R):
+    """Cổ (kiểu nhân vật có cổ), tai nhỏ (mặt cằm V) rồi khuôn mặt màu da."""
+    sty = _sty(kit)
+    skin = SKINS[kit["skin"]]
+    shape = sty.get("head_shape", "round")
+    neck = float(sty.get("neck", 0.0) or 0.0)
+    if neck > 0.02:                                 # cổ: từ dưới cằm xuống lẫn vào cổ áo
+        w = 0.18 * R
+        y1 = hy + (0.86 + neck) * R
+        pen.shape([(cx - w, hy + 0.6 * R), (cx + w, hy + 0.6 * R), (cx + w, y1), (cx - w, y1)],
+                  _shade(skin, 0.95), width=max(1, int(pen.lw * 0.85)), wob=False)
+    if shape == "v" and not sty.get("ears"):
+        for sx in (-1, 1):
+            pen.ell(cx + sx * 0.93 * R, hy + 0.1 * R, 0.13 * R, 0.2 * R, skin)
+    pen.shape(head_pts(cx, hy, R, shape), skin)
+
+
 # ------------------------------------------------------------ người
 
 def _belly_pts(cx, top, bottom, wt, wm, R, belly):
@@ -344,6 +420,9 @@ def _draw_body(img, pen: _Pen, kit, cx, top, bottom, R, seed):
         wb = R * 0.98
     if kit["age"] == "child":
         wt, wb = wt * 0.92, wb * 0.92
+    face = _sty(kit).get("face") or "default"
+    if face == "webtoon" and kit["top"] != "dress":    # vai rộng vuông, eo thon
+        wt, wb = wt * 1.12, wb * 0.92
     belly = float((kit.get("_sty") or {}).get("belly", 0.0) or 0.0)
     if belly > 0.05:                                # bụng tròn: vai hẹp, phình ở dưới, thu lại ở đáy
         wt *= 1 - 0.18 * belly
@@ -359,12 +438,17 @@ def _draw_body(img, pen: _Pen, kit, cx, top, bottom, R, seed):
              "ao_ba_ba": 0.62, "ao_cach": 0.5, "tshirt": 0.74}.get(kit["top"], 0.64)
     if kit["top"] == "tshirt" and kit.get("bottom") == "shorts":
         split = 0.78                                # áo phông trùm bụng, quần soóc chỉ là dải dưới
+    if face in ("mochi", "webtoon") and t_ not in ("dress", "robe", "ao_dai"):
+        split = 0.72 if face == "mochi" else 0.9    # mochi: dải quần dưới; webtoon: áo tới hông
     # lớp thân: tô áo, phần dưới tô quần/váy, cắt theo hình thân
     layer = Image.new("RGBA", img.size, (0, 0, 0, 0))
     ld = ImageDraw.Draw(layer)
     wp = _wob(pts, pen.amp, seed + 7)
     ld.polygon(wp, fill=top_c)
     ys = top + h * split
+    if face == "webtoon":                           # đổ bóng một mảng bên phải
+        ld.polygon([(cx + 0.3 * wt, top), (cx + wb * 1.6, top), (cx + wb * 1.6, ys), (cx + 0.45 * wb, ys)],
+                   fill=_shade(top_c, 0.93))
     if split < 1 and belly > 0.5 and t_ == "tshirt":
         # vạt áo phông cong theo bụng phệ: giữa võng xuống, quần soóc lộ hai bên
         arc = [(x, ys + 0.07 * R * (1 - ((x - cx) / (wb * 1.5)) ** 2)) for x in
@@ -388,7 +472,7 @@ def _draw_body(img, pen: _Pen, kit, cx, top, bottom, R, seed):
         pen.shape(_ellipse_pts(cx, neck_y + 0.08 * R, 0.32 * R, 0.42 * R, 0, 180, 14), skin, width=thin)
     if belly > 0.5:                                  # nếp bụng phệ dưới vạt áo
         pen.line(_ellipse_pts(cx, ys - 0.1 * R, wb * 0.55, 0.12 * R, 20, 160, 10), width=thin)
-    if t == "sweater":
+    if t == "sweater" and face == "default":
         pen.line([(cx - wb, ys - 0.05 * R), (cx + wb, ys - 0.05 * R)], width=int(pen.lw * 1.6),
                  fill=_shade(bot_c, 0.6))
         pen.shape([(cx - 0.12 * R, ys - 0.17 * R), (cx + 0.12 * R, ys - 0.17 * R),
@@ -438,6 +522,50 @@ def _draw_body(img, pen: _Pen, kit, cx, top, bottom, R, seed):
     if t in ("robe", "ao_dai"):
         pen.line([(cx, neck_y + 0.1 * R), (cx, bottom - 0.1 * R)], width=thin)
         pen.line(_ellipse_pts(cx, neck_y, 0.22 * R, 0.12 * R, 20, 160, 8), width=thin)
+    if t in ("shirt_tie", "suit", "blazer"):
+        tie = (61, 90, 153) if face == "mochi" else (176, 58, 72)
+        if t != "shirt_tie":                                  # sơ mi trắng cổ chữ V
+            pen.shape([(cx - 0.3 * R, top + 0.02 * R), (cx, top + 0.78 * R), (cx + 0.3 * R, top + 0.02 * R)],
+                      (246, 246, 244), width=thin, wob=False)
+        else:
+            for sx in (-1, 1):
+                pen.shape([(cx + sx * 0.3 * R, neck_y - 0.04 * R), (cx, neck_y + 0.2 * R),
+                           (cx + sx * 0.05 * R, neck_y)], _shade(top_c, 1.04), width=thin, wob=False)
+        n0 = neck_y + 0.04 * R
+        pen.shape([(cx, n0), (cx - 0.09 * R, n0 + 0.1 * R), (cx, n0 + 0.66 * R), (cx + 0.09 * R, n0 + 0.1 * R)],
+                  tie, width=thin, wob=False)
+        if t != "shirt_tie":                                  # ve áo
+            for sx in (-1, 1):
+                pen.line([(cx + sx * 0.3 * R, top + 0.02 * R), (cx + sx * 0.09 * R, top + 0.9 * R),
+                          (cx + sx * wb * 0.95, ys)], width=thin, wob=False)
+        if t == "blazer":                                     # phù hiệu trường
+            pen.shape([(cx - 0.62 * R, top + 0.4 * R), (cx - 0.38 * R, top + 0.4 * R),
+                       (cx - 0.38 * R, top + 0.57 * R), (cx - 0.62 * R, top + 0.57 * R)],
+                      (245, 211, 107), width=max(1, thin // 2 + 1), wob=False)
+    if t == "cardigan":                                       # cổ tròn, hàng cúc
+        pen.shape(_qbez((cx - 0.26 * R, top + 0.02 * R), (cx, top + 0.34 * R), (cx + 0.26 * R, top + 0.02 * R), 8),
+                  (255, 248, 238), width=thin, wob=False)
+        pen.line([(cx, top + 0.2 * R), (cx, bottom)], width=thin, wob=False)
+        for i in range(4):
+            yy = top + 0.4 * R + i * (ys - top - 0.5 * R) / 3.5
+            pen.ell(cx + 0.08 * R, yy, 0.05 * R, 0.05 * R, (255, 255, 255), width=max(1, thin // 2), wob=False)
+    if t == "hoodie":                                         # mũ trùm sau gáy + hai dây
+        pen.line(_qbez((cx - 0.5 * R, top + 0.04 * R), (cx, top + 0.42 * R), (cx + 0.5 * R, top + 0.04 * R), 10),
+                 width=thin, wob=False)
+        for sx in (-1, 1):
+            pen.line([(cx + sx * 0.12 * R, top + 0.24 * R), (cx + sx * 0.12 * R, top + 0.62 * R)],
+                     width=max(1, thin), fill=(250, 250, 250), wob=False)
+        pen.line([(cx - wb * 0.95, ys - 0.06 * R), (cx + wb * 0.95, ys - 0.06 * R)], width=thin, wob=False)
+    if t == "apron":                                          # tạp dề
+        a0 = top + 0.5 * R
+        pen.shape([(cx - 0.42 * R, a0), (cx + 0.42 * R, a0), (cx + 0.56 * R, bottom - 0.04 * R), (cx - 0.56 * R, bottom - 0.04 * R)],
+                  (255, 244, 224), width=thin, wob=False)
+        for sx in (-1, 1):
+            pen.line([(cx + sx * 0.42 * R, a0), (cx + sx * 0.24 * R, top + 0.02 * R)], width=thin, wob=False)
+    if kit.get("bottom") == "skirt" and split < 1:           # chân váy xếp ly
+        for k in (-0.6, -0.2, 0.2, 0.6):
+            pen.line([(cx + k * wb * 0.9, ys + 0.06 * R), (cx + k * wb * 1.0, bottom)], width=max(1, thin // 2 + 1),
+                     fill=_shade(bot_c, 0.7), wob=False)
     if kit.get("patched"):                                    # áo vá
         rr = random.Random(seed)
         for _ in range(2):
@@ -507,9 +635,19 @@ def _hair_cap(cx, hy, R, side_deg, fringe_y, teeth=0, asym=0.0, rad=1.07):
 def _draw_hair_back(pen: _Pen, kit, cx, hy, R, face_dir):
     col = HAIR_COLORS[kit["hair_color"]]
     h = kit["hair"]
-    if h == "long":
+    if h == "long" and _sty(kit).get("head_shape") == "mochi":     # tóc dài ôm hai má
+        def P(x, y):
+            return (cx + x * R, hy + y * R)
+        pen.shape(_qpath(P(-1.02, -0.1), [(P(-1.1, 1.2), P(-0.85, 1.55)), P(0.85, 1.55),
+                                          (P(1.1, 1.2), P(1.02, -0.1))]), col)
+    elif h == "long":
         pen.shape([(cx - 1.02 * R, hy - 0.2 * R), (cx + 1.02 * R, hy - 0.2 * R),
                    (cx + 1.0 * R, hy + 1.5 * R), (cx - 1.0 * R, hy + 1.5 * R)], col)
+    if h == "longbang":                                       # tóc dài thẳng chấm lưng
+        def P(x, y):
+            return (cx + x * R, hy + y * R)
+        pen.shape(_qpath(P(-1.0, -0.2), [(P(-1.15, 1.6), P(-0.9, 2.35)), P(0.9, 2.35),
+                                         (P(1.15, 1.6), P(1.0, -0.2))]), col)
     if h == "bun" and kit["hat"] != "khan_van":
         bx = cx - face_dir * 0.55 * R
         pen.ell(bx, hy - 0.86 * R, 0.34 * R, 0.3 * R, col)
@@ -526,6 +664,51 @@ def _draw_hair_front(pen: _Pen, kit, cx, hy, R, face_dir):
     if h == "balding":
         for sx in (-1, 1):
             pen.ell(cx + sx * 0.9 * R, hy - 0.12 * R, 0.2 * R, 0.3 * R, col)
+        return
+    m = face_dir or 1
+
+    def P(x, y):                                              # mái lệch theo hướng nhìn
+        return (cx + m * x * R, hy + y * R)
+    shine = _mix(col, (255, 255, 255), 0.3)                   # vệt bóng tóc webtoon
+    if h == "twoblock":                                       # mái dày rủ trán, hai bên cắt ngắn
+        pen.shape(_qpath(P(-0.95, -0.05), [(P(-1.05, -1.25), P(0.1, -1.18)), (P(1.05, -1.1), P(0.95, -0.05)),
+                                           (P(0.75, -0.3), P(0.55, -0.18)), P(0.35, -0.42), P(0.12, -0.2),
+                                           P(-0.12, -0.45), P(-0.38, -0.22), P(-0.6, -0.4),
+                                           (P(-0.8, -0.2), P(-0.95, -0.05))]), col)
+        pen.line(_qbez(P(-0.3, -0.95), P(0, -1.05), P(0.4, -0.85), 8), width=int(pen.lw * 1.3), fill=shine,
+                 wob=False)
+        return
+    if h == "longbang":                                       # tóc dài, mái thưa
+        pen.shape(_qpath(P(-0.98, 0.1), [(P(-1.08, -1.22), P(0, -1.15)), (P(1.08, -1.22), P(0.98, 0.1)),
+                                          (P(0.8, -0.35), P(0.5, -0.38)), P(0.35, -0.2), P(0.15, -0.42),
+                                          P(-0.05, -0.2), P(-0.25, -0.42), P(-0.45, -0.22), P(-0.6, -0.4),
+                                          (P(-0.85, -0.35), P(-0.98, 0.1))]), col)
+        pen.line(_qbez(P(-0.45, -0.98), P(0, -1.08), P(0.45, -0.98), 8), width=int(pen.lw * 1.3), fill=shine,
+                 wob=False)
+        return
+    if h == "slick":                                          # vuốt ngược, lộ trán
+        pen.shape(_qpath(P(-0.95, -0.05), [(P(-1.0, -1.2), P(0, -1.16)), (P(1.0, -1.2), P(0.95, -0.05)),
+                                           (P(0.85, -0.65), P(0.2, -0.72)), (P(-0.7, -0.72), P(-0.95, -0.05))]), col)
+        pen.line(_qbez(P(-0.4, -0.98), P(0.1, -1.06), P(0.5, -0.9), 8), width=int(pen.lw * 1.1), fill=shine,
+                 wob=False)
+        return
+    if h == "perm":                                           # tóc xoăn ngắn bà bác (아줌마 펌)
+        for a in range(190, 360, 24):
+            t = math.radians(a)
+            pen.ell(cx + R * 0.95 * math.cos(t), hy - R * 0.15 + R * 0.95 * math.sin(t), 0.33 * R, 0.33 * R, col)
+        pen.shape(_qpath(P(-0.9, -0.2), [(P(0, -1.25), P(0.9, -0.2)), (P(0, -0.55), P(-0.9, -0.2))]), col,
+                  outline=False)
+        return
+    if _sty(kit).get("head_shape") == "mochi" and h in ("side_part", "long", "short"):
+        if h == "long":                                       # mái thưa chia hai bên
+            pts = _qpath(P(-0.98, 0.1), [(P(-1.05, -1.12), P(0, -1.05)), (P(1.05, -1.12), P(0.98, 0.1)),
+                                         (P(0.7, -0.45), P(0.35, -0.35)), (P(0, -0.55), P(-0.35, -0.35)),
+                                         (P(-0.7, -0.45), P(-0.98, 0.1))])
+        else:                                                 # rẽ ngôi, mái chéo
+            pts = _qpath(P(-0.98, 0.05), [(P(-1.05, -1.1), P(0, -1.04)), (P(1.05, -1.1), P(0.98, 0.05)),
+                                          (P(0.8, -0.5), P(0.2, -0.5)), (P(-0.3, -0.25), P(-0.75, -0.3)),
+                                          (P(-0.9, -0.1), P(-0.98, 0.05))])
+        pen.shape(pts, col)
         return
     if h == "curl_top":                                       # đầu trọc, một chỏm tóc xoăn
         pts = []                                      # 3 lọn lượn sóng trên đỉnh đầu
@@ -605,8 +788,215 @@ def _draw_hat(pen: _Pen, kit, cx, hy, R):
                  width=int(pen.lw * 1.4), fill=(60, 50, 44))
 
 
+MOUTH_RED = (138, 47, 58)
+TEAR = (158, 211, 245)
+
+
+def _tear(pen, x, y, R, k=1.0):
+    """Giọt nước mắt dài chảy xuống má."""
+    top, bot = (x, y), (x, y + 0.44 * R * k)
+    pts = _qbez(top, (x - 0.1 * R * k, y + 0.34 * R * k), bot, 8) + \
+        _qbez(bot, (x + 0.1 * R * k, y + 0.34 * R * k), top, 8)[1:]
+    pen.shape(pts, TEAR, outline=False, wob=False)
+
+
+def _face_mochi(pen: _Pen, kit, cx, hy, R, f, expr, mouth_open, blink):
+    """Mặt Mochi 둥글이: mắt chấm đen có đốm sáng, má hồng luôn có, miệng mèo ω,
+    không mũi, chỉ có lông mày khi giận / buồn."""
+    fx = cx + f * 0.15 * R
+    ey = hy + 0.05 * R
+    sep = 0.44 * R * (1 - 0.1 * abs(f))
+    lw = max(2, int(pen.lw * 0.9))
+    thin = max(1, int(pen.lw * 0.7))
+    skin = SKINS[kit["skin"]]
+    shut = blink or expr == "sleep"
+    for sx in (-1, 1):
+        ex = fx + sx * sep
+        if expr == "happy" and not blink:                      # ^ ^
+            pen.line(_qbez((ex - 0.115 * R, ey + 0.04 * R), (ex, ey - 0.115 * R), (ex + 0.115 * R, ey + 0.04 * R), 8),
+                     width=lw, wob=False)
+        elif expr == "cry" or shut:                            # mắt nhắm cong xuống
+            pen.line(_qbez((ex - 0.115 * R, ey - 0.025 * R), (ex, ey + 0.09 * R), (ex + 0.115 * R, ey - 0.025 * R), 8),
+                     width=lw, wob=False)
+        elif expr == "shocked":                                # mắt tròn trắng, con ngươi nhỏ
+            pen.ell(ex, ey, 0.128 * R, 0.128 * R, (255, 255, 255), width=thin, wob=False)
+            pen.dot(ex, ey, 0.045 * R)
+        else:
+            dy = 0.03 * R if expr in ("sad", "worried") else (-0.04 * R if expr == "think" else 0.0)
+            px = ex + f * 0.03 * R
+            pen.ell(px, ey + dy, 0.077 * R, 0.1 * R, OUT, outline=False, wob=False)
+            pen.dot(px + 0.026 * R, ey + dy - 0.038 * R, 0.026 * R, (255, 255, 255))
+            if expr == "sly":                                  # mắt lim dim
+                pen.shape(_ellipse_pts(px, ey + dy, 0.1 * R, 0.13 * R, 180, 360, 10), skin, outline=False, wob=False)
+                pen.line([(px - 0.1 * R, ey + dy), (px + 0.1 * R, ey + dy)], width=thin, wob=False)
+        if expr == "angry":                                    # lông mày xếch vào trong
+            pen.line([(ex - 0.154 * R, ey - 0.18 * R + sx * 0.064 * R),
+                      (ex + 0.154 * R, ey - 0.18 * R - sx * 0.064 * R)], width=lw, wob=False)
+        elif expr in ("sad", "worried", "cry"):
+            pen.line([(ex - 0.13 * R, ey - 0.17 * R - sx * 0.05 * R),
+                      (ex + 0.13 * R, ey - 0.17 * R + sx * 0.05 * R)], width=thin, wob=False)
+        if expr == "cry":
+            _tear(pen, ex, ey + 0.077 * R, R)
+    for sx in (-1, 1):                                         # má hồng
+        pen.ell(fx + sx * 0.62 * R * (1 - 0.1 * abs(f)), hy + 0.28 * R, 0.14 * R, 0.077 * R,
+                _mix(skin, (255, 159, 168), 0.8), outline=False, wob=False)
+    mx, my = fx + f * 0.03 * R, hy + 0.36 * R
+    if expr == "shocked":
+        pen.ell(mx, my + 0.05 * R, 0.115 * R, 0.154 * R, MOUTH_RED, width=thin, wob=False)
+    elif expr == "cry":
+        pts = _qbez((mx - 0.154 * R, my + 0.1 * R), (mx, my - 0.077 * R), (mx + 0.154 * R, my + 0.1 * R), 10)
+        pen.shape(pts, MOUTH_RED, width=thin, wob=False)
+    elif mouth_open:
+        if expr in ("happy", "sly"):                           # cười há miệng
+            pen.shape(_ellipse_pts(mx, my - 0.02 * R, 0.13 * R, 0.13 * R, 0, 180, 12), MOUTH_RED, width=thin,
+                      wob=False)
+        else:
+            pen.ell(mx, my + 0.03 * R, 0.085 * R, 0.08 * R, MOUTH_RED, width=thin, wob=False)
+    elif expr in ("angry", "sad", "worried"):
+        pen.line(_qbez((mx - 0.128 * R, my + 0.077 * R), (mx, my - 0.026 * R), (mx + 0.128 * R, my + 0.077 * R), 8),
+                 width=lw, wob=False)
+    elif expr == "sleep":
+        pen.ell(mx, my + 0.02 * R, 0.04 * R, 0.035 * R, MOUTH_RED, width=thin, wob=False)
+    else:                                                      # miệng mèo ω
+        pts = _qbez((mx - 0.1 * R, my), (mx - 0.05 * R, my + 0.08 * R), (mx, my), 6) + \
+            _qbez((mx, my), (mx + 0.05 * R, my + 0.08 * R), (mx + 0.1 * R, my), 6)[1:]
+        pen.line(pts, width=thin, wob=False)
+    g = kit["glasses"]
+    if g != "none":
+        gw = max(1, int(pen.lw * 0.7))
+        for sx in (-1, 1):
+            ex = fx + sx * sep
+            if g == "round":
+                pen.line(_ellipse_pts(ex, ey, 0.19 * R, 0.19 * R), width=gw, wob=False)
+            else:
+                pen.line([(ex - 0.2 * R, ey - 0.15 * R), (ex + 0.2 * R, ey - 0.15 * R), (ex + 0.2 * R, ey + 0.15 * R),
+                          (ex - 0.2 * R, ey + 0.15 * R), (ex - 0.2 * R, ey - 0.15 * R)], width=gw, wob=False)
+        pen.line([(fx - sep + 0.19 * R, ey), (fx + sep - 0.19 * R, ey)], width=gw, wob=False)
+    if kit["facial"] in ("mustache", "beard", "goatee"):      # ria nhỏ gọn
+        hc = HAIR_COLORS[kit["hair_color"]]
+        for sx in (-1, 1):
+            pen.ell(mx + sx * 0.08 * R, my - 0.06 * R, 0.08 * R, 0.035 * R, hc, width=thin, wob=False)
+
+
+def _face_webtoon(pen: _Pen, kit, cx, hy, R, f, expr, mouth_open, blink):
+    """Mặt Webtoon 웹툰: mắt to long lanh (tròng nâu, đốm sáng, mí trên đậm, nữ có
+    lông mi), lông mày mảnh thẳng, mũi một nét, má hồng nhạt, miệng nhỏ."""
+    fx = cx + f * 0.12 * R
+    ey = hy + 0.12 * R
+    sep = 0.36 * R * (1 - 0.1 * abs(f))
+    fem = kit["sex"] == "female"
+    old = kit["age"] == "old"
+    lw = max(2, int(pen.lw))
+    thin = max(1, int(pen.lw * 0.7))
+    skin = SKINS[kit["skin"]]
+    iris = (110, 74, 50) if kit["hair_color"] in ("brown", "darkbrown") else (90, 60, 46)
+    closed = blink or expr in ("sleep", "cry") or (expr == "happy")
+    rx, ry = 0.15 * R, 0.2 * R * (1.15 if expr == "shocked" else 1.0)
+    for sx in (-1, 1):
+        ex = fx + sx * sep
+        if expr == "happy" and not blink:                      # mắt cười ∩
+            pen.line(_qbez((ex - 0.17 * R, ey + 0.04 * R), (ex, ey - 0.14 * R), (ex + 0.17 * R, ey + 0.04 * R), 8),
+                     width=lw, wob=False)
+        elif closed:                                           # nhắm ∪
+            pen.line(_qbez((ex - 0.17 * R, ey - 0.02 * R), (ex, ey + 0.1 * R), (ex + 0.17 * R, ey - 0.02 * R), 8),
+                     width=lw, wob=False)
+            if fem:
+                pen.line([(ex + sx * 0.17 * R, ey - 0.02 * R), (ex + sx * 0.23 * R, ey - 0.06 * R)], width=thin,
+                         wob=False)
+        else:
+            pen.ell(ex, ey, rx, ry, (255, 255, 255), width=thin, wob=False)
+            k = 0.55 if expr == "shocked" else 0.8
+            ix = ex + f * 0.04 * R
+            iy = ey + ry * 0.12 + (ry * 0.1 if expr in ("sad", "worried") else 0.0) - \
+                (ry * 0.18 if expr == "think" else 0.0)
+            pen.ell(ix, iy, rx * (0.55 if expr == "shocked" else 0.82), ry * k, iris, outline=False, wob=False)
+            pen.ell(ix, iy + ry * 0.03, rx * 0.4, ry * 0.42, OUT, outline=False, wob=False)
+            pen.dot(ix - rx * 0.3, iy - ry * 0.32, rx * 0.28, (255, 255, 255))
+            if expr == "sly":                                  # lim dim: mí che nửa trên
+                pen.shape(_ellipse_pts(ex, ey, rx * 1.2, ry * 1.25, 180, 360, 10), skin, outline=False, wob=False)
+                pen.line([(ex - rx * 1.1, ey), (ex + rx * 1.1, ey)], width=lw, wob=False)
+            else:                                              # mí trên đậm
+                pen.line(_qbez((ex - rx * 1.15, ey - ry * 0.55), (ex, ey - ry * 1.25), (ex + rx * 1.15, ey - ry * 0.55), 8),
+                         width=int(lw * (1.25 if fem else 1.0)), wob=False)
+                if fem:
+                    pen.line([(ex + sx * rx * 1.1, ey - ry * 0.6), (ex + sx * (rx * 1.1 + 0.06 * R), ey - ry * 0.6 - 0.05 * R)],
+                             width=thin, wob=False)
+        # lông mày mảnh
+        x0, x1 = fx + sx * 0.2 * R, fx + sx * 0.52 * R
+        if expr == "angry":
+            y0, y1 = ey - 0.22 * R, ey - 0.34 * R
+        elif expr in ("cry", "worried", "sad"):
+            y0, y1 = ey - 0.36 * R, ey - 0.27 * R
+        elif expr == "shocked":
+            y0, y1 = ey - 0.42 * R, ey - 0.42 * R
+        else:
+            y0, y1 = ey - 0.33 * R, ey - 0.34 * R
+        hc = HAIR_COLORS[kit["hair_color"]]
+        brow = (58, 44, 44) if kit["hair_color"] == "black" else _shade(hc, 0.8)
+        pen.line([(x0, y0), (x1, y1)], width=lw, fill=brow, wob=False)
+        if expr == "cry":
+            _tear(pen, ex, ey + 0.1 * R, R, 0.95)
+        if old and not closed:                                 # nếp nhăn đuôi mắt
+            ox = ex + sx * 0.26 * R
+            pen.line([(ox, ey - 0.02 * R), (ox + sx * 0.06 * R, ey + 0.06 * R)], width=thin, wob=False)
+    for sx in (-1, 1):                                         # má hồng nhạt
+        pen.ell(fx + sx * 0.55 * R, hy + 0.5 * R, 0.14 * R, 0.06 * R, _mix(skin, (255, 170, 170), 0.55),
+                outline=False, wob=False)
+    nx = fx + 0.03 * R + f * 0.05 * R                          # mũi một nét
+    pen.line([(nx, hy + 0.42 * R), (nx - 0.05 * R, hy + 0.52 * R)], width=thin, fill=(200, 143, 127), wob=False)
+    mx, my = fx + f * 0.03 * R, hy + 0.72 * R
+    if expr == "shocked":
+        pen.ell(mx, my + 0.04 * R, 0.08 * R, 0.11 * R, (154, 58, 70), width=thin, wob=False)
+    elif expr == "happy" or (mouth_open and expr == "sly"):    # cười há miệng chữ D
+        pts = _qbez((mx - 0.16 * R, my - 0.02 * R), (mx, my + 0.18 * R), (mx + 0.16 * R, my - 0.02 * R), 10)
+        pen.shape(pts, (196, 80, 92), width=thin, wob=False)
+    elif mouth_open:
+        pen.ell(mx, my + 0.02 * R, 0.07 * R, 0.06 * R, (154, 58, 70), width=thin, wob=False)
+    elif expr in ("cry", "angry", "sad"):
+        pen.line(_qbez((mx - 0.12 * R, my + 0.06 * R), (mx, my - 0.04 * R), (mx + 0.12 * R, my + 0.06 * R), 8),
+                 width=lw, wob=False)
+    elif expr == "worried":
+        pen.line([(mx - 0.1 * R, my + 0.02 * R), (mx - 0.03 * R, my - 0.01 * R), (mx + 0.03 * R, my + 0.03 * R),
+                  (mx + 0.1 * R, my)], width=lw, wob=False)
+    elif expr == "sly":
+        pen.line(_qbez((mx - 0.1 * R, my + 0.02 * R), (mx + 0.02 * R, my + 0.05 * R), (mx + 0.12 * R, my - 0.04 * R), 8),
+                 width=lw, wob=False)
+    else:
+        pen.line(_qbez((mx - 0.08 * R, my), (mx, my + 0.05 * R), (mx + 0.08 * R, my), 8), width=lw, wob=False)
+    facial = kit["facial"]
+    hc = HAIR_COLORS[kit["hair_color"]] if kit["hair_color"] != "black" else (70, 60, 62)
+    if facial in ("mustache", "beard", "goatee"):
+        pen.shape(_qbez((mx - 0.16 * R, my - 0.04 * R), (mx, my - 0.16 * R), (mx + 0.16 * R, my - 0.04 * R), 8),
+                  hc, width=thin, wob=False)
+    if facial in ("beard", "goatee"):
+        pen.shape(_qbez((mx - 0.1 * R, my + 0.14 * R), (mx, my + 0.42 * R), (mx + 0.1 * R, my + 0.14 * R), 8),
+                  hc, width=thin, wob=False)
+    elif facial == "stubble":
+        rr = random.Random(7)
+        for _ in range(14):
+            pen.dot(mx + rr.uniform(-0.35, 0.35) * R, my + rr.uniform(0.08, 0.36) * R, 0.014 * R, _shade(skin, 0.7))
+    g = kit["glasses"]
+    if g != "none":
+        gw = max(1, int(pen.lw * 0.85))
+        for sx in (-1, 1):
+            ex = fx + sx * sep
+            if g == "round":
+                pen.line(_ellipse_pts(ex, ey, 0.22 * R, 0.21 * R), width=gw, wob=False)
+            else:
+                x0, x1, y0, y1, r = ex - 0.24 * R, ex + 0.24 * R, ey - 0.2 * R, ey + 0.16 * R, 0.08 * R
+                pen.line(_qpath((x0 + r, y0), [(x1 - r, y0), ((x1, y0), (x1, y0 + r)), (x1, y1 - r),
+                                               ((x1, y1), (x1 - r, y1)), (x0 + r, y1), ((x0, y1), (x0, y1 - r)),
+                                               (x0, y0 + r), ((x0, y0), (x0 + r, y0))], 4), width=gw, wob=False)
+        pen.line([(fx - sep + 0.22 * R, ey - 0.04 * R), (fx + sep - 0.22 * R, ey - 0.04 * R)], width=gw, wob=False)
+
+
 def _draw_face(pen: _Pen, kit, cx, hy, R, f, expr, mouth_open, blink):
     """f = hướng nhìn (-1 trái .. 1 phải)."""
+    face = _sty(kit).get("face")
+    if face == "mochi":
+        return _face_mochi(pen, kit, cx, hy, R, f, expr, mouth_open, blink)
+    if face == "webtoon":
+        return _face_webtoon(pen, kit, cx, hy, R, f, expr, mouth_open, blink)
     fx = cx + f * 0.18 * R
     ey = hy + 0.08 * R
     sep = 0.36 * R * (1 - 0.12 * abs(f))
@@ -810,10 +1200,9 @@ def _human(kit, T, expr, mouth_open, blink, facing, seed):
     face_dir = 1 if facing > 0.15 else (-1 if facing < -0.15 else 0)
     _draw_head_parts(pen, kit, cx, hy, R, "back")
     _draw_hair_back(pen, kit, cx, hy, R, face_dir or 1)
-    _draw_body(img, pen, kit, cx, hy + 0.78 * R, bottom, R, seed)
-    skin = SKINS[kit["skin"]]
+    _draw_body(img, pen, kit, cx, hy + (0.78 + float(_sty(kit).get("neck", 0.0) or 0.0)) * R, bottom, R, seed)
     draw_ears(pen, kit, cx, hy, R)
-    pen.ell(cx, hy, R, R * 0.97, skin)
+    draw_head(pen, kit, cx, hy, R)
     _draw_face(pen, kit, cx, hy, R, facing, expr, mouth_open, blink)
     _draw_hair_front(pen, kit, cx, hy, R, face_dir or 1)
     _draw_hat(pen, kit, cx, hy, R)
