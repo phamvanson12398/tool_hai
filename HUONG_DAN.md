@@ -1093,6 +1093,24 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
   nhau suốt truyện. Thiếu ảnh đêm thì tool lấy ảnh ngày làm tối đi; chưa có ảnh nào thì dùng
   nền vẽ tay. Cận mặt thì nền tự mờ, tối như video mẫu.
 
+### Nét vẽ nhân vật (mục 1, ô "Nét vẽ nhân vật")
+Chọn nét vẽ cho ảnh nhân vật AI của truyện. Câu lệnh vẽ ở mục 2b (và file câu lệnh) đổi
+theo nét đã chọn:
+- **사연 썰툰** (mặc định): người thật, viền đen đều, màu phẳng — như các kênh 썰 / 사연.
+- **Mochi 둥글이**: đầu bánh gạo to, mắt chấm, má hồng, miệng ω, thân nhỏ mũm mĩm.
+- **Webtoon 웹툰**: người mảnh chân dài, mặt cằm V, mắt to long lanh, đổ bóng một tông.
+- **Manhwa bán thực**: tỉ lệ người thật, mặt chi tiết, mắt sắc, đổ bóng hai tông.
+- **Gợi ý theo thể loại**: chọn thể loại thì dưới ô hiện gợi ý (Hài, Gia đình → Mochi;
+  Tình cảm, Học đường, Công sở → Webtoon; Giật gân, Kinh dị, Bí ẩn → Manhwa; Nhà chồng,
+  Trả thù → 사연 썰툰). Bấm **Dùng nét này** mới đổi.
+- **Thêm nét vẽ mới**: mở **＋ Thêm nét vẽ mới**, đặt tên, mô tả nét vẽ (nên viết tiếng
+  Anh, vd "cute 3D Pixar style, big round eyes, soft lighting"), tick thể loại hợp rồi
+  **Lưu nét vẽ**. Nét này có ngay trong ô của mọi truyện webtoon (dấu ★), xoá được ở
+  cùng chỗ. Lưu ở data/library/webtoon_styles.json.
+- Đổi nét khi đã có ảnh: ảnh cũ vẫn giữ, nhưng được đánh dấu **"Ảnh vẽ theo nét cũ"** —
+  chép câu lệnh mới vẽ lại để cả truyện cùng một nét. Làm phần tiếp theo thì giữ nét cũ.
+- Nhân vật chưa có ảnh AI thì tool vẫn tự vẽ bằng nét webtoon có sẵn như trước.
+
 ### Ảnh nhân vật vẽ bằng AI (mục 2b, không bắt buộc)
 Muốn nhân vật đẹp như tranh thật thì dùng ảnh vẽ bằng Gemini / ChatGPT; mỗi cảnh là một
 khung tranh đứng yên, tool chỉ **nhép miệng** theo giọng và **chớp mắt** (kiểu kênh 썰).

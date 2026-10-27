@@ -94,7 +94,8 @@
 
   function createNew() {
     return api("/api/webtoon", { method: "POST", body: { brief: $("wt-brief").value.trim(),
-      genre: $("wt-genre").value || "thriller", language: $("wt-lang").value || "ko" } })
+      genre: $("wt-genre").value || "thriller", language: $("wt-lang").value || "ko",
+      art: $("wt-art").value || "saeon" } })
       .then(function (d) {
         W.id = d.id; W.data = d;
         try { localStorage.setItem(LS, d.id); } catch (e) {}
@@ -106,7 +107,7 @@
   function collect() {
     var b = {
       title: $("wt-title").value.trim(), brief: $("wt-brief").value.trim(), genre: $("wt-genre").value,
-      style: $("wt-style").value, narrator_voice: $("wt-narrv").value,
+      style: $("wt-style").value, narrator_voice: $("wt-narrv").value, art: $("wt-art").value,
       language: $("wt-lang").value, minutes: parseFloat($("wt-minutes").value) || 4,
       part: parseInt($("wt-part").value, 10) || 1, cliffhanger: $("wt-cliff").value === "1",
       subtitles: $("wt-subs").value === "1", prev_summary: $("wt-prev").value,
@@ -162,6 +163,88 @@
     }).catch(function (e) { toast("error", "Lưu thất bại", e.message); });
   }
 
+  /* ---------------------------- nét vẽ nhân vật ---------------------------- */
+
+  var ARTS = [];
+  function artOf(id) { return ARTS.filter(function (a) { return a.id === id; })[0]; }
+  function fillArt(value) {
+    var s = $("wt-art");
+    if (!s) return;
+    s.innerHTML = "";
+    ARTS.forEach(function (a) { s.appendChild(new Option((a.custom ? "★ " : "") + a.label, a.id)); });
+    s.value = artOf(value) ? value : "saeon";
+    artInfo();
+  }
+  // tả nét đang chọn + gợi ý nét hợp thể loại + danh sách nét chị tự thêm
+  function artInfo() {
+    var a = artOf($("wt-art").value);
+    $("wt-art-note").textContent = a ? (a.note || a.prompt) : "";
+    var g = $("wt-genre").value, hint = $("wt-art-hint");
+    var best = ARTS.filter(function (x) { return (x.genres || []).indexOf(g) >= 0; })[0];
+    hint.innerHTML = "";
+    hint.hidden = !best || best.id === $("wt-art").value;
+    if (!hint.hidden) {
+      hint.appendChild(document.createTextNode("Gợi ý: thể loại " + (GENRE_VI[g] || g) + " hợp nét “" +
+                                               best.label.split(" — ")[0] + "”. "));
+      var b = el("button", "btn btn-sm", "Dùng nét này");
+      b.type = "button";
+      b.addEventListener("click", function () { $("wt-art").value = best.id; artChanged(); });
+      hint.appendChild(b);
+    }
+    var box = $("wt-art-genres");
+    if (box && !box.children.length) {
+      Object.keys(GENRE_VI).forEach(function (k) {
+        var lb = el("label", "wt-art-g");
+        var cb = document.createElement("input");
+        cb.type = "checkbox"; cb.value = k;
+        lb.appendChild(cb); lb.appendChild(document.createTextNode(" " + GENRE_VI[k]));
+        box.appendChild(lb);
+      });
+    }
+    var list = $("wt-art-list");
+    list.innerHTML = "";
+    ARTS.filter(function (x) { return x.custom; }).forEach(function (x) {
+      var row = el("div", "wt-art-item");
+      row.appendChild(el("b", null, x.label));
+      row.appendChild(el("span", "muted", " " + x.prompt.slice(0, 140) + (x.prompt.length > 140 ? "…" : "")));
+      var rm = el("button", "btn btn-sm", "Xoá");
+      rm.type = "button";
+      rm.addEventListener("click", function () {
+        if (!window.confirm("Xoá nét vẽ “" + x.label + "”? (Ảnh đã vẽ vẫn giữ nguyên.)")) return;
+        api("/api/webtoon/art-styles/" + encodeURIComponent(x.id), { method: "DELETE" }).then(function (d) {
+          ARTS = d.arts || ARTS;
+          var keep = $("wt-art").value === x.id ? "saeon" : $("wt-art").value;
+          fillArt(keep);
+          if (keep !== x.id && W.id) save(true);
+        }).catch(function (e) { toast("error", "Không xoá được", e.message); });
+      });
+      row.appendChild(rm);
+      list.appendChild(row);
+    });
+  }
+  function artChanged() {
+    artInfo();
+    if (!W.id) return;
+    var have = Object.keys(wt().pics || {}).length;
+    save(true).then(function () {
+      toast("ok", "Đã đổi nét vẽ nhân vật", have ? "Câu lệnh vẽ đã đổi theo nét mới. Ảnh vẽ theo nét cũ được đánh dấu — vẽ lại để cả truyện cùng một nét." :
+            "Câu lệnh vẽ nhân vật đã đổi theo nét mới.");
+    });
+  }
+  function addArt() {
+    var genres = Array.prototype.map.call(document.querySelectorAll("#wt-art-genres input:checked"),
+                                          function (c) { return c.value; });
+    api("/api/webtoon/art-styles", { method: "POST", body: { label: $("wt-art-name").value,
+      prompt: $("wt-art-desc").value, genres: genres } }).then(function (d) {
+      ARTS = d.arts || ARTS;
+      $("wt-art-name").value = ""; $("wt-art-desc").value = "";
+      document.querySelectorAll("#wt-art-genres input").forEach(function (c) { c.checked = false; });
+      fillArt(d.id);
+      artChanged();
+      toast("ok", "Đã thêm nét vẽ", "Dùng được cho mọi truyện webtoon.");
+    }).catch(function (e) { toast("error", "Chưa thêm được", e.message); });
+  }
+
   /* ---------------------------- vẽ giao diện ---------------------------- */
 
   function fillSelect(id, list, value) {
@@ -175,6 +258,8 @@
     var d = W.data || {}, w = wt(), o = opts();
     fillSelect("wt-genre", o.genres, w.genre || "marriage");
     fillSelect("wt-style", o.styles || STYLE_LIST, w.style || "saeon");
+    if (o.arts) ARTS = o.arts;
+    fillArt(w.art || "saeon");
     fillSelect("wt-narrv", o.narr_voices || NARRV_LIST, w.narrator_voice || "own");
     fillSelect("wt-lang", o.langs, w.language || "ko");
     $("wt-brief").value = w.brief || "";
@@ -419,6 +504,11 @@
           img.title = "Bấm để chỉnh điểm mắt / miệng";
           img.addEventListener("click", function () { openMark(c.id, n.key, meta); });
           card.appendChild(img);
+          if ((meta.art || "saeon") !== (w.art || "saeon")) {
+            var ao = artOf(meta.art || "saeon");
+            card.appendChild(el("div", "warn", "Ảnh vẽ theo nét cũ (" + (ao ? ao.label.split(" — ")[0] : meta.art) +
+                                ") — chép câu lệnh mới để vẽ lại cho cùng nét"));
+          }
           if (meta.sure === false) {
             card.appendChild(el("div", "warn", "Tool chưa tìm chắc mắt / miệng nên chưa nhép miệng — bấm vào ảnh để đánh dấu"));
           } else if (meta.auto) {
@@ -864,6 +954,12 @@
     fillSelect("wt-style", STYLE_LIST, "saeon");
     fillSelect("wt-narrv", NARRV_LIST, "own");
     g.forEach(function (kv) { GENRE_VI[kv[0]] = kv[1]; });
+    api("/api/webtoon/art-styles").then(function (d) {
+      if (!ARTS.length) { ARTS = d.arts || []; fillArt((wt() || {}).art || "saeon"); }
+    }).catch(function () {});
+    $("wt-art").addEventListener("change", artChanged);
+    $("wt-genre").addEventListener("change", artInfo);
+    $("wt-art-save").addEventListener("click", addArt);
     fillSelect("wt-idea-genre", [["", "Mọi thể loại"]].concat(g), "");
     $("wt-ideas-btn").addEventListener("click", moreIdeas);
     fillSelect("wt-lang", [["ko", "Tiếng Hàn"], ["vi", "Tiếng Việt"], ["en", "Tiếng Anh"]], "ko");

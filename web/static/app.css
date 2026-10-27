@@ -999,3 +999,13 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 /* gợi ý kiểu nhân vật theo thể loại truyện */
 .st-cs-hint { margin: 6px 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 6px; }
 .st-cs-hint[hidden] { display: none; }
+
+/* nét vẽ nhân vật (Truyện webtoon) */
+.wt-art-box { margin: -4px 0 10px; }
+.wt-art-box .muted { margin: 0 0 4px; font-size: 13px; }
+.wt-art-hint { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; margin: 4px 0; }
+.wt-art-hint[hidden] { display: none; }
+.wt-art-genres { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 13px; }
+.wt-art-item { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid rgba(127,127,127,.2); }
+.wt-art-item .muted { flex: 1 1 200px; font-size: 12px; }
+#wt-art-add[open] { padding-bottom: 10px; margin-bottom: 6px; border-bottom: 1px solid rgba(127,127,127,.2); }

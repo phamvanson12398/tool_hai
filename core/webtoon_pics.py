@@ -17,7 +17,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw
 
-from . import webtoon_art as wa
+from . import webtoon_art as wa, webtoon_styles as wst
 
 PICS_DIR = "webtoon_pics"
 OPEN_SUFFIX = ".open.png"           # ảnh miệng mở đi kèm (đã căn khớp với ảnh gốc)
@@ -64,11 +64,7 @@ EXPR_EN = {
     "relieved": "relieved expression, soft smile, mouth closed",
     "desperate": "desperate expression, eyebrows raised, eyes teary, mouth slightly open",
 }
-STYLE_EN = ("Korean webtoon style exactly like Korean YouTube story-animation channels (\"썰\" / 사연 animation): "
-            "clean bold uniform black outlines, flat pastel colors, NO shading, no gradients, no textures, "
-            "simple neat line art, natural adult proportions, large oval solid black pupils with a small white "
-            "highlight, eyebrows as simple dark strokes, nose as one small line, small simple mouth, "
-            "hair drawn as flat color with a few black strand lines, clothes with simple fold lines.")
+STYLE_EN = wst.PRESETS[wst.DEFAULT]["prompt"]       # nét vẽ mặc định (chọn nét khác: webtoon_styles)
 
 
 def key_of(pose: str, expr: str = "") -> str:
@@ -107,11 +103,11 @@ def describe(c: dict) -> str:
     return s + (", " + ", ".join(x for x in extra if x) if extra else "")
 
 
-def prompt(c: dict, key: str, first: bool) -> str:
+def prompt(c: dict, key: str, first: bool, style: str = STYLE_EN) -> str:
     pose, expr = split_key(key)
     ref = ("" if first else "Use the attached image as the character reference: keep exactly the same face, "
            "hairstyle, clothes and colors. ")
-    return (f"{ref}{STYLE_EN} Draw {describe(c)} ({c.get('name') or c.get('id')}), {POSE_EN.get(pose, POSE_EN['down'])}, "
+    return (f"{ref}{style} Draw {describe(c)} ({c.get('name') or c.get('id')}), {POSE_EN.get(pose, POSE_EN['down'])}, "
             f"{EXPR_EN.get(expr, EXPR_EN['neutral'])}. Waist-up shot, character centered and facing the viewer, "
             "both eyes clearly visible, the whole head and hands inside the frame. "
             "Plain solid bright green (#00FF00) background like a green screen, nothing else in the image, "
@@ -141,6 +137,7 @@ def needed(st: dict) -> list[dict]:
             for k in {key_of(pose), key_of(pose, expr)}:
                 cnt[(cid, k)] = cnt.get((cid, k), 0) + 1
     out = []
+    style = wst.prompt_of(st.get("art"))
     for cid, c in chars.items():
         keys = sorted({k for (ci, k) in cnt if ci == cid}, key=lambda k: (SEP in k, -cnt[(cid, k)], k))
         keys = ["down"] + [k for k in keys if k != "down"]   # ảnh gốc vẽ trước, làm mẫu cho các ảnh sau
@@ -149,7 +146,7 @@ def needed(st: dict) -> list[dict]:
             out.append({"cid": cid, "key": k, "pose": pose, "expr": expr, "shots": cnt.get((cid, k), 0),
                         "required": SEP not in k, "have": k in (have.get(cid) or {}),
                         "has_open": bool(((have.get(cid) or {}).get(k) or {}).get("open")),
-                        "prompt": prompt(c, k, k == "down")})
+                        "prompt": prompt(c, k, k == "down", style)})
     return out
 
 
@@ -516,8 +513,9 @@ def remark(path: Path, meta: dict, eyes=None, mouth=None) -> dict:
     arr = np.asarray(Image.open(path).convert("RGBA"))
     """Tính lại điểm mắt / miệng: chị đánh dấu thì theo chị; không đưa điểm nào thì tool tự tìm lại."""
     m = marks(arr[..., :3], arr[..., 3], eyes, mouth)
-    if meta.get("open"):
-        m["open"] = meta["open"]
+    for k in ("open", "art"):                     # giữ ảnh miệng mở, nét vẽ của ảnh
+        if meta.get(k):
+            m[k] = meta[k]
     m.update({"w": arr.shape[1], "h": arr.shape[0]})
     return m
 

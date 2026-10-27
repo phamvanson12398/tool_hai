@@ -567,9 +567,24 @@
           <div class="field-row">
             <div class="field"><label for="wt-style">Cách kể</label><select id="wt-style"></select></div>
             <div class="field"><label for="wt-genre">Thể loại</label><select id="wt-genre"></select></div>
+            <div class="field"><label for="wt-art">Nét vẽ nhân vật</label><select id="wt-art"></select></div>
             <div class="field"><label for="wt-lang">Ngôn ngữ thoại</label><select id="wt-lang"></select></div>
             <div class="field"><label for="wt-minutes">Thời lượng (phút)</label><input type="number" id="wt-minutes" min="1" max="20" step="0.5" value="4"></div>
             <div class="field"><label for="wt-part">Phần số</label><input type="number" id="wt-part" min="1" max="99" value="1"></div>
+          </div>
+          <div class="wt-art-box">
+            <p class="muted" id="wt-art-note"></p>
+            <p class="hint wt-art-hint" id="wt-art-hint" hidden></p>
+            <details id="wt-art-add">
+              <summary>＋ Thêm nét vẽ mới / quản lý nét đã thêm</summary>
+              <div class="field"><label for="wt-art-name">Tên nét vẽ</label>
+                <input type="text" id="wt-art-name" placeholder="VD: Hoạt hình Pixar tròn trịa"></div>
+              <div class="field"><label for="wt-art-desc">Mô tả nét vẽ (đứng đầu mọi câu lệnh vẽ nhân vật)</label>
+                <textarea id="wt-art-desc" rows="3" placeholder="Nên viết tiếng Anh, VD: cute 3D Pixar style, big round eyes, soft lighting, pastel colors... (tiếng Việt cũng được)"></textarea></div>
+              <div class="field"><label>Hợp thể loại (để tool gợi ý)</label><div id="wt-art-genres" class="wt-art-genres"></div></div>
+              <div class="row-actions"><button class="btn btn-sm btn-primary" id="wt-art-save" type="button">Lưu nét vẽ</button></div>
+              <div id="wt-art-list"></div>
+            </details>
           </div>
           <div class="field-row">
             <div class="field"><label for="wt-cliff">Cuối phần</label>

@@ -2671,7 +2671,7 @@ def _load_webtoon(pid: str) -> tuple[dict, dict]:
 
 
 def _webtoon_view(pid: str, data: dict) -> dict:
-    from core import webtoon_art as wa, webtoon_film as wf, webtoon_pics as wpic
+    from core import webtoon_art as wa, webtoon_film as wf, webtoon_pics as wpic, webtoon_styles as wst
     out = dict(data)
     out["pics_needed"] = wpic.needed(data.get("webtoon") or {})
     out["prompt_open"] = wpic.prompt_open()
@@ -2683,6 +2683,7 @@ def _webtoon_view(pid: str, data: dict) -> dict:
     out["options"] = {
         "genres": [[k, v] for k, v in wf.GENRES.items()], "langs": [[k, v] for k, v in wf.LANGS.items()],
         "styles": [[k, v] for k, v in wf.STYLES.items()],
+        "arts": wst.options(),
         "narr_voices": [[k, v] for k, v in wf.NARR_VOICES.items()],
         "types": list(wf.SHOT_TYPES), "cameras": list(wf.CAMERAS), "exprs": list(wa.EXPRS),
         "poses": list(wa.POSES), "hairs": list(wa.HAIRS), "hair_colors": list(wa.HAIR),
@@ -2702,6 +2703,9 @@ def api_webtoon_new():
     for k in ("brief", "genre", "language", "style"):
         if body.get(k):
             wt[k] = body[k]
+    from core import webtoon_styles as wst
+    if wst.valid(str(body.get("art") or "")):
+        wt["art"] = body["art"]
     data = {"id": pid, "mode": "webtoon", "title": (body.get("title") or "").strip(),
             "language": wt["language"], "format": "16:9", "webtoon": wt,
             "assets": {"characters": [], "background": None, "voices": {}},
@@ -2724,6 +2728,34 @@ def api_webtoon_ideas():
         traceback.print_exc()
         return _err(f"AI gợi ý lỗi: {_short_err(e, 300)}")
     return jsonify({"ideas": items})
+
+
+@app.get("/api/webtoon/art-styles")
+def api_webtoon_arts():
+    from core import webtoon_styles as wst
+    return jsonify({"arts": wst.options()})
+
+
+@app.post("/api/webtoon/art-styles")
+def api_webtoon_art_add():
+    """Thêm nét vẽ nhân vật chị tự mô tả (dùng cho mọi truyện webtoon)."""
+    from core import webtoon_styles as wst
+    body = request.get_json(silent=True) or {}
+    try:
+        sid = wst.add(str(body.get("label") or ""), str(body.get("prompt") or ""),
+                      body.get("genres") if isinstance(body.get("genres"), list) else [],
+                      str(body.get("note") or ""))
+    except ValueError as e:
+        return _err(str(e))
+    return jsonify({"id": sid, "arts": wst.options()})
+
+
+@app.delete("/api/webtoon/art-styles/<sid>")
+def api_webtoon_art_delete(sid):
+    from core import webtoon_styles as wst
+    if not wst.remove(sid):
+        return _err("Chỉ xoá được nét vẽ chị tự thêm.")
+    return jsonify({"ok": True, "arts": wst.options()})
 
 
 @app.get("/api/webtoon/list")
@@ -2777,6 +2809,9 @@ def api_webtoon_save(pid):
         wt["bg_mode"] = body["bg_mode"]
     if body.get("style") in wf.STYLES:
         wt["style"] = body["style"]
+    from core import webtoon_styles as wst
+    if wst.valid(str(body.get("art") or "")):
+        wt["art"] = body["art"]
     if body.get("narrator_voice") in wf.NARR_VOICES:
         wt["narrator_voice"] = body["narrator_voice"]
     if isinstance(body.get("narrator"), dict):
@@ -2870,7 +2905,7 @@ def api_webtoon_next(pid):
         return _err("Tập này chưa có nội dung tóm tắt — bấm 'Tóm tắt bằng AI' hoặc tự gõ vào ô Nội dung tập này.")
     nid = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
     nw = wf.default_story()
-    for k in ("genre", "language", "minutes", "subtitles", "cliffhanger", "narrator", "bg_mode", "pics", "style",
+    for k in ("genre", "language", "minutes", "subtitles", "cliffhanger", "narrator", "bg_mode", "pics", "style", "art",
               "narrator_id", "narrator_voice"):
         if k in wt:
             nw[k] = json.loads(json.dumps(wt[k]))
@@ -2976,6 +3011,7 @@ def api_webtoon_pic_upload(pid, cid, key):
     finally:
         tmp.unlink(missing_ok=True)
     dst.with_name(key + wpic.OPEN_SUFFIX).unlink(missing_ok=True)     # ảnh miệng mở cũ không còn khớp
+    meta["art"] = wt.get("art") or "saeon"                            # vẽ theo nét nào (đổi nét thì báo vẽ lại)
     wt.setdefault("pics", {}).setdefault(cid, {})[key] = meta
     _save_project(pid, data)
     return jsonify(_webtoon_view(pid, data))
