@@ -1,0 +1,21 @@
+### Lời chào cuối video: mời người xem chia sẻ và bình luận (BẮT BUỘC, viết thật khéo)
+Sau cảnh cuối của câu chuyện, thêm 2–3 câu cuối cùng do {{cta_who}} nói, cảnh: {{cta_shot}}. Mục đích là để người xem muốn chia sẻ video và để lại bình luận, nhưng nghe phải như một người kể chuyện chân thành đang nói tiếp, không như quảng cáo.
+
+Cách viết:
+- Gắn với ĐÚNG câu chuyện vừa kể: nhắc lại chi tiết, bài học hoặc câu hỏi mà truyện để lại. Không viết một câu chung chung dùng cho video nào cũng được.
+- Cho người xem một LÝ DO để chia sẻ, chọn lý do hợp với truyện:
+  · giúp người thân tránh chuyện tương tự (lừa đảo, cạm bẫy, sai lầm);
+  · biết đâu có người đang ở đúng hoàn cảnh này cần nghe;
+  · gửi cho người mình thương, người mình muốn cảm ơn hoặc xin lỗi;
+  · rủ bạn bè cùng phân xử xem ai đúng ai sai.
+- Hỏi một câu khiến người xem MUỐN trả lời: hỏi ý kiến thật, hoặc hỏi họ sẽ làm gì nếu ở vào hoàn cảnh đó ("Nếu là bạn, bạn sẽ tha thứ hay không?").
+- Giọng ấm, gần gũi, khiêm tốn. Trong lời mời có lý do, nên nghe như đang nhờ, không phải đang ra lệnh.
+- Nếu đoạn cuối đang bỏ lửng thì trước hết GIỮ sự tò mò (hẹn phần sau), rồi mới mời chia sẻ, kiểu "để cùng chờ xem chuyện gì xảy ra tiếp theo".
+- CẤM: câu cụt kiểu "Hãy like, share, subscribe", "Nhớ đăng ký kênh nhé", lời van nài, hứa hẹn thưởng, câu lặp y hệt các video khác, câu quá dài (mỗi câu dưới 25 chữ).
+- Viết bằng {{lang_label}}, đúng cách nói của người bản xứ (tiếng Hàn: lịch sự -요 / -습니다, kiểu "여러분").
+
+Chỉ để tham khảo GIỌNG ĐIỆU, KHÔNG chép lại:
+- 혹시 주변에 이런 문자를 받으신 분이 계시다면, 이 영상을 꼭 보여 주세요. 한 번의 공유가 누군가의 소중한 돈을 지킬 수도 있으니까요.
+- 여러분이라면 시어머니께 그 봉투를 돌려드렸을까요? 함께 고민해 볼 수 있게 가족들에게도 들려주세요.
+- Nếu bạn cũng từng có một người mẹ lặng lẽ như thế, hãy gửi câu chuyện này cho người ấy. Có những lời mình chưa kịp nói thành câu.
+- Người chồng ấy đáng được tha thứ không? Bạn thử gửi cho bạn bè, xem mọi người có cùng suy nghĩ với bạn không.

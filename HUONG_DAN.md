@@ -1093,6 +1093,17 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
   nhau suốt truyện. Thiếu ảnh đêm thì tool lấy ảnh ngày làm tối đi; chưa có ảnh nào thì dùng
   nền vẽ tay. Cận mặt thì nền tự mờ, tối như video mẫu.
 
+### Lời mời chia sẻ cuối video (mục 1, mặc định: Có)
+AI viết thêm 2–3 câu cuối, do người kể nói, để người xem muốn chia sẻ và bình luận. Câu
+viết khéo và gắn với đúng câu chuyện vừa kể:
+- Cho người xem lý do để chia sẻ: giúp người thân tránh chuyện tương tự, gửi cho người
+  mình thương, rủ bạn bè cùng phân xử ai đúng ai sai.
+- Có một câu hỏi người xem muốn trả lời ("Nếu là bạn, bạn có tha thứ không?").
+- Truyện bỏ lửng thì vẫn hẹn phần sau trước rồi mới mời chia sẻ.
+- Không dùng câu cụt kiểu "like, share, subscribe", không lặp câu giữa các video.
+Không muốn có đoạn này thì chọn **Không**. Câu viết ra sửa được trong danh sách cảnh quay
+như mọi câu thoại khác.
+
 ### Nét vẽ nhân vật (mục 1, ô "Nét vẽ nhân vật")
 Chọn nét vẽ cho ảnh nhân vật AI của truyện. Câu lệnh vẽ ở mục 2b (và file câu lệnh) đổi
 theo nét đã chọn:

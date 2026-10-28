@@ -110,7 +110,7 @@
       style: $("wt-style").value, narrator_voice: $("wt-narrv").value, art: $("wt-art").value,
       language: $("wt-lang").value, minutes: parseFloat($("wt-minutes").value) || 4,
       part: parseInt($("wt-part").value, 10) || 1, cliffhanger: $("wt-cliff").value === "1",
-      subtitles: $("wt-subs").value === "1", prev_summary: $("wt-prev").value,
+      subtitles: $("wt-subs").value === "1", cta: $("wt-cta").value === "1", prev_summary: $("wt-prev").value,
       summary: $("wt-summary").value
     };
     if ($("wt-bgmode")) b.bg_mode = $("wt-bgmode").value;
@@ -268,6 +268,7 @@
     $("wt-part").value = w.part || 1;
     $("wt-cliff").value = w.cliffhanger === false ? "0" : "1";
     $("wt-subs").value = w.subtitles === false ? "0" : "1";
+    $("wt-cta").value = w.cta === false ? "0" : "1";
     $("wt-prev").value = w.prev_summary || "";
     $("wt-summary").value = w.summary || "";
     if ($("wt-open").value !== W.id && W.id) $("wt-open").value = W.id;

@@ -50,7 +50,7 @@ FRONTS = ("table", "dining", "bed", "car", "desk", "sofa")
 
 def default_story() -> dict:
     return {"title": "", "brief": "", "genre": "marriage", "language": "ko", "minutes": 4, "style": "saeon",
-            "bg_mode": "2d",
+            "bg_mode": "2d", "cta": True,
             "part": 1, "subtitles": True, "characters": [], "places": [], "shots": []}
 
 
@@ -1049,6 +1049,16 @@ def write(st: dict, progress=None) -> dict:
         style_rule = '- Người kể ("who":"narr") rất ít.'
     if nid:
         chars_txt = chars_txt.replace(f"- {nid}: ", f"- {nid} (NHÂN VẬT CHÍNH, người kể): ", 1)
+    cta = ""
+    if st.get("cta", True):                       # cuối video: mời chia sẻ, bình luận thật khéo
+        if saeon and nid:
+            cta_who = f"người kể {nname} (\"line\":{{\"who\":\"narr\",...}})"
+            cta_shot = f"\"place\":\"spot\", cận mặt {nname} (\"who\":\"{nid}\"), nét mặt chân thành, \"camera\":\"push_in\""
+        else:
+            cta_who = "người kể (\"line\":{\"who\":\"narr\",...})"
+            cta_shot = "cận mặt nhân vật chính lặng im, nét mặt đúng cảm xúc cuối truyện"
+        cta = claude_cli._load_prompt("webtoon_cta", cta_who=cta_who, cta_shot=cta_shot,
+                                      lang_label=LANGS.get(lang, lang))
     outline = "\n".join(f"{i + 1}. {s.get('summary')}" for i, s in enumerate(segs))
     per = minutes * 60 / max(1, len(segs))
     shots: list = []
@@ -1061,8 +1071,9 @@ def write(st: dict, progress=None) -> dict:
             outline=outline, characters=chars_txt, places=places_txt, index=str(i + 1),
             summary=str(sg.get("summary") or ""), seconds=str(int(per)), shots=str(max(6, int(per / 2.6))),
             segment_rule=("Mở video bằng MÓC CÂU." if i == 0 else "") +
-                         (" Đây là đoạn CUỐI: dừng ở cú sốc, cảnh cuối là một câu bỏ lửng."
-                          if i == len(segs) - 1 and st.get("cliffhanger", True) else ""),
+                         (" Đây là đoạn CUỐI: dừng ở cú sốc, câu chuyện kết bằng một câu bỏ lửng."
+                          if i == len(segs) - 1 and st.get("cliffhanger", True) else "") +
+                         ("\n\n" + cta if cta and i == len(segs) - 1 else ""),
             before_block=("### Thoại ngay trước đó (nối tiếp, không lặp lại)\n" + "\n".join(before)) if before else "",
             style_rule=style_rule, **cat), task="story", timeout=600)
         got = data.get("shots") if isinstance(data, dict) else None

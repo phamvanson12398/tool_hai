@@ -2802,7 +2802,7 @@ def api_webtoon_save(pid):
                 wt[k] = max(lo, min(hi, float(body[k]) if k == "minutes" else int(body[k])))
             except (TypeError, ValueError):
                 pass
-    for k in ("subtitles", "cliffhanger"):
+    for k in ("subtitles", "cliffhanger", "cta"):
         if k in body:
             wt[k] = bool(body[k])
     if body.get("bg_mode") in ("draw", "3d", "2d"):
@@ -2905,7 +2905,7 @@ def api_webtoon_next(pid):
         return _err("Tập này chưa có nội dung tóm tắt — bấm 'Tóm tắt bằng AI' hoặc tự gõ vào ô Nội dung tập này.")
     nid = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
     nw = wf.default_story()
-    for k in ("genre", "language", "minutes", "subtitles", "cliffhanger", "narrator", "bg_mode", "pics", "style", "art",
+    for k in ("genre", "language", "minutes", "subtitles", "cliffhanger", "narrator", "bg_mode", "pics", "style", "art", "cta",
               "narrator_id", "narrator_voice"):
         if k in wt:
             nw[k] = json.loads(json.dumps(wt[k]))
