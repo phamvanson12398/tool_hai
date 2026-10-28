@@ -501,7 +501,7 @@
           (n.shots ? n.shots + " cảnh" : "ảnh gốc") + (n.required ? "" : " · nên có")));
         if (n.have && meta) {
           var img = document.createElement("img");
-          img.src = picUrl(c.id, n.key) + ".png?v=" + Date.now() % 1000000;
+          img.src = picUrl(c.id, n.key) + ".png?v=" + picVer(meta);
           img.title = "Bấm để chỉnh điểm mắt / miệng";
           img.addEventListener("click", function () { openMark(c.id, n.key, meta); });
           card.appendChild(img);
@@ -533,7 +533,7 @@
           fd.append("file", file.files[0]);
           up.disabled = true; up.textContent = "Đang xử lý...";
           api(picUrl(c.id, n.key), { method: "POST", body: fd }).then(function (d) {
-            W.data = d; renderPics(); renderChars(); refreshThumbs();
+            W.data = d; renderPics(); renderChars(); refreshThumbs(c.id);
             var m = ((d.webtoon.pics || {})[c.id] || {})[n.key];
             toast("ok", "Đã tải ảnh", m && m.auto ? "Bấm vào ảnh để kiểm tra điểm mắt / miệng." : "");
           }).catch(function (e) {
@@ -550,7 +550,7 @@
           rm.type = "button";
           rm.addEventListener("click", function () {
             api(picUrl(c.id, n.key) + "/delete", { method: "POST", body: {} }).then(function (d) {
-              W.data = d; renderPics(); renderChars(); refreshThumbs();
+              W.data = d; renderPics(); renderChars(); refreshThumbs(c.id);
             }).catch(function (e) { toast("error", "Xoá thất bại", e.message); });
           });
           card.appendChild(rm);
@@ -586,7 +586,7 @@
     function next() {
       if (k >= n) {
         btn.disabled = false;
-        renderPics(); renderChars(); refreshThumbs();
+        renderPics(); renderChars(); refreshThumbs(c.id);
         toast(bad ? "warn" : "ok", "Đã tải " + (n - bad) + "/" + n + " ảnh cho " + (c.name || c.id),
           "Kiểm tra từng ô xem ảnh có đúng tư thế không; sai thì bấm 'Thay ảnh'.");
         return;
@@ -612,7 +612,7 @@
       rm.type = "button";
       rm.addEventListener("click", function () {
         api(picUrl(c.id, n.key) + "/open/delete", { method: "POST", body: {} }).then(function (d) {
-          W.data = d; renderPics(); refreshThumbs();
+          W.data = d; renderPics(); refreshThumbs(c.id);
         }).catch(function (e) { toast("error", "Xoá thất bại", e.message); });
       });
       card.appendChild(rm);
@@ -638,7 +638,7 @@
       fd.append("file", file.files[0]);
       up.disabled = true; up.textContent = "Đang căn khớp...";
       api(picUrl(c.id, n.key) + "/open", { method: "POST", body: fd }).then(function (d) {
-        W.data = d; renderPics(); refreshThumbs();
+        W.data = d; renderPics(); refreshThumbs(c.id);
         var m = ((d.webtoon.pics || {})[c.id] || {})[n.key] || {};
         toast(m.open && m.open.score < 0.5 ? "warn" : "ok", "Đã thêm ảnh miệng mở",
           m.open && m.open.score < 0.5 ? "Hai ảnh lệch nhau nhiều, nên nhờ AI sửa lại giữ nguyên khung hình." : "");
@@ -650,9 +650,23 @@
     card.appendChild(cp); card.appendChild(file); card.appendChild(up);
   }
 
-  function refreshThumbs() {
-    document.querySelectorAll("#wt-shots img").forEach(function (img, i) { img.src = shotThumb(i); });
+  // vẽ lại ảnh xem trước các cảnh; cid = chỉ những cảnh có nhân vật đó (đổi ảnh / điểm mắt
+  // của một nhân vật thì khỏi vẽ lại cả trăm cảnh — ảnh đang bấm khỏi phải xếp hàng chờ)
+  function refreshThumbs(cid) {
+    document.querySelectorAll("#wt-shots .wt-shot").forEach(function (row, i) {
+      var img = row.querySelector("img");
+      if (!img) return;
+      if (cid) {
+        var s = {};
+        try { s = JSON.parse(row.getAttribute("data-raw") || "{}"); } catch (e) {}
+        var who = [s.who].concat(s.with || [], [((s.phone || {}).data || {}).who]);
+        if (who.indexOf(cid) < 0) return;
+      }
+      img.src = shotThumb(i);
+    });
   }
+  // phiên bản ảnh nhân vật: chỉ đổi khi tải ảnh mới -> trình duyệt dùng lại ảnh đã tải
+  function picVer(meta) { return (meta && (meta.v || (meta.w + "x" + meta.h))) || "0"; }
 
   // chỉnh điểm mắt / miệng: bấm mắt bên trái ảnh, mắt bên phải ảnh, rồi giữa miệng
   var MK = { cid: null, key: null, img: null, pts: [], k: 1 };
@@ -684,7 +698,7 @@
       drawMark();
       $("wt-mark-tip").textContent = "Vòng xanh = mắt, vòng hồng = miệng. Sai thì bấm 'Bấm lại từ đầu' rồi bấm lại 3 điểm.";
     };
-    img.src = picUrl(cid, key) + ".png?v=" + Date.now() % 1000000;
+    img.src = picUrl(cid, key) + ".png?v=" + picVer(meta);
   }
   function initMark() {
     var cv = $("wt-mark-cv");
@@ -702,7 +716,7 @@
       if (MK.pts.length < 3) { toast("warn", "Chưa đủ điểm", "Bấm đủ 2 mắt và miệng."); return; }
       api(picUrl(MK.cid, MK.key) + "/marks", { method: "POST",
         body: { eyes: [MK.pts[0], MK.pts[1]], mouth: MK.pts[2] } }).then(function (d) {
-        W.data = d; $("wt-mark").hidden = true; renderPics(); refreshThumbs();
+        W.data = d; $("wt-mark").hidden = true; renderPics(); refreshThumbs(MK.cid);
         toast("ok", "Đã lưu điểm mắt / miệng");
       }).catch(function (e) { toast("error", "Lưu thất bại", e.message); });
     });

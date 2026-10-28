@@ -3012,6 +3012,7 @@ def api_webtoon_pic_upload(pid, cid, key):
         tmp.unlink(missing_ok=True)
     dst.with_name(key + wpic.OPEN_SUFFIX).unlink(missing_ok=True)     # ảnh miệng mở cũ không còn khớp
     meta["art"] = wt.get("art") or "saeon"                            # vẽ theo nét nào (đổi nét thì báo vẽ lại)
+    meta["v"] = uuid.uuid4().hex[:8]                                  # phiên bản ảnh (trình duyệt dùng lại ảnh cũ)
     wt.setdefault("pics", {}).setdefault(cid, {})[key] = meta
     _save_project(pid, data)
     return jsonify(_webtoon_view(pid, data))
@@ -3043,7 +3044,8 @@ def api_webtoon_pic_get(pid, cid, key):
         return _err(str(e), 404)
     if not p.exists():
         return _err("Chưa có ảnh.", 404)
-    return send_file(str(p), mimetype="image/png", max_age=0)
+    # có ?v= (phiên bản ảnh, đổi khi tải ảnh mới) thì trình duyệt giữ ảnh, khỏi tải lại
+    return send_file(str(p), mimetype="image/png", max_age=86400 if request.args.get("v") else 0)
 
 
 @app.post("/api/webtoon/<pid>/pic/<cid>/<key>/marks")

@@ -513,7 +513,7 @@ def remark(path: Path, meta: dict, eyes=None, mouth=None) -> dict:
     arr = np.asarray(Image.open(path).convert("RGBA"))
     """Tính lại điểm mắt / miệng: chị đánh dấu thì theo chị; không đưa điểm nào thì tool tự tìm lại."""
     m = marks(arr[..., :3], arr[..., 3], eyes, mouth)
-    for k in ("open", "art"):                     # giữ ảnh miệng mở, nét vẽ của ảnh
+    for k in ("open", "art", "v"):                # giữ ảnh miệng mở, nét vẽ, phiên bản ảnh
         if meta.get(k):
             m[k] = meta[k]
     m.update({"w": arr.shape[1], "h": arr.shape[0]})
@@ -713,20 +713,37 @@ def _drop(canvas, x, y, r, lw):
     d.polygon(wa._crs(pts, 6), fill=(150, 200, 240, 255), outline=INK)
 
 
-def load(st: dict, pdir: Path | None) -> dict:
-    """{id nhân vật: {key: Pic}} từ các ảnh đã tải lên."""
+_IMG_CACHE: dict = {}          # đường dẫn -> (mtime, ảnh RGBA): khỏi đọc lại PNG mỗi lần xem trước
+
+
+def _img(p: Path) -> Image.Image:
+    mt = p.stat().st_mtime_ns
+    got = _IMG_CACHE.get(str(p))
+    if got and got[0] == mt:
+        return got[1]
+    im = Image.open(p).convert("RGBA")
+    if len(_IMG_CACHE) > 160:
+        _IMG_CACHE.clear()
+    _IMG_CACHE[str(p)] = (mt, im)
+    return im
+
+
+def load(st: dict, pdir: Path | None, only: set | None = None) -> dict:
+    """{id nhân vật: {key: Pic}} từ các ảnh đã tải lên (only = chỉ những nhân vật này)."""
     out: dict = {}
     if pdir is None:
         return out
     for cid, items in (st.get("pics") or {}).items():
+        if only is not None and cid not in only:
+            continue
         for key, meta in (items or {}).items():
             p = Path(pdir) / PICS_DIR / cid / f"{key}.png"
             if not p.exists() or not meta.get("eyes"):
                 continue
             po = p.with_name(f"{key}{OPEN_SUFFIX}")
             try:
-                op = Image.open(po).convert("RGBA") if meta.get("open") and po.exists() else None
-                out.setdefault(cid, {})[key] = Pic(Image.open(p).convert("RGBA"), meta, op)
+                op = _img(po) if meta.get("open") and po.exists() else None
+                out.setdefault(cid, {})[key] = Pic(_img(p), meta, op)
             except Exception:  # noqa: BLE001
                 continue
     return out

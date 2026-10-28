@@ -848,7 +848,9 @@ def preview(st: dict, shot_idx: int, size=(960, 540), t: float = 0.6, pdir: Path
         s = r["shot"]
         if s.get("who"):
             prev[s["who"]] = s.get("pose", "down")
-    sh = Shot(st, rows[shot_idx], size, figures(st), prev, wpic.load(st, pdir), pdir)
+    s0 = rows[shot_idx]["shot"]
+    need = {s0.get("who"), *(s0.get("with") or []), ((s0.get("phone") or {}).get("data") or {}).get("who")}
+    sh = Shot(st, rows[shot_idx], size, figures(st), prev, wpic.load(st, pdir, need), pdir)
     return Image.fromarray(sh.subtitle(sh.frame(t), t))
 
 
