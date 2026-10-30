@@ -67,15 +67,50 @@ VOICE_MODES = {"cast": "Mỗi nhân vật một giọng + giọng người kể"
 # màu chữ: lời kể xanh, người nói theo thứ tự nhân vật
 NARR_COLOR = (24, 48, 232)
 SPEAK_COLORS = [(232, 40, 70), (0, 140, 150), (40, 150, 40), (150, 60, 200), (230, 120, 0), (220, 60, 150)]
-STYLE_EN = ("Cute chibi anime illustration exactly like Japanese YouTube story shorts (2ch / 昭和 story videos): "
-            "large head about one third of the body height, big expressive brown eyes with white highlights, rosy "
-            "blush cheeks, soft cel shading, clean dark brown outlines, warm natural colors, detailed but simple "
-            "clothes.")
+# phong cách ảnh nhân vật AI: mô tả nét vẽ đứng đầu câu lệnh + cách tả từng nét mặt cho hợp nét
+ARTS = {
+    "flat": {
+        "label": "Minh hoạ phẳng dễ thương (giống 5 hình có sẵn)",
+        "prompt": ("Simple cute flat Japanese clip-art illustration style, like free stock illustrations used in "
+                   "Japanese presentations and 2ch story videos: soft rounded shapes, a large round head with a "
+                   "slightly wide face, compact body about 3.5 heads tall, short rounded limbs. Thin soft outlines "
+                   "drawn in a darker shade of each fill color (NOT black lines), with a slightly rough "
+                   "colored-pencil / crayon texture on edges and fills. Flat pastel colors with a subtle paper grain, "
+                   "no shading, no gradients, no shine. Face: small solid black dot eyes (or simple curved lines "
+                   "when smiling or crying), a tiny pinkish nose, round pink blush on both cheeks, simple small "
+                   "mouth (open mouth shows red inside). Hair is a flat dark shape with a few lighter vertical "
+                   "streaks. Simple clothes with only a few fold lines. Warm, gentle, friendly look."),
+        "emo": {"neutral": "calm gentle face, dot eyes, small closed smile",
+                "happy": "very happy, eyes closed as upward curved lines (^ ^), big open smiling mouth",
+                "sad": "sad face, dot eyes looking down, eyebrows slanted up in the middle, small frown",
+                "cry": "crying, eyes shut as downward curves, tears streaming down, wobbly open mouth",
+                "angry": "angry face, thick eyebrows slanted down toward the center, dot eyes, frowning mouth",
+                "shocked": "shocked face, small dot eyes wide apart, mouth open in a small oval, sweat lines",
+                "worried": "worried face, eyebrows slanted up, dot eyes, wavy mouth, a blue sweat drop",
+                "think": "thinking, hand on chin, dot eyes looking up, small closed mouth",
+                "sleep": "eyes closed as simple curves, peaceful sleeping face",
+                "sly": "sly face, half-closed eyes, one-sided smirk"},
+    },
+    "chibi": {
+        "label": "Chibi anime (như video mẫu 昭和)",
+        "prompt": ("Cute chibi anime illustration exactly like Japanese YouTube story shorts (2ch / 昭和 story videos): "
+                   "large head about one third of the body height, big expressive brown eyes with white highlights, "
+                   "rosy blush cheeks, soft cel shading, clean dark brown outlines, warm natural colors, detailed but "
+                   "simple clothes."),
+        "emo": EMO_EN,
+    },
+}
+DEFAULT_ART = "flat"
+STYLE_EN = ARTS["chibi"]["prompt"]
+
+
+def art_of(st: dict | None) -> dict:
+    return ARTS.get((st or {}).get("art") or DEFAULT_ART, ARTS[DEFAULT_ART])
 
 
 def default_story() -> dict:
     return {"brief": "", "genre": "kando", "minutes": 3, "language": "ja", "title1": "", "title2": "",
-            "cta": True, "voice_mode": "cast", "narrator": {}, "characters": [], "places": [], "scenes": [],
+            "cta": True, "voice_mode": "cast", "art": DEFAULT_ART, "narrator": {}, "characters": [], "places": [], "scenes": [],
             "pics": {}}
 
 
@@ -227,18 +262,26 @@ def char_desc(c: dict) -> str:
            f"{k.get('top_color', '')} {k.get('top', 'shirt')}".replace("_", " ")
 
 
-def prompt_char(c: dict, emo: str, first: bool) -> str:
-    ref = "" if first else ("Use the attached image as the character reference: keep exactly the same face, "
-                            "hairstyle, clothes and colors. ")
-    return (f"{ref}{STYLE_EN} Draw {char_desc(c)} ({c.get('name')}), {EMO_EN.get(emo, EMO_EN['neutral'])}. "
+def prompt_char(c: dict, emo: str, first: bool, art: dict | None = None) -> str:
+    art = art or ARTS[DEFAULT_ART]
+    ref = ("If a style sample image is attached, copy its drawing style exactly (line, color, texture, proportions), "
+           "but draw a NEW character. " if first else
+           "Use the attached image as the character reference: keep exactly the same face, hairstyle, clothes, "
+           "colors and drawing style. ")
+    return (f"{ref}{art['prompt']} Draw {char_desc(c)} ({c.get('name')}), "
+            f"{art['emo'].get(emo, art['emo']['neutral'])}. "
             "Full body standing (or upper body if more natural), character centered and facing the viewer. "
             "Plain solid bright green (#00FF00) background like a green screen, nothing else in the image, "
             "no green on the character, no text, no frame. Vertical 3:4 image.")
 
 
-def prompt_object(desc: str) -> str:
-    return (f"{STYLE_EN.split(':')[0]} style. Draw a close-up of {desc}, centered, single object, soft warm "
-            "lighting. Plain solid bright green (#00FF00) background, nothing else, no text, no frame. Square image.")
+def prompt_object(desc: str, art: dict | None = None) -> str:
+    art = art or ARTS[DEFAULT_ART]
+    look = art["prompt"].split(":")[0] if art is ARTS["chibi"] else \
+        ("Simple cute flat Japanese clip-art illustration style: thin soft outlines in a darker shade of the fill "
+         "color, slightly rough colored-pencil texture, flat pastel colors, no shading")
+    return (f"{look}. Draw a close-up of {desc}, centered, single object. "
+            "Plain solid bright green (#00FF00) background, nothing else, no text, no frame. Square image.")
 
 
 def prompt_bg(p: dict) -> str:
@@ -260,12 +303,13 @@ def needed(st: dict) -> list[dict]:
             if cid:
                 cnt[(cid, emo or "neutral")] = cnt.get((cid, emo or "neutral"), 0) + 1
     out = []
+    art = art_of(st)
     for c in st.get("characters") or []:
         emos = ["neutral"] + sorted({e for (ci, e) in cnt if ci == c["id"] and e != "neutral"},
                                     key=lambda e: -cnt[(c["id"], e)])
         for e in emos:
             out.append({"cid": c["id"], "emo": e, "scenes": cnt.get((c["id"], e), 0),
-                        "have": e in (have.get(c["id"]) or {}), "prompt": prompt_char(c, e, e == "neutral")})
+                        "have": e in (have.get(c["id"]) or {}), "prompt": prompt_char(c, e, e == "neutral", art)})
     return out
 
 
@@ -288,7 +332,7 @@ def prompt_rows(st: dict, pdir: Path | None, kind: str, cid: str | None = None, 
             v = s.get("visual") or {}
             if v.get("type") == "object":
                 rows.append({"key": s["id"], "label": f"Cảnh {i + 1}: {v['desc_en'][:40]}",
-                             "prompt": prompt_object(v["desc_en"]), "have": bool(s.get("img"))})
+                             "prompt": prompt_object(v["desc_en"], art_of(st)), "have": bool(s.get("img"))})
     return [r for r in rows if not (missing and r["have"])]
 
 
@@ -754,3 +798,20 @@ def render(st: dict, pdir: Path, audio: dict | None = None, progress=None, out_n
                     "-shortest", str(out)], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=True)
     raw.unlink(missing_ok=True)
     return out
+
+
+def style_sample() -> Image.Image:
+    """Ảnh mẫu nét vẽ (các hình có sẵn ghép trên nền trắng) để gửi kèm khi vẽ ảnh đầu tiên."""
+    ims = []
+    for it in stickers():
+        if it.get("builtin"):
+            im = Image.open(BUILTIN / f"{it['id']}.png").convert("RGBA")
+            ims.append(_fit(im, 420, 420))
+    if not ims:
+        return Image.new("RGB", (400, 400), "white")
+    out = Image.new("RGBA", (sum(i.width for i in ims) + 30 * (len(ims) + 1), 480), (255, 255, 255, 255))
+    x = 30
+    for im in ims:
+        out.alpha_composite(im, (x, (480 - im.height) // 2))
+        x += im.width + 30
+    return out.convert("RGB")

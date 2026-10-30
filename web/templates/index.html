@@ -703,6 +703,12 @@
         <section class="card">
           <h2 class="card-title"><span class="step">2</span> Nhân vật &amp; ảnh vẽ bằng AI</h2>
           <p class="hint">Mỗi nhân vật cần ảnh theo từng nét mặt dùng trong truyện. Bấm <b>Chép câu lệnh vẽ</b>, dán vào Gemini / ChatGPT (ảnh thứ hai trở đi gửi kèm ảnh "bình thường" để giữ đúng mặt), tải ảnh về rồi tải lên. Chưa có ảnh thì tool tự vẽ nhân vật kiểu Mochi tròn mũm mĩm.</p>
+          <div class="field-row">
+            <div class="field"><label for="nc-art">Phong cách ảnh nhân vật</label><select id="nc-art"></select></div>
+            <div class="field" style="align-self:end"><a class="btn btn-sm" id="nc-sample" href="/api/2ch/style_sample.png" download
+              title="Gửi KÈM ảnh này khi vẽ ảnh đầu tiên (bình thường) của mỗi nhân vật để AI vẽ đúng nét như các hình có sẵn">Tải ảnh mẫu nét vẽ</a></div>
+          </div>
+          <p class="hint">Vẽ ảnh <b>bình thường</b> của nhân vật: gửi kèm <b>ảnh mẫu nét vẽ</b> rồi dán câu lệnh — AI sẽ vẽ đúng nét như các hình có sẵn. Các nét mặt sau: gửi kèm ảnh bình thường của chính nhân vật đó.</p>
           <div id="nc-chars"></div>
         </section>
         <section class="card">

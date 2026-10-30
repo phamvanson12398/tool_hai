@@ -3294,7 +3294,8 @@ def _2ch_view(pid: str, data: dict) -> dict:
     st = data.get("nichan") or {}
     out = dict(data)
     out["pics_needed"] = nichan.needed(st)
-    out["objects"] = [{"sid": s["id"], "desc": s["visual"]["desc_en"], "prompt": nichan.prompt_object(s["visual"]["desc_en"])}
+    out["objects"] = [{"sid": s["id"], "desc": s["visual"]["desc_en"],
+                       "prompt": nichan.prompt_object(s["visual"]["desc_en"], nichan.art_of(st))}
                       for s in st.get("scenes") or [] if (s.get("visual") or {}).get("type") == "object"]
     out["bg_prompts"] = {p["id"]: nichan.prompt_bg(p) for p in st.get("places") or []}
     for o in out["objects"]:
@@ -3306,6 +3307,7 @@ def _2ch_view(pid: str, data: dict) -> dict:
     out["options"] = {"genres": [[k, v] for k, v in nichan.GENRES.items()], "emos": list(nichan.EMOS),
                       "emo_vi": nichan.EMO_VI, "fx": [[k, v] for k, v in nichan.FX_VI.items()],
                       "voice_modes": [[k, v] for k, v in nichan.VOICE_MODES.items()],
+                      "arts": [[k, v["label"]] for k, v in nichan.ARTS.items()],
                       "kinds": [[k, v["label"]] for k, v in scene_art.KINDS.items()],
                       "stickers": nichan.stickers()}
     return out
@@ -3367,6 +3369,8 @@ def api_2ch_save(pid):
         st["genre"] = body["genre"]
     if body.get("voice_mode") in nichan.VOICE_MODES:
         st["voice_mode"] = body["voice_mode"]
+    if body.get("art") in nichan.ARTS:
+        st["art"] = body["art"]
     if "cta" in body:
         st["cta"] = bool(body["cta"])
     if "minutes" in body:
@@ -3562,6 +3566,17 @@ def api_2ch_prompts(pid, kind):
     name = {"chars": "nhan_vat", "bgs": "nen", "objects": "do_vat"}[kind] + (f"_{cid}" if cid else "_tat_ca")
     return send_file(io.BytesIO(text.encode("utf-8")), mimetype="text/plain; charset=utf-8", as_attachment=True,
                      download_name=f"cau_lenh_2ch_{name}.txt")
+
+
+@app.get("/api/2ch/style_sample.png")
+def api_2ch_style_sample():
+    """Ảnh mẫu nét vẽ (5 hình có sẵn) — gửi kèm khi vẽ ảnh đầu tiên của nhân vật."""
+    import io
+    from core import nichan
+    buf = io.BytesIO()
+    nichan.style_sample().save(buf, "PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png", as_attachment=True, download_name="mau_net_ve_2ch.png")
 
 
 @app.get("/api/2ch/stickers")

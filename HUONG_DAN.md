@@ -1197,6 +1197,11 @@ liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm
    cảnh** (chưa có ảnh thì giữ hình cảnh trước). Cảnh nào cũng tải được ảnh riêng. Bấm ảnh
    nhỏ để xem lớn. Sửa xong bấm **Lưu các cảnh**.
 6. **Dựng video**: đọc giọng tiếng Nhật rồi dựng video 1080×1920.
+8. **Phong cách ảnh nhân vật** (mục 2): mặc định **Minh hoạ phẳng dễ thương** — giống 5 hình
+   có sẵn (đầu tròn, mắt chấm, má hồng, viền màu mềm có vân bút chì, màu phẳng không đổ
+   bóng). Hoặc chọn **Chibi anime** như video mẫu 昭和. Bấm **Tải ảnh mẫu nét vẽ** (5 hình có
+   sẵn ghép lại): khi vẽ ảnh **bình thường** của mỗi nhân vật, gửi kèm ảnh mẫu này rồi dán câu
+   lệnh để AI vẽ đúng nét; các nét mặt sau gửi kèm ảnh bình thường của chính nhân vật đó.
 7. **Tải tất cả câu lệnh một lần** (như tab Webtoon): mục Nhân vật (tất cả nhân vật, hoặc
    từng nhân vật), mục Địa điểm (ảnh nền) và mục Các cảnh (ảnh đồ vật) đều có nút **Tải file
    câu lệnh** — mỗi dòng một câu lệnh, chỉ những ảnh còn thiếu, đúng thứ tự các ô — để dán

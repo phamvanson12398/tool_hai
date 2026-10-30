@@ -102,7 +102,7 @@
   function collectHead() {
     return {
       brief: $("nc-brief").value, genre: $("nc-genre").value, minutes: parseFloat($("nc-minutes").value) || 3,
-      voice_mode: $("nc-voicemode").value, cta: $("nc-cta").value === "1",
+      voice_mode: $("nc-voicemode").value, cta: $("nc-cta").value === "1", art: $("nc-art").value,
       title1: $("nc-t1").value.trim(), title2: $("nc-t2").value.trim(),
       narrator: { voice: ((st().narrator || {}).voice) || "", instruct: $("nc-narr").value.trim() }
     };
@@ -143,6 +143,7 @@
     var s = st(), o = opts();
     fillSelect("nc-genre", o.genres, s.genre || "kando");
     fillSelect("nc-voicemode", o.voice_modes, s.voice_mode || "cast");
+    fillSelect("nc-art", o.arts, s.art || "flat");
     $("nc-brief").value = s.brief || "";
     $("nc-minutes").value = s.minutes || 3;
     $("nc-cta").value = s.cta === false ? "0" : "1";
@@ -591,6 +592,11 @@
     $("nc-render").addEventListener("click", renderVideo);
     $("nc-add").addEventListener("click", addScene);
     $("nc-k-add").addEventListener("click", addSticker);
+    $("nc-art").addEventListener("change", function () {
+      if (!N.id) return;
+      save(true).then(function () { toast("ok", "Đã đổi phong cách", "Câu lệnh vẽ nhân vật và đồ vật đã đổi theo phong cách mới."); });
+    });
+    fillSelect("nc-art", [["flat", "Minh hoạ phẳng dễ thương (giống 5 hình có sẵn)"], ["chibi", "Chibi anime (như video mẫu 昭和)"]], "flat");
     // lựa chọn có sẵn cả khi chưa mở video nào
     fillSelect("nc-genre", [["kando", "Cảm động 感動"], ["showa", "Chuyện thời Showa 昭和"], ["sukatto", "Trả đũa đã đời スカッと"],
       ["giji", "Nhà chồng 義実家"], ["shokuba", "Công sở 職場"], ["kinjo", "Hàng xóm ご近所"], ["gakko", "Học đường 学校"],
