@@ -230,7 +230,7 @@
       row.appendChild(promptBar("chars", c.id, picMiss(c.id), "của " + (c.name || c.id)));
       var fr = el("div", "field-row");
       [["name", "Tên", c.name], ["desc", "Ngoại hình (tiếng Anh, dùng cho câu lệnh vẽ)", c.desc_en],
-       ["voice", "Mô tả giọng (khi không chọn giọng có sẵn)", (c.voice || {}).instruct || ""]].forEach(function (f) {
+       ["voice", "Mô tả giọng (tool tự điền, sửa được)", (c.voice || {}).instruct || ""]].forEach(function (f) {
         var fd = el("div", "field");
         fd.appendChild(el("label", null, f[1]));
         var inp = document.createElement("input");

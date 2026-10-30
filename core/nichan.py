@@ -225,9 +225,11 @@ def clean_story(st: dict) -> dict:
         if cid in {x["id"] for x in chars}:
             continue
         kit = doodle.clean_kit(dict(c.get("kit") or {}, species="human"))
+        v = c.get("voice")
+        v = {"instruct": v} if isinstance(v, str) else (v if isinstance(v, dict) else {})
         chars.append({"id": cid, "name": str(c.get("name") or cid)[:40], "kit": kit,
                       "desc_en": str(c.get("desc_en") or "").strip()[:400],
-                      "voice": c.get("voice") if isinstance(c.get("voice"), dict) else {}})
+                      "voice": {"voice": str(v.get("voice") or ""), "instruct": str(v.get("instruct") or "").strip()}})
     st["characters"] = chars[:8]
     from . import scene_art
     pl = []
@@ -246,6 +248,12 @@ def clean_story(st: dict) -> dict:
     k_ok = {k["id"] for k in stickers()}
     st["scenes"] = [clean_scene(s, ids, places, k_ok, k) for k, s in enumerate(st.get("scenes") or [])
                     if isinstance(s, dict) and str(s.get("text") or "").strip()][:400]
+    narr = st.get("narrator") or {}
+    if not narr.get("voice") and not (narr.get("instruct") or "").strip():
+        st["narrator"] = dict(narrator_default(st), auto=True)      # tool tự mô tả (chị sửa được)
+    n_ins = "" if st["narrator"].get("voice") else st["narrator"].get("instruct") or ""
+    auto_voices(st["characters"], [", ".join(_voice_mod().parse_instruct(n_ins))]
+                if n_ins else [])
     seen = set()
     for k, s in enumerate(st["scenes"]):                  # id cảnh không trùng
         if s["id"] in seen:
@@ -370,7 +378,10 @@ def write(st: dict, progress=None) -> dict:
         raise RuntimeError("AI không viết được truyện.")
     st["title1"] = (st.get("title1") or "").strip() or str(data.get("title1") or "")[:20]
     st["title2"] = (st.get("title2") or "").strip() or str(data.get("title2") or "")[:20]
-    keep_voice = {c["id"]: c.get("voice") for c in st.get("characters") or []}
+    keep_voice = {c["id"]: c.get("voice") for c in st.get("characters") or []
+                  if (c.get("voice") or {}).get("voice")}           # giữ giọng Thư viện chị đã chọn
+    if (st.get("narrator") or {}).get("auto"):
+        st["narrator"] = {}                               # truyện mới: tool mô tả lại giọng người kể
     st["characters"] = data.get("characters") or []
     st["places"] = data.get("places") or []
     st["scenes"] = data.get("scenes") or []
@@ -388,6 +399,38 @@ def speak_text(text: str) -> str:
     return re.sub(r"\s+", "", text.replace("「", "").replace("」", "").replace("\n", ""))
 
 
+def _voice_mod():
+    from . import voice
+    return voice
+
+
+PITCHES = ["very low pitch", "low pitch", "moderate pitch", "high pitch", "very high pitch"]
+
+
+def auto_voices(chars: list, reserved: list | None = None) -> None:
+    """Nhân vật chưa có giọng (không chọn giọng Thư viện, không mô tả): tool tự mô tả giọng theo
+    tuổi, giới (chỉ dùng từ khoá bộ đọc giọng hiểu); hai người trùng mô tả thì đổi cao độ cho khác."""
+    from . import story, voice
+    used = list(reserved or [])                           # giọng người kể: nhân vật không trùng
+    for c in chars:
+        v = c.setdefault("voice", {})
+        if v.get("voice"):
+            continue
+        parts = voice.parse_instruct(v.get("instruct") or "")
+        if not parts:
+            parts = story.default_voice(c.get("kit")).split(", ")
+        pitch = next((p for p in parts if p in PITCHES), "moderate pitch")
+        base = [p for p in parts if p not in PITCHES]
+        i = PITCHES.index(pitch)
+        for step in (0, 1, -1, 2, -2):                    # trùng người trước thì nhích cao độ
+            j = max(0, min(len(PITCHES) - 1, i + step))
+            cand = ", ".join(base + [PITCHES[j]])
+            if cand not in used:
+                break
+        used.append(cand)
+        v["instruct"] = cand
+
+
 def narrator_default(st: dict) -> dict:
     """Giọng người kể mặc định như video mẫu: kể ngôi thứ nhất "俺 / 僕" thì nam trầm ấm; còn lại
     theo giới của nhân vật chính (nhân vật đầu tiên)."""
@@ -395,8 +438,8 @@ def narrator_default(st: dict) -> dict:
     chars = st.get("characters") or []
     male = bool(re.search("俺|僕|オレ", text)) or not chars or (chars[0].get("kit") or {}).get("sex") != "female"
     if male:
-        return {"instruct": "male, middle-aged, low pitch, calm warm storytelling voice"}
-    return {"instruct": "female, middle-aged, moderate pitch, calm warm storytelling voice"}
+        return {"instruct": "male, middle-aged, low pitch"}
+    return {"instruct": "female, middle-aged, moderate pitch"}
 
 
 def narrate(st: dict, pdir: Path, progress=None) -> dict:
@@ -412,8 +455,11 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict:
     if progress:
         progress(0.0, "chọn giọng cho người kể và nhân vật")
     narr = dict(st.get("narrator") or {})
+    narr.pop("auto", None)
     if not narr.get("voice") and not (narr.get("instruct") or "").strip():
         narr = narrator_default(st)
+    if not narr.get("voice"):                    # chữ thêm này bộ đọc bỏ qua; để không bị đổi sang giọng khác
+        narr["instruct"] = narr["instruct"] + ", storytelling voice"
     shim = {"characters": [{"id": c["id"], "voice": c.get("voice") or {}, "kit": c["kit"]} for c in chars.values()],
             "narrator": narr}
     speed = SPEEDS.get(st.get("speed") or "normal", SPEEDS["normal"])[1]

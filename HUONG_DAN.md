@@ -1207,6 +1207,12 @@ liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm
      trầm ấm kể chuyện** (truyện xưng 俺 / 僕, hoặc nhân vật chính là nam); nhân vật chính là nữ
      thì giọng nữ ấm. Muốn giọng riêng: chọn giọng có sẵn trong **Thư viện** (ô Giọng người kể)
      hoặc gõ mô tả. Từng nhân vật cũng chọn được giọng trong Thư viện (mục 2).
+   - **Mô tả giọng do tool tự điền**: sau khi AI viết truyện, ô mô tả giọng của người kể và
+     từng nhân vật được điền sẵn (giới, tuổi, cao độ — vd ông chủ "male, elderly, low pitch", người
+     mẹ "female, middle-aged, moderate pitch"), không ai trùng giọng ai, không trùng người kể.
+     Sửa được; xoá trống thì tool tự điền lại. Bộ đọc giọng chỉ hiểu các từ: male / female,
+     child / teenager / young adult / middle-aged / elderly, very low / low / moderate / high /
+     very high pitch, whisper.
    - **+ Tải giọng mẫu** (cạnh ô Giọng người kể và ở từng nhân vật): chọn file giọng (wav / mp3,
      5–15 giây, một người nói rõ, không nhạc), đặt tên — tool tự nghe chữ trong đoạn mẫu, lưu
      vào Thư viện giọng và chọn luôn. Lần sau chọn lại trong ô, dùng cho mọi video.

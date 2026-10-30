@@ -3389,8 +3389,14 @@ def api_2ch_save(pid):
         except (TypeError, ValueError):
             pass
     if isinstance(body.get("narrator"), dict):
-        st["narrator"] = {"voice": str(body["narrator"].get("voice") or ""),
-                          "instruct": str(body["narrator"].get("instruct") or "")}
+        old = st.get("narrator") or {}
+        new = {"voice": str(body["narrator"].get("voice") or ""),
+               "instruct": str(body["narrator"].get("instruct") or "").strip()}
+        if old.get("auto") and not new["voice"] and new["instruct"] == (old.get("instruct") or ""):
+            new["auto"] = True                            # vẫn là mô tả tool tự điền
+        st["narrator"] = new
+        if not new["voice"] and not new["instruct"] and st.get("scenes"):
+            st["narrator"] = dict(nichan.narrator_default(st), auto=True)
     for k in ("characters", "places", "scenes"):
         if isinstance(body.get(k), list):
             st[k] = body[k]

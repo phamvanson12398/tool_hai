@@ -26,6 +26,7 @@ Thể loại: {{genre}}
 Mỗi người: "id" ngắn không dấu, "name" tên tiếng Nhật, "desc_en" tả ngoại hình bằng TIẾNG ANH thật cụ thể và CỐ ĐỊNH (tuổi, giới, kiểu tóc, màu tóc, quần áo + màu, phụ kiện — vd "a 15-year-old Japanese boy with a buzz cut, navy zip-up work jacket, gray trousers") để AI vẽ cùng một người ở mọi nét mặt; "kit" chọn ĐÚNG giá trị (để tool tự vẽ khi chưa có ảnh):
 {{kit_cat}}
 Các nhân vật phải trông KHÁC NHAU rõ.
+Mỗi nhân vật thêm "voice": mô tả giọng cho bộ đọc giọng, CHỈ dùng các từ khoá sau, cách nhau dấu phẩy: giới (male | female), tuổi (child | teenager | young adult | middle-aged | elderly), cao độ (very low pitch | low pitch | moderate pitch | high pitch | very high pitch). Chọn hợp tính cách (ông chủ khó tính: "male, middle-aged, very low pitch"; người mẹ hiền: "female, middle-aged, moderate pitch"; cậu bé: "male, child, high pitch"); các nhân vật KHÔNG trùng mô tả.
 
 ### Địa điểm ("places", tối đa 6)
 "id", "name", "kind" (mẫu bối cảnh gần nhất: {{kinds}}), "time" (ngay | dem), "look": tả bối cảnh bằng TIẾNG ANH 1–2 câu cụ thể để AI vẽ nền (nơi chốn ở Nhật, thời đại, đồ vật, ánh sáng), không tả người.
@@ -34,7 +35,7 @@ Các nhân vật phải trông KHÁC NHAU rõ.
 
 Output JSON đúng dạng này, không có gì khác:
 {"title1":"昭和の男たち","title2":"何の汽車賃？",
- "characters":[{"id":"kiyoshi","name":"清","desc_en":"...","kit":{"age":"child","sex":"male","hair":"short","hair_color":"black","top":"jacket","top_color":"navy","bottom_color":"gray"}}],
+ "characters":[{"id":"kiyoshi","name":"清","desc_en":"...","voice":"male, teenager, moderate pitch","kit":{"age":"child","sex":"male","hair":"short","hair_color":"black","top":"jacket","top_color":"navy","bottom_color":"gray"}}],
  "places":[{"id":"kojo","name":"ネジ工場","kind":"cua_hang","time":"ngay","look":"a small 1960s Tokyo screw factory..."}],
  "scenes":[
   {"text":"15で上京した俺に\n鬼の社長は言った","who":"narr","visual":{"type":"char","cid":"kiyoshi","emo":"worried"},"place":"kojo","fx":"sweat"},
