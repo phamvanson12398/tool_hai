@@ -1197,3 +1197,8 @@ liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm
    cảnh** (chưa có ảnh thì giữ hình cảnh trước). Cảnh nào cũng tải được ảnh riêng. Bấm ảnh
    nhỏ để xem lớn. Sửa xong bấm **Lưu các cảnh**.
 6. **Dựng video**: đọc giọng tiếng Nhật rồi dựng video 1080×1920.
+7. **Tải tất cả câu lệnh một lần** (như tab Webtoon): mục Nhân vật (tất cả nhân vật, hoặc
+   từng nhân vật), mục Địa điểm (ảnh nền) và mục Các cảnh (ảnh đồ vật) đều có nút **Tải file
+   câu lệnh** — mỗi dòng một câu lệnh, chỉ những ảnh còn thiếu, đúng thứ tự các ô — để dán
+   vào công cụ tạo hàng loạt. Vẽ xong bấm **Tải nhiều ảnh cùng lúc**, chọn hết các ảnh: ảnh
+   tải về trước điền vào dòng trước.

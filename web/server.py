@@ -3297,6 +3297,8 @@ def _2ch_view(pid: str, data: dict) -> dict:
     out["objects"] = [{"sid": s["id"], "desc": s["visual"]["desc_en"], "prompt": nichan.prompt_object(s["visual"]["desc_en"])}
                       for s in st.get("scenes") or [] if (s.get("visual") or {}).get("type") == "object"]
     out["bg_prompts"] = {p["id"]: nichan.prompt_bg(p) for p in st.get("places") or []}
+    for o in out["objects"]:
+        o["have"] = any(x["id"] == o["sid"] and x.get("img") for x in st.get("scenes") or [])
     pdir = config.PROJECTS / pid / nichan.PICS_DIR / "bgs"
     out["bgs_have"] = [p["id"] for p in st.get("places") or [] if (pdir / f"{p['id']}.png").exists()]
     out["status"] = _status(pid)
@@ -3538,6 +3540,28 @@ def api_2ch_image(pid, kind, a, b=""):
         st.setdefault("bg_ver", {})[a] = ver
     _save_project(pid, data)
     return jsonify(_2ch_view(pid, data))
+
+
+@app.get("/api/2ch/<pid>/prompts/<kind>.txt")
+def api_2ch_prompts(pid, kind):
+    """File câu lệnh vẽ: mỗi dòng một câu lệnh, đúng thứ tự các ô (?cid= một nhân vật,
+    ?all=1 lấy cả ảnh đã có). kind: chars | bgs | objects."""
+    import io
+    from core import nichan
+    if kind not in ("chars", "bgs", "objects"):
+        return _err("Không có.", 404)
+    try:
+        _, st = _load_2ch(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    cid = request.args.get("cid") or None
+    rows = nichan.prompt_rows(st, config.PROJECTS / pid, kind, cid, missing=request.args.get("all") != "1")
+    if not rows:
+        return _err("Không còn ảnh nào cần vẽ.", 404)
+    text = "\n".join(" ".join(r["prompt"].split()) for r in rows) + "\n"
+    name = {"chars": "nhan_vat", "bgs": "nen", "objects": "do_vat"}[kind] + (f"_{cid}" if cid else "_tat_ca")
+    return send_file(io.BytesIO(text.encode("utf-8")), mimetype="text/plain; charset=utf-8", as_attachment=True,
+                     download_name=f"cau_lenh_2ch_{name}.txt")
 
 
 @app.get("/api/2ch/stickers")

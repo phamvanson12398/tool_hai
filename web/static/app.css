@@ -1031,3 +1031,4 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 .nc-scene .ctl select, .nc-scene .ctl input { width: auto; max-width: 170px; font-size: 13px; padding: 3px 6px; }
 .nc-scene .ctl textarea { flex: 1 1 100%; width: 100%; font-size: 15px; }
 .nc-scene .ctl .wide { flex: 1 1 100%; max-width: none; }
+.nc-bar { margin: 4px 0 8px; align-items: center; }

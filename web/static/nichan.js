@@ -159,13 +159,69 @@
 
   function emoVi(e) { return (opts().emo_vi || {})[e] || e; }
 
+  // thanh "Tải file câu lệnh" + "Tải nhiều ảnh cùng lúc" (giống tab Webtoon): miss = các ô còn
+  // thiếu đúng thứ tự dòng trong file, mỗi ô {url, label}
+  function promptBar(kind, cid, miss, what) {
+    var bar = el("div", "row-actions nc-bar");
+    if (!miss.length) { bar.appendChild(el("span", "muted", "✓ Đã đủ ảnh " + what)); return bar; }
+    var dl = el("a", "btn btn-sm", "Tải file câu lệnh " + what + " (" + miss.length + " dòng)");
+    dl.href = base() + "/prompts/" + kind + ".txt" + (cid ? "?cid=" + encodeURIComponent(cid) : "");
+    bar.appendChild(dl);
+    var many = document.createElement("input");
+    many.type = "file"; many.accept = "image/*"; many.multiple = true; many.hidden = true;
+    var mb = el("button", "btn btn-sm btn-primary", "Tải nhiều ảnh cùng lúc");
+    mb.type = "button";
+    mb.title = "Chọn cùng lúc các ảnh đã vẽ theo file câu lệnh: ảnh tải về trước điền vào dòng trước";
+    mb.addEventListener("click", function () { many.click(); });
+    many.addEventListener("change", function () { bulkUpload(miss, many.files, mb); });
+    bar.appendChild(many); bar.appendChild(mb);
+    bar.appendChild(el("span", "muted", "Mỗi dòng một câu lệnh (chỉ ảnh còn thiếu), đúng thứ tự các ô."));
+    return bar;
+  }
+
+  // nhiều ảnh một lần: xếp theo lúc tải về (cũ trước), cùng lúc thì theo tên -> điền lần lượt
+  function bulkUpload(miss, fileList, btn) {
+    var files = Array.prototype.slice.call(fileList || []);
+    if (!files.length) return;
+    files.sort(function (a, b) {
+      return (a.lastModified - b.lastModified) || a.name.localeCompare(b.name, undefined, { numeric: true });
+    });
+    if (files.length > miss.length) {
+      toast("warn", "Thừa ảnh", "Chọn " + files.length + " ảnh nhưng chỉ còn " + miss.length +
+        " ô trống — bỏ qua " + (files.length - miss.length) + " ảnh cuối.");
+    }
+    var n = Math.min(files.length, miss.length), k = 0, bad = 0;
+    btn.disabled = true;
+    function next() {
+      if (k >= n) {
+        btn.disabled = false;
+        open(N.id);
+        toast(bad ? "warn" : "ok", "Đã tải " + (n - bad) + "/" + n + " ảnh",
+          "Kiểm tra từng ô xem ảnh có đúng không; sai thì bấm 'Thay ảnh'.");
+        return;
+      }
+      btn.textContent = "Đang xử lý " + (k + 1) + "/" + n + "...";
+      upload(miss[k].url, files[k])
+        .catch(function (e) { bad += 1; toast("error", "Ảnh " + files[k].name + " lỗi", e.message); })
+        .then(function () { k += 1; next(); });
+    }
+    next();
+  }
+  function picMiss(cid) {
+    return ((N.data && N.data.pics_needed) || []).filter(function (n) { return !n.have && (!cid || n.cid === cid); })
+      .map(function (n) { return { url: base() + "/pic/" + encodeURIComponent(n.cid) + "/" + n.emo }; });
+  }
+
   function renderChars() {
     var box = $("nc-chars"), s = st(), need = (N.data && N.data.pics_needed) || [];
     box.innerHTML = "";
     if (!(s.characters || []).length) { box.appendChild(el("p", "muted", "Chưa có nhân vật — bấm 'AI viết truyện' ở mục 1.")); return; }
+    box.appendChild(promptBar("chars", null, picMiss(null), "— tất cả nhân vật"));
     (s.characters || []).forEach(function (c) {
       var row = el("div", "nc-char");
       row.setAttribute("data-raw", JSON.stringify(c));
+      row.appendChild(el("b", null, c.name || c.id));
+      row.appendChild(promptBar("chars", c.id, picMiss(c.id), "của " + (c.name || c.id)));
       var fr = el("div", "field-row");
       [["name", "Tên", c.name], ["desc", "Ngoại hình (tiếng Anh, dùng cho câu lệnh vẽ)", c.desc_en],
        ["voice", "Giọng (mô tả, tuỳ chọn)", (c.voice || {}).instruct || ""]].forEach(function (f) {
@@ -268,6 +324,8 @@
     var box = $("nc-places"), s = st(), d = N.data || {};
     box.innerHTML = "";
     if (!(s.places || []).length) { box.appendChild(el("p", "muted", "Chưa có địa điểm.")); return; }
+    box.appendChild(promptBar("bgs", null, (s.places || []).filter(function (p) { return (d.bgs_have || []).indexOf(p.id) < 0; })
+      .map(function (p) { return { url: base() + "/bg/" + encodeURIComponent(p.id) }; }), "nền"));
     (s.places || []).forEach(function (p) {
       var row = el("div", "nc-place");
       row.setAttribute("data-raw", JSON.stringify(p));
@@ -427,6 +485,11 @@
   function renderScenes() {
     var box = $("nc-scenes"), w = st();
     box.innerHTML = "";
+    var objs = (N.data && N.data.objects) || [];
+    if (objs.length) {
+      box.appendChild(promptBar("objects", null, objs.filter(function (o) { return !o.have; })
+        .map(function (o) { return { url: base() + "/scene/" + encodeURIComponent(o.sid) }; }), "đồ vật"));
+    }
     (w.scenes || []).forEach(function (s, i) { box.appendChild(sceneRow(s, i)); });
     if ((w.scenes || []).length) $("nc-big").src = thumb(Math.min(N.big || 0, w.scenes.length - 1));
   }

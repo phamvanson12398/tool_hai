@@ -269,6 +269,29 @@ def needed(st: dict) -> list[dict]:
     return out
 
 
+def prompt_rows(st: dict, pdir: Path | None, kind: str, cid: str | None = None, missing: bool = True) -> list[dict]:
+    """Câu lệnh vẽ theo đúng thứ tự các ô (để tải file câu lệnh / tải nhiều ảnh một lần).
+    kind: chars (ảnh nhân vật), bgs (ảnh nền), objects (ảnh đồ vật). [{key, label, prompt, have}]."""
+    rows = []
+    if kind == "chars":
+        names = {c["id"]: c.get("name") or c["id"] for c in st.get("characters") or []}
+        for n in needed(st):
+            if cid is None or n["cid"] == cid:
+                rows.append({"key": f"{n['cid']}/{n['emo']}", "label": f"{names.get(n['cid'])} — {EMO_VI.get(n['emo'])}",
+                             "prompt": n["prompt"], "have": n["have"]})
+    elif kind == "bgs":
+        for p in st.get("places") or []:
+            have = bool(pdir and (Path(pdir) / PICS_DIR / "bgs" / f"{p['id']}.png").exists())
+            rows.append({"key": p["id"], "label": p.get("name") or p["id"], "prompt": prompt_bg(p), "have": have})
+    elif kind == "objects":
+        for i, s in enumerate(st.get("scenes") or []):
+            v = s.get("visual") or {}
+            if v.get("type") == "object":
+                rows.append({"key": s["id"], "label": f"Cảnh {i + 1}: {v['desc_en'][:40]}",
+                             "prompt": prompt_object(v["desc_en"]), "have": bool(s.get("img"))})
+    return [r for r in rows if not (missing and r["have"])]
+
+
 # ---------------------------------------------------------------- AI viết
 
 def write(st: dict, progress=None) -> dict:
