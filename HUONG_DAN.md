@@ -1207,6 +1207,9 @@ liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm
      trầm ấm kể chuyện** (truyện xưng 俺 / 僕, hoặc nhân vật chính là nam); nhân vật chính là nữ
      thì giọng nữ ấm. Muốn giọng riêng: chọn giọng có sẵn trong **Thư viện** (ô Giọng người kể)
      hoặc gõ mô tả. Từng nhân vật cũng chọn được giọng trong Thư viện (mục 2).
+   - **+ Tải giọng mẫu** (cạnh ô Giọng người kể và ở từng nhân vật): chọn file giọng (wav / mp3,
+     5–15 giây, một người nói rõ, không nhạc), đặt tên — tool tự nghe chữ trong đoạn mẫu, lưu
+     vào Thư viện giọng và chọn luôn. Lần sau chọn lại trong ô, dùng cho mọi video.
    - **Nhịp đọc liền** như video mẫu: nghỉ giữa các câu khoảng 0,15 giây. Ô **Tốc độ đọc**:
      Bình thường / Hơi nhanh.
    - **Nhạc nền** (mặc định không có): bấm **+ Thêm nhạc** chọn file mp3 / wav / m4a / ogg

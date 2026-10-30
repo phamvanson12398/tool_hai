@@ -244,7 +244,19 @@
       var vl = sel(voiceList(opts()), (c.voice || {}).voice || "");
       vl.setAttribute("data-k", "vlib");
       vl.addEventListener("change", function () { save(true); });
-      fv.appendChild(vl);
+      var vr = el("div", "nc-voice-row");
+      vr.appendChild(vl);
+      var vu = el("button", "btn btn-sm", "+ Tải giọng mẫu");
+      vu.type = "button";
+      vu.addEventListener("click", function () {
+        uploadVoice(vu, function (name) {
+          if (!vl.querySelector('option[value="' + name.replace(/"/g, '\\"') + '"]')) vl.appendChild(new Option(name, name));
+          vl.value = name;
+          save(true);
+        });
+      });
+      vr.appendChild(vu);
+      fv.appendChild(vr);
       fr.appendChild(fv);
       row.appendChild(fr);
       var pics = el("div", "nc-pics");
@@ -390,6 +402,28 @@
   function voiceList(o) {
     return [["", "— Tự chọn theo mô tả —"]].concat(((o && o.voices) || []).map(function (v) { return [v, v]; }));
   }
+  // tải giọng mẫu: lưu vào Thư viện giọng (tool tự nghe chữ trong đoạn mẫu), xong gọi done(tên)
+  function uploadVoice(btn, done) {
+    picker("audio/*,.wav,.mp3,.m4a,.ogg,.flac", function (f) {
+      var name = (window.prompt("Tên giọng (lưu vào Thư viện):", f.name.replace(/\.[^.]+$/, "")) || "").trim();
+      if (!name) return;
+      var fd = new FormData();
+      fd.append("file", f); fd.append("name", name); fd.append("language", "ja");
+      btn.disabled = true; var old = btn.textContent; btn.textContent = "Đang xử lý…";
+      toast("ok", "Đang xử lý giọng mẫu…", "Tool nghe chữ trong đoạn mẫu, lần đầu mất vài chục giây.");
+      api("/api/library/voice", { body: fd }).then(function (r) {
+        toast("ok", "Đã lưu giọng “" + name + "”", (r.duration ? r.duration.toFixed(1) + " giây" : "") +
+          (r.text ? " · “" + r.text.slice(0, 50) + "”" : ""));
+        return api("/api/library").then(function (d) {
+          var names = (d.voices || []).map(function (v) { return v.name; }).filter(Boolean);
+          if (N.data) N.data.options.voices = names;
+          done(name, names);
+        });
+      }).catch(function (e) { toast("error", "Không lưu được giọng mẫu", e.message); })
+        .then(function () { btn.disabled = false; btn.textContent = old; });
+    });
+  }
+
   function fillMusic(items, value) {
     fillSelect("nc-bgm", [["", "— Không nhạc nền —"]].concat((items || []).map(function (m) { return [m.name, m.name]; })), value);
     $("nc-bgm").value = value || "";
@@ -647,6 +681,13 @@
     $("nc-add").addEventListener("click", addScene);
     $("nc-k-add").addEventListener("click", addSticker);
     $("nc-bgm-play").addEventListener("click", playMusic);
+    $("nc-narr-up").addEventListener("click", function () {
+      uploadVoice($("nc-narr-up"), function (name, names) {
+        fillSelect("nc-narr-voice", voiceList({ voices: names }), name);
+        $("nc-narr-voice").value = name;
+        if (N.id) save(true);
+      });
+    });
     $("nc-bgm-add").addEventListener("click", addMusic);
     $("nc-bgm-del").addEventListener("click", delMusic);
     ["nc-speed", "nc-bgm", "nc-bgm-level", "nc-narr-voice"].forEach(function (id) {
