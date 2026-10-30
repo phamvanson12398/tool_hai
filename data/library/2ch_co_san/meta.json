@@ -1,0 +1,7 @@
+[
+ {"id": "diu_ba_cu", "name": "Cô gái dìu bà cụ chống gậy", "desc": "a smiling young woman (caregiver / granddaughter) gently helping a happy elderly woman with a cane walk", "people": 2, "mood": "happy"},
+ {"id": "bo_day_con_hoc", "name": "Bố đeo kính dạy con trai học bài", "desc": "a smiling father with glasses teaching his laughing son doing homework at a desk", "people": 2, "mood": "happy"},
+ {"id": "choi_bong_ro", "name": "Hai cậu bé tranh bóng rổ", "desc": "two boys competing hard in a basketball game, determined faces", "people": 2, "mood": "determined"},
+ {"id": "gianh_do_choi", "name": "Hai em bé giành ô tô đồ chơi", "desc": "two little boys fighting over a red toy car, one angry, one upset and pleading", "people": 2, "mood": "angry"},
+ {"id": "canh_sat_bat", "name": "Cảnh sát còng tay bắt người", "desc": "a stern police officer arresting a sad young man in handcuffs", "people": 2, "mood": "sad"}
+]

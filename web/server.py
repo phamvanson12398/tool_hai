@@ -3277,6 +3277,312 @@ def api_webtoon_render(pid):
     return jsonify({"ok": True})
 
 
+# ------------------------------------------------------------ truyện 2ch
+# Tab riêng: video dọc 9:16 kiểu Shorts Nhật (2ch / 昭和 / 感動): mỗi câu một hình
+# nhân vật kiểu sticker, chữ to, giọng tiếng Nhật.
+
+def _load_2ch(pid: str) -> tuple[dict, dict]:
+    from core import nichan
+    data = _load_project(pid)
+    if data.get("mode") != "2ch":
+        raise FileNotFoundError(f"'{pid}' không phải truyện 2ch")
+    return data, data.setdefault("nichan", nichan.default_story())
+
+
+def _2ch_view(pid: str, data: dict) -> dict:
+    from core import nichan, scene_art
+    st = data.get("nichan") or {}
+    out = dict(data)
+    out["pics_needed"] = nichan.needed(st)
+    out["objects"] = [{"sid": s["id"], "desc": s["visual"]["desc_en"], "prompt": nichan.prompt_object(s["visual"]["desc_en"])}
+                      for s in st.get("scenes") or [] if (s.get("visual") or {}).get("type") == "object"]
+    out["bg_prompts"] = {p["id"]: nichan.prompt_bg(p) for p in st.get("places") or []}
+    pdir = config.PROJECTS / pid / nichan.PICS_DIR / "bgs"
+    out["bgs_have"] = [p["id"] for p in st.get("places") or [] if (pdir / f"{p['id']}.png").exists()]
+    out["status"] = _status(pid)
+    out["video_ready"] = (config.PROJECTS / pid / "out" / "video.mp4").exists()
+    out["options"] = {"genres": [[k, v] for k, v in nichan.GENRES.items()], "emos": list(nichan.EMOS),
+                      "emo_vi": nichan.EMO_VI, "fx": [[k, v] for k, v in nichan.FX_VI.items()],
+                      "voice_modes": [[k, v] for k, v in nichan.VOICE_MODES.items()],
+                      "kinds": [[k, v["label"]] for k, v in scene_art.KINDS.items()],
+                      "stickers": nichan.stickers()}
+    return out
+
+
+@app.get("/api/2ch/list")
+def api_2ch_list():
+    out = []
+    for p in sorted(config.PROJECTS.glob("*/project.json"), reverse=True):
+        try:
+            d = json.loads(p.read_text(encoding="utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        if d.get("mode") == "2ch":
+            n = d.get("nichan") or {}
+            out.append({"id": d["id"], "title": " ".join(x for x in (n.get("title1"), n.get("title2")) if x)
+                        or "(chưa đặt tên)", "created_at": d.get("created_at")})
+    return jsonify({"items": out[:60]})
+
+
+@app.post("/api/2ch")
+def api_2ch_new():
+    from core import nichan
+    body = request.get_json(silent=True) or {}
+    pid = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
+    st = nichan.default_story()
+    st["brief"] = str(body.get("brief") or "")
+    if body.get("genre") in nichan.GENRES:
+        st["genre"] = body["genre"]
+    data = {"id": pid, "mode": "2ch", "title": "", "language": "ja", "format": "9:16", "nichan": st,
+            "assets": {"characters": [], "background": None, "voices": {}},
+            "state": "draft", "created_at": datetime.now().isoformat(timespec="seconds")}
+    config.project_dir(pid)
+    _save_project(pid, data)
+    return jsonify(_2ch_view(pid, data))
+
+
+@app.get("/api/2ch/<pid>")
+def api_2ch_get(pid):
+    try:
+        data, _ = _load_2ch(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    return jsonify(_2ch_view(pid, data))
+
+
+@app.post("/api/2ch/<pid>/save")
+def api_2ch_save(pid):
+    from core import nichan
+    try:
+        data, st = _load_2ch(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    body = request.get_json(silent=True) or {}
+    for k in ("brief", "title1", "title2"):
+        if k in body:
+            st[k] = str(body[k] or "")[:2000 if k == "brief" else 30]
+    if body.get("genre") in nichan.GENRES:
+        st["genre"] = body["genre"]
+    if body.get("voice_mode") in nichan.VOICE_MODES:
+        st["voice_mode"] = body["voice_mode"]
+    if "cta" in body:
+        st["cta"] = bool(body["cta"])
+    if "minutes" in body:
+        try:
+            st["minutes"] = max(0.5, min(8.0, float(body["minutes"])))
+        except (TypeError, ValueError):
+            pass
+    if isinstance(body.get("narrator"), dict):
+        st["narrator"] = {"voice": str(body["narrator"].get("voice") or ""),
+                          "instruct": str(body["narrator"].get("instruct") or "")}
+    for k in ("characters", "places", "scenes"):
+        if isinstance(body.get(k), list):
+            st[k] = body[k]
+    if any(k in body for k in ("characters", "places", "scenes")):
+        imgs = {s.get("id"): s.get("img") for s in st.get("scenes") or [] if isinstance(s, dict)}
+        nichan.clean_story(st)
+        pics = st.get("pics") or {}
+        st["pics"] = {cid: v for cid, v in pics.items() if cid in {c["id"] for c in st["characters"]}}
+        for s in st["scenes"]:
+            if imgs.get(s["id"]):
+                s["img"] = imgs[s["id"]]
+    data["title"] = " ".join(x for x in (st.get("title1"), st.get("title2")) if x)
+    _save_project(pid, data)
+    return jsonify(_2ch_view(pid, data))
+
+
+@app.post("/api/2ch/<pid>/write")
+def api_2ch_write(pid):
+    from core import nichan
+    try:
+        data, st = _load_2ch(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    if _status(pid).get("state") in ("writing", "rendering"):
+        return jsonify({"ok": True, "already": True})
+    with JOBS_LOCK:
+        JOBS[pid] = {"state": "writing", "progress": 0.0, "message": "bắt đầu", "log": []}
+
+    def work():
+        try:
+            nichan.write(st, progress=lambda f, m: _set_status(pid, progress=round(float(f), 3), message=str(m)))
+            d2, _ = _load_2ch(pid)
+            st["pics"] = d2["nichan"].get("pics") or {}
+            d2["nichan"] = st
+            d2["title"] = " ".join(x for x in (st.get("title1"), st.get("title2")) if x)
+            _save_project(pid, d2)
+            _set_status(pid, state="written", progress=1.0, message="đã viết xong")
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            _set_status(pid, state="error", message=f"AI viết lỗi: {_short_err(e, 400)}")
+
+    threading.Thread(target=work, daemon=True).start()
+    return jsonify({"ok": True})
+
+
+@app.post("/api/2ch/<pid>/render")
+def api_2ch_render(pid):
+    from core import nichan
+    try:
+        data, st = _load_2ch(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    if not st.get("scenes"):
+        return _err("Chưa có cảnh nào — bấm 'AI viết truyện' trước.")
+    if _status(pid).get("state") in ("writing", "rendering"):
+        return jsonify({"ok": True, "already": True})
+    with JOBS_LOCK:
+        JOBS[pid] = {"state": "rendering", "progress": 0.0, "message": "bắt đầu", "log": []}
+
+    def work():
+        stage = "đọc giọng (OmniVoice)"
+        try:
+            pdir = config.project_dir(pid)
+            audio = nichan.narrate(st, pdir, progress=lambda f, m: _set_status(
+                pid, progress=round(0.4 * float(f), 3), message=str(m)))
+            stage = "dựng hình"
+            mp4 = nichan.render(st, pdir, audio, progress=lambda f, m: _set_status(
+                pid, progress=round(0.4 + 0.6 * float(f), 3), message=str(m)))
+            d2, _ = _load_2ch(pid)
+            d2["result"] = {"video": str(mp4)}
+            _save_project(pid, d2)
+            _set_status(pid, state="done", progress=1.0, message="xong")
+        except Exception as e:  # noqa: BLE001
+            traceback.print_exc()
+            _set_status(pid, state="error", message=f"Dựng video lỗi ở bước {stage}: {_short_err(e, 400)}")
+
+    threading.Thread(target=work, daemon=True).start()
+    return jsonify({"ok": True})
+
+
+@app.get("/api/2ch/<pid>/preview/<int:i>.png")
+def api_2ch_preview(pid, i):
+    import io
+    from core import nichan
+    try:
+        _, st = _load_2ch(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    im = nichan.preview(st, i, config.PROJECTS / pid)
+    buf = io.BytesIO()
+    im.save(buf, "PNG")
+    buf.seek(0)
+    return send_file(buf, mimetype="image/png", max_age=0)
+
+
+def _2ch_file(pid: str, kind: str, a: str, b: str = "") -> Path:
+    """kind: pic (a = nhân vật, b = nét mặt), scene (a = id cảnh), bg (a = địa điểm)."""
+    from core import nichan
+    for x in (a, b):
+        if x and not re.fullmatch(r"[A-Za-z0-9_]+", x):
+            raise ValueError("Tên không hợp lệ.")
+    base = config.PROJECTS / pid / nichan.PICS_DIR
+    if kind == "pic":
+        if b not in nichan.EMOS:
+            raise ValueError("Nét mặt không hợp lệ.")
+        return base / a / f"{b}.png"
+    return base / ("scenes" if kind == "scene" else "bgs") / f"{a}.png"
+
+
+@app.route("/api/2ch/<pid>/<kind>/<a>", methods=["GET", "POST", "DELETE"])
+@app.route("/api/2ch/<pid>/<kind>/<a>/<b>", methods=["GET", "POST", "DELETE"])
+def api_2ch_image(pid, kind, a, b=""):
+    """Ảnh nhân vật theo nét mặt (pic), ảnh riêng của cảnh (scene), ảnh nền địa điểm (bg)."""
+    from core import webtoon_pics as wpic
+    if kind not in ("pic", "scene", "bg"):
+        return _err("Không có.", 404)
+    try:
+        data, st = _load_2ch(pid)
+        dst = _2ch_file(pid, kind, a, b)
+    except (FileNotFoundError, ValueError) as e:
+        return _err(str(e), 404)
+    if request.method == "GET":
+        if not dst.exists():
+            return _err("Chưa có ảnh.", 404)
+        return send_file(str(dst), mimetype="image/png", max_age=86400 if request.args.get("v") else 0)
+    ver = uuid.uuid4().hex[:8]
+    if request.method == "DELETE":
+        dst.unlink(missing_ok=True)
+    else:
+        f = request.files.get("file")
+        if not f or not f.filename:
+            return _err("Chưa chọn ảnh.")
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        tmp = dst.with_suffix(".upload")
+        f.save(str(tmp))
+        try:
+            if kind == "bg":
+                from PIL import Image
+                Image.open(tmp).convert("RGB").save(dst)
+            else:
+                wpic._cutout(tmp).save(dst)               # tách nền xanh / trắng, cắt sát hình
+        except Exception as e:  # noqa: BLE001
+            return _err(f"Không đọc được ảnh: {_short_err(e, 200)}")
+        finally:
+            tmp.unlink(missing_ok=True)
+    have = dst.exists()
+    if kind == "pic":
+        pics = st.setdefault("pics", {}).setdefault(a, {})
+        if have:
+            pics[b] = {"v": ver}
+        else:
+            pics.pop(b, None)
+    elif kind == "scene":
+        for s in st.get("scenes") or []:
+            if s["id"] == a:
+                if have:
+                    s["img"] = ver
+                else:
+                    s.pop("img", None)
+    else:
+        st.setdefault("bg_ver", {})[a] = ver
+    _save_project(pid, data)
+    return jsonify(_2ch_view(pid, data))
+
+
+@app.get("/api/2ch/stickers")
+def api_2ch_stickers():
+    from core import nichan
+    return jsonify({"items": nichan.stickers()})
+
+
+@app.get("/api/2ch/stickers/<sid>.png")
+def api_2ch_sticker_img(sid):
+    from core import nichan
+    p = nichan.sticker_path(sid)
+    if not p:
+        return _err("Không có.", 404)
+    return send_file(str(p), mimetype="image/png", max_age=3600)
+
+
+@app.post("/api/2ch/stickers")
+def api_2ch_sticker_add():
+    from core import nichan
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return _err("Chưa chọn ảnh.")
+    tmp = config.DATA / "tmp_2ch_upload.img"
+    tmp.parent.mkdir(parents=True, exist_ok=True)
+    f.save(str(tmp))
+    try:
+        sid = nichan.add_sticker(tmp, request.form.get("name") or "", request.form.get("desc") or "")
+    except ValueError as e:
+        return _err(str(e))
+    except Exception as e:  # noqa: BLE001
+        return _err(f"Không đọc được ảnh: {_short_err(e, 200)}")
+    finally:
+        tmp.unlink(missing_ok=True)
+    return jsonify({"id": sid, "items": nichan.stickers()})
+
+
+@app.delete("/api/2ch/stickers/<sid>")
+def api_2ch_sticker_del(sid):
+    from core import nichan
+    if not nichan.remove_sticker(sid):
+        return _err("Chỉ xoá được hình chị tự thêm vào kho.")
+    return jsonify({"ok": True, "items": nichan.stickers()})
+
+
 def main() -> None:
     host = "127.0.0.1"
     port = 8766

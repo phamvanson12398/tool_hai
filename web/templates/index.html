@@ -19,6 +19,7 @@
       <button class="tab is-active" data-screen="new" type="button">Tập mới</button>
       <button class="tab" data-screen="story" type="button">Truyện kể</button>
       <button class="tab" data-screen="webtoon" type="button">Truyện webtoon</button>
+      <button class="tab" data-screen="nichan" type="button">2ch</button>
       <button class="tab" data-screen="charstyles" type="button">Kiểu nhân vật</button>
       <button class="tab" data-screen="library" type="button">Thư viện</button>
       <button class="tab" data-screen="settings" type="button">Cài đặt</button>
@@ -663,6 +664,87 @@
     </div>
   </section>
 
+  <section class="screen" id="screen-nichan">
+    <div class="screen-head">
+      <h1>2ch</h1>
+      <span class="muted">Video dọc 9:16 kiểu Shorts Nhật (2ch / 昭和 / 感動): mỗi câu một hình nhân vật, chữ to, giọng tiếng Nhật.</span>
+    </div>
+    <div class="wt-grid">
+      <div class="wt-main">
+        <section class="card">
+          <h2 class="card-title"><span class="step">1</span> Câu chuyện</h2>
+          <div class="field-row">
+            <div class="field"><label for="nc-open">Mở video đã làm</label><select id="nc-open"></select></div>
+            <div class="field" style="align-self:end"><button class="btn btn-sm" id="nc-new" type="button">+ Video mới</button>
+              <button class="btn btn-ghost btn-sm" id="nc-del" type="button">🗑 Xoá</button></div>
+          </div>
+          <div class="field">
+            <label for="nc-brief">Yêu cầu</label>
+            <textarea id="nc-brief" rows="3" placeholder="VD: Cậu bé 15 tuổi lên Tokyo làm ở xưởng, ông chủ khó tính giữ hết lương — cuối cùng mới biết ông để dành tiền đón mẹ cậu lên thăm"></textarea>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="nc-genre">Thể loại</label><select id="nc-genre"></select></div>
+            <div class="field"><label for="nc-minutes">Thời lượng (phút)</label><input type="number" id="nc-minutes" min="0.5" max="8" step="0.5" value="3"></div>
+            <div class="field"><label for="nc-voicemode">Giọng đọc</label><select id="nc-voicemode"></select></div>
+            <div class="field"><label for="nc-cta">Lời mời chia sẻ cuối video</label>
+              <select id="nc-cta"><option value="1">Có (viết khéo theo từng truyện)</option><option value="0">Không</option></select></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="nc-t1">Tiêu đề dòng 1</label><input type="text" id="nc-t1" placeholder="昭和の男たち — để trống thì AI đặt"></div>
+            <div class="field"><label for="nc-t2">Tiêu đề dòng 2</label><input type="text" id="nc-t2" placeholder="何の汽車賃？"></div>
+            <div class="field"><label for="nc-narr">Giọng người kể (mô tả, tuỳ chọn)</label><input type="text" id="nc-narr" placeholder="VD: male, middle-aged, low pitch, calm storytelling voice"></div>
+          </div>
+          <div class="row-actions">
+            <button class="btn" id="nc-save" type="button">Lưu</button>
+            <button class="btn btn-primary" id="nc-write" type="button">AI viết truyện &amp; chia cảnh</button>
+            <span class="muted" id="nc-state"></span>
+          </div>
+        </section>
+        <section class="card">
+          <h2 class="card-title"><span class="step">2</span> Nhân vật &amp; ảnh vẽ bằng AI</h2>
+          <p class="hint">Mỗi nhân vật cần ảnh theo từng nét mặt dùng trong truyện. Bấm <b>Chép câu lệnh vẽ</b>, dán vào Gemini / ChatGPT (ảnh thứ hai trở đi gửi kèm ảnh "bình thường" để giữ đúng mặt), tải ảnh về rồi tải lên. Chưa có ảnh thì tool tự vẽ nhân vật kiểu Mochi tròn mũm mĩm.</p>
+          <div id="nc-chars"></div>
+        </section>
+        <section class="card">
+          <h2 class="card-title"><span class="step">2b</span> Kho nhân vật có sẵn</h2>
+          <p class="hint">Hình nhân vật dùng ngay (AI viết truyện tự chọn khi đúng nội dung câu). Thêm hình vào kho: chọn ảnh (nền trắng hoặc nền xanh, tool tự xoá nền), đặt tên, tả hình để AI biết khi nào dùng.</p>
+          <div id="nc-stickers" class="nc-stickers"></div>
+          <div class="field-row">
+            <div class="field"><label for="nc-k-name">Tên hình</label><input type="text" id="nc-k-name" placeholder="VD: Mẹ ôm con khóc"></div>
+            <div class="field"><label for="nc-k-desc">Tả hình (tiếng Anh hoặc Việt)</label><input type="text" id="nc-k-desc" placeholder="a mother hugging her crying son"></div>
+            <div class="field" style="align-self:end"><input type="file" id="nc-k-file" accept="image/*" hidden>
+              <button class="btn btn-sm" id="nc-k-add" type="button">+ Thêm hình vào kho</button></div>
+          </div>
+        </section>
+        <section class="card">
+          <h2 class="card-title"><span class="step">3</span> Địa điểm (nền)</h2>
+          <div id="nc-places"></div>
+        </section>
+        <section class="card">
+          <h2 class="card-title"><span class="step">4</span> Các cảnh</h2>
+          <p class="hint">Mỗi cảnh một câu (xuống dòng bằng Enter). Câu nói đặt trong 「」. Cảnh đồ vật: chép câu lệnh vẽ, tải ảnh lên cho cảnh đó (chưa có ảnh thì giữ hình cảnh trước).</p>
+          <div id="nc-scenes" class="wt-shots"></div>
+          <div class="row-actions"><button class="btn btn-sm" id="nc-add" type="button">+ Thêm cảnh</button>
+            <button class="btn btn-sm" id="nc-save2" type="button">Lưu các cảnh</button></div>
+        </section>
+      </div>
+      <aside class="wt-side">
+        <section class="card">
+          <h2 class="card-title"><span class="step">5</span> Dựng video</h2>
+          <img id="nc-big" class="nc-big" alt="Xem trước">
+          <div class="row-actions">
+            <button class="btn btn-primary" id="nc-render" type="button">Dựng video</button>
+          </div>
+          <div class="progress" id="nc-progress-wrap" hidden><div class="progress-bar" id="nc-progress"></div></div>
+          <p class="muted" id="nc-msg"></p>
+          <div id="nc-out" hidden>
+            <video id="nc-video" controls class="nc-video"></video>
+            <a class="btn btn-sm" id="nc-dl" download="video_2ch.mp4">Tải mp4</a>
+          </div>
+        </section>
+      </aside>
+    </div>
+  </section>
   <section class="screen" id="screen-charstyles">
     <div class="screen-head">
       <h1>Kiểu nhân vật</h1>
@@ -1053,5 +1135,6 @@
 <script src="/static/story.js"></script>
 <script src="/static/styles.js"></script>
 <script src="/static/webtoon.js"></script>
+<script src="/static/nichan.js"></script>
 </body>
 </html>

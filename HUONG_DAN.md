@@ -1167,3 +1167,33 @@ khung tranh đứng yên, tool chỉ **nhép miệng** theo giọng và **chớp
   trên CPU. Cảnh dùng ảnh AI nhân vật dựng nhanh hơn hẳn nhân vật tool tự vẽ.
 - Bối cảnh dùng các mẫu vẽ có sẵn của tool (phòng khách, phòng ngủ, văn phòng, đường phố,
   công viên...). Thứ chưa có (ga tàu, bệnh viện, xe hơi...) thì chọn mẫu gần nhất.
+
+## 14. 2ch (tab riêng): video dọc 9:16 kiểu Shorts Nhật
+
+Giống các video Shorts Nhật kiểu 2ch / 昭和 / 感動: thanh tiêu đề đen 2 dòng chữ cam phát
+sáng cố định ở trên, mỗi câu một hình (nhân vật viền trắng kiểu sticker trên nền mờ), chữ
+to viền trắng (lời kể màu xanh, câu nói trong 「」 màu theo người nói), giọng đọc tiếng Nhật
+liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm.
+
+1. **Câu chuyện**: gõ yêu cầu (tiếng Việt cũng được), chọn thể loại (感動, 昭和, スカッと,
+   義実家, 職場…), thời lượng, giọng đọc (mỗi nhân vật một giọng, hoặc một người kể đọc tất
+   cả), lời mời chia sẻ cuối video. Tiêu đề 2 dòng để trống thì AI đặt. Bấm **AI viết
+   truyện & chia cảnh**: AI viết tiếng Nhật theo khuôn hook → hoàn cảnh → chi tiết cài cắm →
+   cú lật, mỗi câu một cảnh, tự chọn hình cho từng câu.
+2. **Nhân vật & ảnh vẽ bằng AI**: mỗi nhân vật liệt kê các nét mặt truyện dùng. Bấm
+   **Chép câu lệnh vẽ** → dán vào Gemini / ChatGPT (vẽ ảnh "bình thường" trước; các nét mặt
+   sau gửi kèm ảnh đó để giữ đúng mặt) → **Tải ảnh lên** (tool tự xoá nền xanh / trắng).
+   Nét mặt nào chưa có ảnh thì dùng ảnh khác của nhân vật đó; chưa có ảnh nào thì tool tự
+   vẽ nhân vật kiểu Mochi tròn mũm mĩm đúng nét mặt.
+3. **Kho nhân vật có sẵn**: 5 hình đi kèm tool (dìu bà cụ, bố dạy con học, chơi bóng rổ,
+   giành đồ chơi, cảnh sát bắt người). Thêm hình vào kho: đặt tên, tả hình, bấm **+ Thêm
+   hình vào kho** rồi chọn ảnh. AI viết truyện tự dùng hình trong kho khi đúng nội dung câu.
+   Hình chị thêm lưu ở data/library/2ch_kho/.
+4. **Địa điểm**: nền tool tự vẽ (làm mờ). Muốn nền đẹp: **Chép câu lệnh nền** (ảnh dọc
+   9:16) → vẽ bằng AI → **Tải ảnh nền**.
+5. **Các cảnh**: sửa câu (Enter để xuống dòng), người nói, hình (nhân vật / hai người / hình
+   trong kho / đồ vật), nét mặt, địa điểm, hiệu ứng (giọt mồ hôi, nổi gân, rung hình, nước
+   mắt, suy nghĩ, zzz). Cảnh đồ vật: **Chép câu lệnh vẽ đồ vật** rồi **Tải ảnh riêng cho
+   cảnh** (chưa có ảnh thì giữ hình cảnh trước). Cảnh nào cũng tải được ảnh riêng. Bấm ảnh
+   nhỏ để xem lớn. Sửa xong bấm **Lưu các cảnh**.
+6. **Dựng video**: đọc giọng tiếng Nhật rồi dựng video 1080×1920.
