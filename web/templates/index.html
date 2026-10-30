@@ -737,16 +737,17 @@
       <aside class="wt-side">
         <section class="card">
           <h2 class="card-title"><span class="step">5</span> Dựng video</h2>
-          <img id="nc-big" class="nc-big" alt="Xem trước">
+          <div id="nc-out" hidden>
+            <video id="nc-video" controls class="nc-video"></video>
+            <div class="row-actions"><a class="btn btn-sm" id="nc-dl" download="video_2ch.mp4">Tải mp4</a>
+              <span class="muted">Video đã dựng — ảnh dưới là xem trước từng cảnh</span></div>
+          </div>
           <div class="row-actions">
             <button class="btn btn-primary" id="nc-render" type="button">Dựng video</button>
           </div>
           <div class="progress" id="nc-progress-wrap" hidden><div class="progress-bar" id="nc-progress"></div></div>
           <p class="muted" id="nc-msg"></p>
-          <div id="nc-out" hidden>
-            <video id="nc-video" controls class="nc-video"></video>
-            <a class="btn btn-sm" id="nc-dl" download="video_2ch.mp4">Tải mp4</a>
-          </div>
+          <img id="nc-big" class="nc-big" alt="Xem trước">
         </section>
       </aside>
     </div>

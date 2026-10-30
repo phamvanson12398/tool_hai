@@ -588,6 +588,7 @@ class Renderer:
         self._img: dict = {}
         self._cap: dict = {}
         self._vis: dict = {}
+        self._head: dict = {}
 
     # --- ảnh
     def _file(self, *parts) -> Path | None:
@@ -672,6 +673,37 @@ class Renderer:
             self._cap[s["id"]] = np.asarray(caption(s["text"], col))
         return self._cap[s["id"]]
 
+    def head_of(self, im: Image.Image) -> tuple[float, float, float]:
+        """Đầu trong ảnh (toạ độ ảnh): (x giữa, y tâm đầu, bán kính), đo từ viền hình: đỉnh hình,
+        bề ngang lớn nhất ở phần trên."""
+        key = id(im)
+        if key not in self._head:
+            a = np.asarray(im.getchannel("A")) > 40
+            rows = np.where(a.any(axis=1))[0]
+            if not len(rows):
+                self._head[key] = (im.width / 2, im.height * 0.25, im.width * 0.2)
+            else:
+                top = rows[0]
+                xt = np.where(a[top])[0]
+                x0 = int((xt[0] + xt[-1]) / 2)
+                best = (0, x0, x0)
+                for yy in range(top, min(a.shape[0], top + int(im.height * 0.4))):
+                    if not a[yy, x0]:
+                        continue
+                    lo = x0                                   # đoạn liền quanh giữa đầu (bỏ tay giơ riêng ra)
+                    while lo > 0 and a[yy, lo - 1]:
+                        lo -= 1
+                    hi = x0
+                    while hi < a.shape[1] - 1 and a[yy, hi + 1]:
+                        hi += 1
+                    if hi - lo > best[0] * 1.35 and best[0] and yy - top > (best[0] or 1) * 0.9:
+                        break                                 # tới vai / tay: bề ngang vọt lên
+                    if hi - lo > best[0]:
+                        best = (hi - lo, lo, hi)
+                r = min(best[0] / 2 * 0.92, im.width * 0.42, im.height * 0.3) or im.width * 0.2
+                self._head[key] = (float((best[1] + best[2]) / 2), float(top + r * 0.98), float(r))
+        return self._head[key]
+
     # --- một khung
     def frame(self, row: dict, t: float) -> np.ndarray:
         """Khung ở giây t của cảnh (gọi visual(cảnh, hình cảnh trước) trước khi vào cảnh)."""
@@ -702,9 +734,10 @@ class Renderer:
             if s.get("fx") and len(vis) == 1:
                 act = {"sweat": "tremble", "anger": "angry", "shock": "hands_up", "cry": "cry",
                        "think": "think", "sleep": "sleep"}.get(s["fx"])
-                if act:
-                    r = nw * 0.22
-                    film_rig.marks(can, act, t, (cx + dx, max(TOP + r, y + nh * 0.2), r), 900, 1)
+                if act:                                     # dấu cảm xúc bám đúng đầu nhân vật
+                    hx, hy, hr = self.head_of(im)
+                    k = nw / im.width
+                    film_rig.marks(can, act, t, (x + hx * k, max(y, TOP - 40) + hy * k, hr * k), 900, 1)
         capa = self.cap(s)
         _blend(can, capa, 0, TOP + 60)
         return can
