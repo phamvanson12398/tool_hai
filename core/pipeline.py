@@ -46,6 +46,7 @@ ANCHOR_TEXT = {
     "vi": "Xin chào, hôm nay trời đẹp quá. Mình đi dạo một vòng rồi về ăn cơm nhé.",
     "ko": "안녕하세요, 오늘 날씨 정말 좋네요. 잠깐 산책하고 와서 밥 먹을까요?",
     "en": "Hi there, it's a really nice day today. Let's take a quick walk and then grab some lunch.",
+    "ja": "こんにちは、今日は本当にいい天気ですね。少し散歩してから、ご飯を食べに行きましょうか。",
 }
 
 

@@ -115,7 +115,7 @@ def synthesize(
     if err:
         return None, 0, err
 
-    lang_name = C.LANGUAGES.get(language, {}).get("voice_lang", "English")
+    lang_name = C.LANGUAGES.get(language, {}).get("voice_lang") or C.VOICE_LANG_EXTRA.get(language, "English")
     kwargs = {"language": lang_name}
     if speed:
         kwargs["speed"] = speed

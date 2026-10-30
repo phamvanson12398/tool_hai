@@ -83,6 +83,10 @@ LANGUAGES = {
 }
 
 
+# ngôn ngữ bộ đọc giọng hiểu thêm (dùng riêng ở tab 2ch, không hiện trong danh sách ngôn ngữ chung)
+VOICE_LANG_EXTRA = {"ja": "Japanese"}
+
+
 def lang_info(code: str) -> dict:
     """Thông tin một ngôn ngữ (mã lạ thì coi như tiếng Anh)."""
     return LANGUAGES.get(code, LANGUAGES["en"])

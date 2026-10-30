@@ -469,7 +469,8 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict:
         who = "narr" if one or s["who"] not in chars else s["who"]
         cfg, ref = got.get("nguoi_ke" if who == "narr" else f"nv_{who}") or ({"instruct": "female, young adult"}, {})
         text = speak_text(s["text"])
-        key = hashlib.md5(json.dumps([text, ref.get("ref"), cfg.get("instruct"), speed], ensure_ascii=False)
+        key = hashlib.md5(json.dumps([text, ref.get("ref"), ref.get("ref_text"), cfg.get("instruct"), speed, "ja2"],
+                                     ensure_ascii=False)
                           .encode("utf-8")).hexdigest()[:12]
         path = adir / f"{s['id']}_{key}.wav"
         if not path.exists():
