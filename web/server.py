@@ -3308,6 +3308,10 @@ def _2ch_view(pid: str, data: dict) -> dict:
                       "emo_vi": nichan.EMO_VI, "fx": [[k, v] for k, v in nichan.FX_VI.items()],
                       "voice_modes": [[k, v] for k, v in nichan.VOICE_MODES.items()],
                       "arts": [[k, v["label"]] for k, v in nichan.ARTS.items()],
+                      "speeds": [[k, v[0]] for k, v in nichan.SPEEDS.items()],
+                      "bgm_levels": [[k, v[0]] for k, v in nichan.BGM_LEVELS.items()],
+                      "music": nichan.music_list(),
+                      "voices": [v.get("name") for v in assets.list_voices() if v.get("name")],
                       "kinds": [[k, v["label"]] for k, v in scene_art.KINDS.items()],
                       "stickers": nichan.stickers()}
     return out
@@ -3371,6 +3375,12 @@ def api_2ch_save(pid):
         st["voice_mode"] = body["voice_mode"]
     if body.get("art") in nichan.ARTS:
         st["art"] = body["art"]
+    if body.get("speed") in nichan.SPEEDS:
+        st["speed"] = body["speed"]
+    if body.get("bgm_level") in nichan.BGM_LEVELS:
+        st["bgm_level"] = body["bgm_level"]
+    if "bgm" in body:
+        st["bgm"] = body["bgm"] if nichan.music_path(str(body["bgm"] or "")) else ""
     if "cta" in body:
         st["cta"] = bool(body["cta"])
     if "minutes" in body:
@@ -3566,6 +3576,48 @@ def api_2ch_prompts(pid, kind):
     name = {"chars": "nhan_vat", "bgs": "nen", "objects": "do_vat"}[kind] + (f"_{cid}" if cid else "_tat_ca")
     return send_file(io.BytesIO(text.encode("utf-8")), mimetype="text/plain; charset=utf-8", as_attachment=True,
                      download_name=f"cau_lenh_2ch_{name}.txt")
+
+
+@app.get("/api/2ch/music")
+def api_2ch_music():
+    from core import nichan
+    return jsonify({"items": nichan.music_list()})
+
+
+@app.get("/api/2ch/music/<name>")
+def api_2ch_music_play(name):
+    from core import nichan
+    p = nichan.music_path(name)
+    if not p:
+        return _err("Không có bài này.", 404)
+    return send_file(str(p), max_age=0)
+
+
+@app.post("/api/2ch/music")
+def api_2ch_music_add():
+    """Thêm bài nhạc nền vào thư viện nhạc (data/library/nhac_nen)."""
+    from core import nichan
+    f = request.files.get("file")
+    if not f or not f.filename:
+        return _err("Chưa chọn file nhạc.")
+    tmp = config.DATA / ("tmp_music" + Path(f.filename).suffix.lower())
+    f.save(str(tmp))
+    try:
+        name = nichan.save_music(tmp, f.filename)
+    except ValueError as e:
+        tmp.unlink(missing_ok=True)
+        return _err(str(e))
+    return jsonify({"name": name, "items": nichan.music_list()})
+
+
+@app.delete("/api/2ch/music/<name>")
+def api_2ch_music_del(name):
+    from core import nichan
+    p = nichan.music_path(name)
+    if not p:
+        return _err("Không có bài này.", 404)
+    p.unlink()
+    return jsonify({"ok": True, "items": nichan.music_list()})
 
 
 @app.get("/api/2ch/style_sample.png")

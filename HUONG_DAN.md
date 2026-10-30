@@ -1202,6 +1202,19 @@ liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm
    bóng). Hoặc chọn **Chibi anime** như video mẫu 昭和. Bấm **Tải ảnh mẫu nét vẽ** (5 hình có
    sẵn ghép lại): khi vẽ ảnh **bình thường** của mỗi nhân vật, gửi kèm ảnh mẫu này rồi dán câu
    lệnh để AI vẽ đúng nét; các nét mặt sau gửi kèm ảnh bình thường của chính nhân vật đó.
+9. **Giọng và nhạc nền giống video mẫu**:
+   - **Giọng người kể**: để trống thì tool tự chọn như video mẫu — giọng **nam trưởng thành,
+     trầm ấm kể chuyện** (truyện xưng 俺 / 僕, hoặc nhân vật chính là nam); nhân vật chính là nữ
+     thì giọng nữ ấm. Muốn giọng riêng: chọn giọng có sẵn trong **Thư viện** (ô Giọng người kể)
+     hoặc gõ mô tả. Từng nhân vật cũng chọn được giọng trong Thư viện (mục 2).
+   - **Nhịp đọc liền** như video mẫu: nghỉ giữa các câu khoảng 0,15 giây. Ô **Tốc độ đọc**:
+     Bình thường / Hơi nhanh.
+   - **Nhạc nền** (mặc định không có): bấm **+ Thêm nhạc** chọn file mp3 / wav / m4a / ogg
+     (nhạc chị có quyền dùng), chọn bài trong ô **Nhạc nền**, **▶ Nghe** để nghe thử, chọn
+     **Âm lượng nhạc**. Nhạc phát nhỏ dưới giọng, tự nhỏ đi khi có lời, vào / ra nhỏ dần, lặp
+     lại cho đủ dài. Nhạc lưu ở data/library/nhac_nen/, dùng cho mọi video.
+   - Không nên lấy giọng từ video của kênh khác để nhân bản — dùng bản thu của chị hoặc
+     giọng có bản quyền rồi tải vào Thư viện giọng.
 7. **Tải tất cả câu lệnh một lần** (như tab Webtoon): mục Nhân vật (tất cả nhân vật, hoặc
    từng nhân vật), mục Địa điểm (ảnh nền) và mục Các cảnh (ảnh đồ vật) đều có nút **Tải file
    câu lệnh** — mỗi dòng một câu lệnh, chỉ những ảnh còn thiếu, đúng thứ tự các ô — để dán

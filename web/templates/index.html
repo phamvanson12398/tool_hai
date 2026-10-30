@@ -692,7 +692,20 @@
           <div class="field-row">
             <div class="field"><label for="nc-t1">Tiêu đề dòng 1</label><input type="text" id="nc-t1" placeholder="昭和の男たち — để trống thì AI đặt"></div>
             <div class="field"><label for="nc-t2">Tiêu đề dòng 2</label><input type="text" id="nc-t2" placeholder="何の汽車賃？"></div>
-            <div class="field"><label for="nc-narr">Giọng người kể (mô tả, tuỳ chọn)</label><input type="text" id="nc-narr" placeholder="VD: male, middle-aged, low pitch, calm storytelling voice"></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="nc-narr-voice">Giọng người kể</label><select id="nc-narr-voice"></select></div>
+            <div class="field"><label for="nc-narr">Mô tả giọng người kể (khi không chọn giọng có sẵn)</label><input type="text" id="nc-narr" placeholder="Để trống: tự chọn giọng nam trầm ấm như video mẫu (truyện nhân vật chính là nữ thì giọng nữ)"></div>
+            <div class="field"><label for="nc-speed">Tốc độ đọc</label><select id="nc-speed"></select></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="nc-bgm">Nhạc nền</label><select id="nc-bgm"></select></div>
+            <div class="field"><label for="nc-bgm-level">Âm lượng nhạc</label><select id="nc-bgm-level"></select></div>
+            <div class="field" style="align-self:end">
+              <button class="btn btn-sm" id="nc-bgm-play" type="button">▶ Nghe</button>
+              <button class="btn btn-sm" id="nc-bgm-add" type="button">+ Thêm nhạc</button>
+              <button class="btn btn-ghost btn-sm" id="nc-bgm-del" type="button">Xoá bài</button>
+              <audio id="nc-bgm-audio" hidden></audio></div>
           </div>
           <div class="row-actions">
             <button class="btn" id="nc-save" type="button">Lưu</button>

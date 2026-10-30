@@ -104,7 +104,8 @@
       brief: $("nc-brief").value, genre: $("nc-genre").value, minutes: parseFloat($("nc-minutes").value) || 3,
       voice_mode: $("nc-voicemode").value, cta: $("nc-cta").value === "1", art: $("nc-art").value,
       title1: $("nc-t1").value.trim(), title2: $("nc-t2").value.trim(),
-      narrator: { voice: ((st().narrator || {}).voice) || "", instruct: $("nc-narr").value.trim() }
+      speed: $("nc-speed").value, bgm: $("nc-bgm").value, bgm_level: $("nc-bgm-level").value,
+      narrator: { voice: $("nc-narr-voice").value, instruct: $("nc-narr").value.trim() }
     };
   }
   function collectAll() {
@@ -114,7 +115,7 @@
       var c = JSON.parse(row.getAttribute("data-raw"));
       c.name = row.querySelector("[data-k=name]").value;
       c.desc_en = row.querySelector("[data-k=desc]").value;
-      c.voice = { voice: (c.voice || {}).voice || "", instruct: row.querySelector("[data-k=voice]").value };
+      c.voice = { voice: row.querySelector("[data-k=vlib]").value, instruct: row.querySelector("[data-k=voice]").value };
       return c;
     });
     b.places = Array.prototype.map.call(document.querySelectorAll("#nc-places .nc-place"), function (row) {
@@ -144,6 +145,10 @@
     fillSelect("nc-genre", o.genres, s.genre || "kando");
     fillSelect("nc-voicemode", o.voice_modes, s.voice_mode || "cast");
     fillSelect("nc-art", o.arts, s.art || "flat");
+    fillSelect("nc-speed", o.speeds, s.speed || "normal");
+    fillSelect("nc-bgm-level", o.bgm_levels, s.bgm_level || "soft");
+    fillMusic(o.music, s.bgm || "");
+    fillSelect("nc-narr-voice", voiceList(o), (s.narrator || {}).voice || "");
     $("nc-brief").value = s.brief || "";
     $("nc-minutes").value = s.minutes || 3;
     $("nc-cta").value = s.cta === false ? "0" : "1";
@@ -225,7 +230,7 @@
       row.appendChild(promptBar("chars", c.id, picMiss(c.id), "của " + (c.name || c.id)));
       var fr = el("div", "field-row");
       [["name", "Tên", c.name], ["desc", "Ngoại hình (tiếng Anh, dùng cho câu lệnh vẽ)", c.desc_en],
-       ["voice", "Giọng (mô tả, tuỳ chọn)", (c.voice || {}).instruct || ""]].forEach(function (f) {
+       ["voice", "Mô tả giọng (khi không chọn giọng có sẵn)", (c.voice || {}).instruct || ""]].forEach(function (f) {
         var fd = el("div", "field");
         fd.appendChild(el("label", null, f[1]));
         var inp = document.createElement("input");
@@ -234,6 +239,13 @@
         fd.appendChild(inp);
         fr.appendChild(fd);
       });
+      var fv = el("div", "field");
+      fv.appendChild(el("label", null, "Giọng có sẵn (Thư viện)"));
+      var vl = sel(voiceList(opts()), (c.voice || {}).voice || "");
+      vl.setAttribute("data-k", "vlib");
+      vl.addEventListener("change", function () { save(true); });
+      fv.appendChild(vl);
+      fr.appendChild(fv);
       row.appendChild(fr);
       var pics = el("div", "nc-pics");
       var have = (s.pics || {})[c.id] || {};
@@ -371,6 +383,48 @@
       row.appendChild(act);
       box.appendChild(row);
     });
+  }
+
+  /* ---------------------------- giọng, nhạc nền ---------------------------- */
+
+  function voiceList(o) {
+    return [["", "— Tự chọn theo mô tả —"]].concat(((o && o.voices) || []).map(function (v) { return [v, v]; }));
+  }
+  function fillMusic(items, value) {
+    fillSelect("nc-bgm", [["", "— Không nhạc nền —"]].concat((items || []).map(function (m) { return [m.name, m.name]; })), value);
+    $("nc-bgm").value = value || "";
+  }
+  function playMusic() {
+    var a = $("nc-bgm-audio"), name = $("nc-bgm").value;
+    if (!name) { toast("warn", "Chưa chọn bài nhạc"); return; }
+    if (!a.paused && a.getAttribute("data-name") === name) { a.pause(); $("nc-bgm-play").textContent = "▶ Nghe"; return; }
+    a.src = "/api/2ch/music/" + encodeURIComponent(name);
+    a.setAttribute("data-name", name);
+    a.play().then(function () { $("nc-bgm-play").textContent = "⏸ Dừng"; }).catch(function () {});
+    a.onended = function () { $("nc-bgm-play").textContent = "▶ Nghe"; };
+  }
+  function addMusic() {
+    picker("audio/*,.mp3,.wav,.m4a,.ogg,.flac,.aac", function (file) {
+      var fd = new FormData();
+      fd.append("file", file);
+      $("nc-bgm-add").disabled = true;
+      api("/api/2ch/music", { method: "POST", body: fd }).then(function (d) {
+        if (N.data) N.data.options.music = d.items;
+        fillMusic(d.items, d.name);
+        if (N.id) save(true);
+        toast("ok", "Đã thêm nhạc nền", d.name);
+      }).catch(function (e) { toast("error", "Chưa thêm được", e.message); })
+        .then(function () { $("nc-bgm-add").disabled = false; });
+    });
+  }
+  function delMusic() {
+    var name = $("nc-bgm").value;
+    if (!name || !window.confirm("Xoá bài nhạc “" + name + "” khỏi thư viện nhạc nền?")) return;
+    api("/api/2ch/music/" + encodeURIComponent(name), { method: "DELETE" }).then(function (d) {
+      if (N.data) N.data.options.music = d.items;
+      fillMusic(d.items, "");
+      if (N.id) save(true);
+    }).catch(function (e) { toast("error", "Xoá thất bại", e.message); });
   }
 
   /* ---------------------------- các cảnh ---------------------------- */
@@ -592,6 +646,18 @@
     $("nc-render").addEventListener("click", renderVideo);
     $("nc-add").addEventListener("click", addScene);
     $("nc-k-add").addEventListener("click", addSticker);
+    $("nc-bgm-play").addEventListener("click", playMusic);
+    $("nc-bgm-add").addEventListener("click", addMusic);
+    $("nc-bgm-del").addEventListener("click", delMusic);
+    ["nc-speed", "nc-bgm", "nc-bgm-level", "nc-narr-voice"].forEach(function (id) {
+      $(id).addEventListener("change", function () { if (N.id) save(true); });
+    });
+    fillSelect("nc-speed", [["normal", "Bình thường"], ["fast", "Hơi nhanh (như video mẫu)"]], "normal");
+    fillSelect("nc-bgm-level", [["soft", "Nhỏ"], ["mid", "Vừa"], ["loud", "To"]], "soft");
+    api("/api/2ch/music").then(function (d) { if (!N.data) fillMusic(d.items, ""); }).catch(function () {});
+    api("/api/library").then(function (d) {
+      if (!N.data) fillSelect("nc-narr-voice", voiceList({ voices: (d.voices || []).map(function (v) { return v.name; }) }), "");
+    }).catch(function () {});
     $("nc-art").addEventListener("change", function () {
       if (!N.id) return;
       save(true).then(function () { toast("ok", "Đã đổi phong cách", "Câu lệnh vẽ nhân vật và đồ vật đã đổi theo phong cách mới."); });

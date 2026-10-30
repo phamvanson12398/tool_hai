@@ -33,7 +33,12 @@ from . import config, doodle
 W, H = 1080, 1920
 TOP = 420                     # thanh tiêu đề
 FPS = 30
-LEAD = 0.25
+LEAD = 0.06                   # giọng bắt đầu sau khi đổi cảnh
+GAP = 0.09                    # nghỉ sau câu: cả nhịp ~0,15 giây như video mẫu (đọc liền)
+SPEEDS = {"normal": ("Bình thường", None), "fast": ("Hơi nhanh (như video mẫu)", 1.1)}
+BGM_LEVELS = {"soft": ("Nhỏ", -27.0), "mid": ("Vừa", -23.0), "loud": ("To", -19.0)}
+MUSIC = config.LIBRARY / "nhac_nen"            # nhạc nền chị tự bỏ vào (mp3, wav, m4a, ogg)
+MUSIC_EXT = (".mp3", ".wav", ".m4a", ".ogg", ".flac", ".aac")
 PICS_DIR = "2ch_pics"         # trong thư mục dự án: <cid>/<emo>.png, scenes/<sid>.png, bgs/<place>.png
 AUDIO_DIR = "2ch_audio"
 BUILTIN = config.LIBRARY / "2ch_co_san"       # nhân vật có sẵn đi kèm tool
@@ -110,7 +115,7 @@ def art_of(st: dict | None) -> dict:
 
 def default_story() -> dict:
     return {"brief": "", "genre": "kando", "minutes": 3, "language": "ja", "title1": "", "title2": "",
-            "cta": True, "voice_mode": "cast", "art": DEFAULT_ART, "narrator": {}, "characters": [], "places": [], "scenes": [],
+            "cta": True, "voice_mode": "cast", "art": DEFAULT_ART, "speed": "normal", "bgm": "", "bgm_level": "soft", "narrator": {}, "characters": [], "places": [], "scenes": [],
             "pics": {}}
 
 
@@ -383,6 +388,17 @@ def speak_text(text: str) -> str:
     return re.sub(r"\s+", "", text.replace("「", "").replace("」", "").replace("\n", ""))
 
 
+def narrator_default(st: dict) -> dict:
+    """Giọng người kể mặc định như video mẫu: kể ngôi thứ nhất "俺 / 僕" thì nam trầm ấm; còn lại
+    theo giới của nhân vật chính (nhân vật đầu tiên)."""
+    text = "".join(sc.get("text", "") for sc in st.get("scenes") or [] if sc.get("who") == "narr")
+    chars = st.get("characters") or []
+    male = bool(re.search("俺|僕|オレ", text)) or not chars or (chars[0].get("kit") or {}).get("sex") != "female"
+    if male:
+        return {"instruct": "male, middle-aged, low pitch, calm warm storytelling voice"}
+    return {"instruct": "female, middle-aged, moderate pitch, calm warm storytelling voice"}
+
+
 def narrate(st: dict, pdir: Path, progress=None) -> dict:
     """Đọc từng câu bằng tiếng Nhật. {id cảnh: file wav}."""
     import soundfile as sf
@@ -395,15 +411,19 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict:
     adir.mkdir(parents=True, exist_ok=True)
     if progress:
         progress(0.0, "chọn giọng cho người kể và nhân vật")
+    narr = dict(st.get("narrator") or {})
+    if not narr.get("voice") and not (narr.get("instruct") or "").strip():
+        narr = narrator_default(st)
     shim = {"characters": [{"id": c["id"], "voice": c.get("voice") or {}, "kit": c["kit"]} for c in chars.values()],
-            "narrator": st.get("narrator") or {}}
+            "narrator": narr}
+    speed = SPEEDS.get(st.get("speed") or "normal", SPEEDS["normal"])[1]
     got = film_render.cast(shim, pdir, "ja", [x for x in speakers if x != "narr"], narr="narr" in speakers)
     out = {}
     for k, s in enumerate(scenes):
         who = "narr" if one or s["who"] not in chars else s["who"]
         cfg, ref = got.get("nguoi_ke" if who == "narr" else f"nv_{who}") or ({"instruct": "female, young adult"}, {})
         text = speak_text(s["text"])
-        key = hashlib.md5(json.dumps([text, ref.get("ref"), cfg.get("instruct")], ensure_ascii=False)
+        key = hashlib.md5(json.dumps([text, ref.get("ref"), cfg.get("instruct"), speed], ensure_ascii=False)
                           .encode("utf-8")).hexdigest()[:12]
         path = adir / f"{s['id']}_{key}.wav"
         if not path.exists():
@@ -412,7 +432,7 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict:
             wav, sr = voice.synthesize(text, "ja", ref_wav=Path(ref["ref"]) if ref.get("ref") else None,
                                        ref_text=ref.get("ref_text"),
                                        instruct=None if ref.get("ref") else cfg.get("instruct"),
-                                       seed=int(key[:6], 16))
+                                       speed=speed, seed=int(key[:6], 16))
             wav = voice.trim_silence(np.asarray(wav, dtype=np.float32), sr)
             for old in adir.glob(f"{s['id']}_*.wav"):
                 old.unlink(missing_ok=True)
@@ -430,7 +450,7 @@ def timeline(st: dict, audio: dict) -> list[dict]:
         if a and Path(a).exists():
             info = sf.info(str(a))
             d = info.frames / info.samplerate
-        dur = max(1.1, d + LEAD + 0.15) if d else max(1.6, 0.13 * len(speak_text(s["text"])) + 0.6)
+        dur = max(0.8, d + LEAD + GAP) if d else max(1.6, 0.13 * len(speak_text(s["text"])) + 0.6)
         rows.append({"scene": s, "start": t, "dur": dur, "audio": a})
         t += dur
     return rows
@@ -824,6 +844,7 @@ def render(st: dict, pdir: Path, audio: dict | None = None, progress=None, out_n
         a = a * (0.8 / (float(np.max(np.abs(a))) or 1.0))
         k0 = int((row["start"] + LEAD) * sr)
         mix[k0:k0 + len(a)] += a[: max(0, len(mix) - k0)]
+    mix = _with_bgm(st, mix, sr, total)
     wav = out_dir / "2ch_audio.wav"
     sf.write(str(wav), np.clip(mix, -1, 1), sr)
     out = out_dir / out_name
@@ -848,3 +869,61 @@ def style_sample() -> Image.Image:
         out.alpha_composite(im, (x, (480 - im.height) // 2))
         x += im.width + 30
     return out.convert("RGB")
+
+
+# ---------------------------------------------------------------- nhạc nền
+
+def music_list() -> list[dict]:
+    if not MUSIC.exists():
+        return []
+    return [{"name": p.name, "size": p.stat().st_size} for p in sorted(MUSIC.iterdir())
+            if p.suffix.lower() in MUSIC_EXT]
+
+
+def music_path(name: str) -> Path | None:
+    p = MUSIC / Path(name or "").name
+    return p if name and p.exists() and p.suffix.lower() in MUSIC_EXT else None
+
+
+def save_music(src: Path, filename: str) -> str:
+    MUSIC.mkdir(parents=True, exist_ok=True)
+    stem = slug(Path(filename).stem) or "nhac"
+    ext = Path(filename).suffix.lower()
+    if ext not in MUSIC_EXT:
+        raise ValueError("Chỉ nhận file nhạc mp3, wav, m4a, ogg, flac, aac.")
+    name, n = f"{stem}{ext}", 2
+    while (MUSIC / name).exists():
+        name, n = f"{stem}_{n}{ext}", n + 1
+    Path(src).replace(MUSIC / name)
+    return name
+
+
+def _with_bgm(st: dict, voice_mix: np.ndarray, sr: int, total: float) -> np.ndarray:
+    """Trộn nhạc nền (lặp lại cho đủ dài) nhỏ dưới giọng: tự giảm khi có lời, vào / ra nhỏ dần."""
+    from . import video
+    p = music_path(st.get("bgm") or "")
+    if not p:
+        return voice_mix
+    raw = subprocess.run([video._ffmpeg_path(), "-v", "error", "-i", str(p), "-ac", "1", "-ar", str(sr),
+                          "-f", "f32le", "-"], capture_output=True).stdout
+    m = np.frombuffer(raw, dtype=np.float32)
+    if len(m) < sr:
+        return voice_mix
+    n = len(voice_mix)
+    m = np.tile(m, n // len(m) + 1)[:n].copy()
+    m /= max(1e-4, float(np.sqrt(np.mean(m ** 2))) * 4)               # chuẩn hoá độ to
+    db = BGM_LEVELS.get(st.get("bgm_level") or "soft", BGM_LEVELS["soft"])[1]
+    gain = np.full(n, 10 ** (db / 20), dtype=np.float32)
+    # giảm thêm 6 dB khi có giọng (bao mượt 0,15 giây)
+    hop = int(sr * 0.05)
+    env = np.abs(voice_mix[: n // hop * hop]).reshape(-1, hop).max(axis=1) > 0.02
+    k = 3
+    env = np.convolve(env.astype(float), np.ones(2 * k + 1) / (2 * k + 1), mode="same")
+    duck = np.repeat(1.0 - 0.5 * np.clip(env * 1.5, 0, 1), hop)
+    gain[: len(duck)] *= duck.astype(np.float32)
+    fi, fo = int(sr * 1.0), int(sr * 2.5)
+    end = min(n, int(total * sr))
+    gain[:fi] *= np.linspace(0, 1, fi, dtype=np.float32)
+    gain[max(0, end - fo):end] *= np.linspace(1, 0, end - max(0, end - fo), dtype=np.float32)
+    gain[end:] = 0
+    return voice_mix + m * gain
