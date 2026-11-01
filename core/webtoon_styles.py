@@ -22,7 +22,7 @@ PRESETS = {
     "saeon": {
         "label": "사연 썰툰 — người thật, nét đậm, màu phẳng (mặc định)",
         "note": "Như các kênh 썰 / 사연: người lớn tỉ lệ thật, viền đen đều, màu pastel phẳng, mắt đen to.",
-        "genres": ["marriage", "revenge"],
+        "genres": ["marriage", "revenge", "sogaeting", "funny_story"],
         "prompt": ("Korean webtoon style exactly like Korean YouTube story-animation channels (\"썰\" / 사연 "
                    "animation): clean bold uniform black outlines, flat pastel colors, NO shading, no gradients, "
                    "no textures, simple neat line art, natural adult proportions, large oval solid black pupils "

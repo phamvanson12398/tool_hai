@@ -1106,6 +1106,11 @@ như mọi câu thoại khác.
 
 ### Nội dung và nhân vật kiểu kênh 썰 / 사연 nhiều người xem
 AI viết truyện webtoon học theo các video 썰 / 사연 được xem nhiều:
+- **Hai thể loại mới** trong ô Thể loại (và ô gợi ý ý tưởng):
+  - **Xem mắt / hẹn hò (소개팅 썰)**: gã đi xem mắt bất lịch sự, người yêu cũ, hẹn hò công sở;
+    tên tập kiểu "... 정체", người xem bực mình rồi chờ màn dạy dỗ (참교육 / 사이다).
+  - **Chuyện hài tự kể (웃긴 썰 / 학창시절)**: người kể ngôi thứ nhất kể chuyện thời đi học, đi
+    lính, trong xóm; tự giễu, phóng đại vui, chi tiết thật, kết ngược đời. Nên chọn cách kể 사연.
 - **Tên tập** gây tò mò, hứa một lời giải: "[hoàn cảnh] + [nhân vật] + 정체" ("30대 소개팅에 나온
   비매너남 정체"), "순식간에 [kết quả] 되기" ("순식간에 동네 히어로 되기").
 - **Nhân vật** là những "kiểu người" dễ nhớ, khác hẳn nhau, mỗi người lộ tính cách qua một chi

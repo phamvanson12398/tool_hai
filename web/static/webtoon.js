@@ -979,7 +979,8 @@
     // lựa chọn thể loại / ngôn ngữ có sẵn cả khi chưa mở tập
     var g = [["marriage", "Hôn nhân / nhà chồng (사연)"], ["thriller", "Giật gân / lừa đảo"], ["horror", "Kinh dị"], ["comedy", "Hài"], ["romance", "Tình cảm"],
              ["family", "Gia đình"], ["revenge", "Trả thù thoả mãn"], ["office", "Công sở"],
-             ["school", "Học đường"], ["mystery", "Bí ẩn"]];
+             ["school", "Học đường"], ["mystery", "Bí ẩn"],
+             ["sogaeting", "Xem mắt / hẹn hò (소개팅 썰)"], ["funny_story", "Chuyện hài tự kể (웃긴 썰 / 학창시절)"]];
     fillSelect("wt-genre", g, "marriage");
     fillSelect("wt-style", STYLE_LIST, "saeon");
     fillSelect("wt-narrv", NARRV_LIST, "own");

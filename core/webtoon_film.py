@@ -867,6 +867,11 @@ GENRES = {
     "office": "Công sở (sếp, đồng nghiệp, phỏng vấn...)",
     "school": "Học đường (bạn bè, thầy cô, thi cử...)",
     "mystery": "Bí ẩn / trinh thám (ai là thủ phạm)",
+    "sogaeting": ("Xem mắt / hẹn hò 연애·소개팅 썰 (gã đi xem mắt bất lịch sự, người yêu cũ, hẹn hò công sở; "
+                  "tên tập kiểu '... 정체'; người xem bực mình rồi chờ màn dạy dỗ 참교육 / 사이다)"),
+    "funny_story": ("Chuyện hài tự kể 웃긴 썰 / 학창시절 썰 (người kể ngôi thứ nhất kể chuyện thời đi học, đi lính, "
+                    "trong xóm; tự giễu, phóng đại vui, chi tiết thật như số cân, món ăn; tên tập kiểu "
+                    "'순식간에 ... 되기'; kết ngược đời buồn cười)"),
 }
 LANGS = {"ko": "tiếng Hàn", "vi": "tiếng Việt", "en": "tiếng Anh"}
 
