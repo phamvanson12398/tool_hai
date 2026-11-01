@@ -37,7 +37,11 @@ HAIRS = ("short_part", "short", "buzz", "bald", "side_part", "long", "long_messy
          "bob", "ponytail", "bun", "curly")
 TOPS = ("sweater", "tshirt", "shirt", "jacket", "hoodie", "suit", "blouse", "dress")
 EXPRS = ("neutral", "worried", "shocked", "scared", "sad", "crying", "angry", "happy",
-         "laughing", "smirk", "tired", "thinking", "relieved", "desperate")
+         "laughing", "smirk", "tired", "thinking", "relieved", "desperate",
+         # phản ứng kiểu kênh 썰 / 사연 (mắt lờ đờ khinh, nhăn mặt, nhắm tịt, lườm, hoảng loạn)
+         "deadpan", "disgusted", "cringe", "glare", "panic")
+BUILDS = ("slim", "average", "chubby", "muscular")
+FEATURES = ("makeup", "earrings", "eye_bags", "freckles")
 POSES = ("down", "phone_ear", "phone_look", "hand_head", "hands_head", "cross",
          "point", "wave", "hands_face", "hands_hips", "shrug", "fist", "hold_out",
          "hold_baby", "hold_cup", "hold_paper")
@@ -56,6 +60,8 @@ class Look:
     bottom_color: str = "navy"
     glasses: bool = False
     beard: str = ""                 # "" | stubble | mustache | full
+    build: str = "average"          # vóc dáng: slim | average | chubby | muscular
+    features: tuple = ()            # nét riêng: makeup, earrings, eye_bags, freckles
     seed: int = 0
 
     @staticmethod
@@ -70,10 +76,18 @@ class Look:
         if lk.top not in TOPS:
             lk.top = "sweater"
         lk.glasses = bool(lk.glasses)
+        if lk.build not in BUILDS:
+            lk.build = "average"
+        f = lk.features
+        if isinstance(f, str):
+            f = [x.strip() for x in f.split(",")]
+        lk.features = tuple(x for x in (f or ()) if x in FEATURES)
         return lk
 
     def to_dict(self) -> dict:
-        return {k: getattr(self, k) for k in self.__dataclass_fields__}
+        d = {k: getattr(self, k) for k in self.__dataclass_fields__}
+        d["features"] = list(self.features)
+        return d
 
 
 @dataclass
@@ -215,14 +229,23 @@ def build(look: Look) -> dict:
     age, fem = look.age, look.sex == "female"
     heads = {"child": 5.2, "teen": 6.6, "young": 7.0, "adult": 7.0, "middle": 6.9, "old": 6.7}.get(age, 7.0)
     sh = {"child": 1.25, "teen": 1.6}.get(age, 1.55 if fem else 1.9)
+    hw = 0.4 if not fem else 0.38
+    hip_k = 0.78 if fem else 0.66
+    bd = getattr(look, "build", "average")
+    if bd == "chubby":                                 # mặt tròn bè, vai và hông to
+        hw, sh, hip_k = hw * 1.14, sh * 1.16, hip_k * 1.3
+    elif bd == "slim":
+        hw, sh, hip_k = hw * 0.96, sh * 0.9, hip_k * 0.9
+    elif bd == "muscular":                             # vai rộng, eo gọn
+        sh, hip_k = sh * 1.2, hip_k * 0.92
     return {
         "H": heads,                                    # chiều cao (đơn vị đầu)
         "head_c": (0.0, -heads + 0.5),                 # tâm đầu
         "neck": (0.0, -heads + 1.02),                  # điểm xoay của đầu
         "sh_y": -heads + 1.16, "sh_w": sh,             # vai (cổ ngắn như webtoon)
         "waist_y": -heads * 0.47, "hip_y": -heads * 0.45,
-        "hip_w": sh * (0.78 if fem else 0.66),
-        "head_w": 0.4 if not fem else 0.38,
+        "hip_w": sh * hip_k,
+        "head_w": hw,
         "fem": fem,
     }
 
@@ -599,9 +622,13 @@ class Figure:
             p.poly(_crs(ear, 8), self.skin)
             p.line(_crs([(ex + sx * 0.06, Y - 0.04), (ex + sx * 0.085, Y - 0.05), (ex + sx * 0.085, Y + 0.05),
                          (ex + sx * 0.06, Y + 0.1)], 6, closed=False), width=p.lw * 0.7)
+            if "earrings" in lk.features:
+                p.dot(ex + sx * 0.07, Y + 0.21, 0.022, (232, 196, 90, 255))
         # mặt: má tròn, cằm thon mềm (đo theo video mẫu)
         k = hw / 0.39
         jw = 1.0 if lk.sex == "male" and not child else 0.92
+        if lk.build == "chubby":
+            jw *= 1.16                                # cằm bầu, má phính
         R_ = [(0.0, -0.56), (0.27, -0.52), (0.35, -0.32), (0.36, -0.1), (0.357, 0.08), (0.333, 0.22),
               (0.29 * jw, 0.33), (0.215 * jw, 0.43), (0.12 * jw, 0.508), (0.0, 0.535)]      # má thẳng, cằm tròn
         face = [(X + x * k, Y + y) for x, y in R_] + [(X - x * k, Y + y) for x, y in reversed(R_[1:-1])]
@@ -619,7 +646,7 @@ class Figure:
                 cx = X + fx + sx * 0.19
                 p.line(_ellipse(cx, Y + 0.03, 0.12, 0.085, 24))
             p.line([(X + fx - 0.07, Y + 0.02), (X + fx + 0.07, Y + 0.02)])
-        if "sweat" in st.extras:
+        if "sweat" in st.extras or st.expr == "panic":
             sx = X + hw * 0.9
             p.poly(_crs([(sx, Y - 0.3), (sx + 0.06, Y - 0.16), (sx, Y - 0.1), (sx - 0.06, Y - 0.16)], 4),
                    (150, 200, 240, 255))
@@ -634,7 +661,8 @@ class Figure:
                 "scared": (-0.04, 0.08), "shocked": (-0.07, 0.0), "desperate": (-0.02, 0.1),
                 "angry": (0.03, -0.09), "happy": (-0.02, 0.0), "laughing": (-0.03, 0.0),
                 "smirk": (0.0, -0.03), "thinking": (0.0, 0.04), "tired": (0.02, 0.03),
-                "relieved": (0.0, 0.03)}.get(e, (0.0, 0.0))
+                "relieved": (0.0, 0.03), "deadpan": (0.02, 0.0), "disgusted": (0.03, -0.05),
+                "cringe": (0.03, -0.07), "glare": (0.04, -0.1), "panic": (-0.06, 0.08)}.get(e, (0.0, 0.0))
         # lông mày dày, đầu trong tròn, đuôi ngoài thon cụp xuống (đo theo ảnh mẫu)
         thick = 1.0 if not fem else 0.62
         bcol = (40, 38, 42, 255) if lk.hair_color in ("black", "brown") else _shade(self.hair, 0.8)
@@ -651,7 +679,8 @@ class Figure:
         # ---- mắt
         open_ = {"shocked": 1.35, "scared": 1.25, "tired": 0.6, "happy": 0.0, "laughing": 0.0,
                  "sad": 0.85, "crying": 0.8, "angry": 0.85, "smirk": 0.7, "thinking": 0.9,
-                 "desperate": 1.15}.get(e, 1.0)
+                 "desperate": 1.15, "deadpan": 0.48, "disgusted": 0.72, "cringe": 0.0, "glare": 0.55,
+                 "panic": 1.3}.get(e, 1.0)
         open_ *= (1.0 - max(0.0, min(1.0, st.blink)))
         lx, ly = st.look
         for sx in (-1, 1):
@@ -659,6 +688,10 @@ class Figure:
             w, h = 0.074, 0.037 * open_
             if "bags" in st.extras or e in ("tired", "desperate"):
                 p.poly(_ellipse(cx, cy + 0.07, 0.1, 0.045, 16, 0, math.pi), (140, 120, 120, 120), line=False)
+            if e == "cringe" and st.blink < 0.5:  # nhắm tịt mắt kiểu > <
+                p.line([(cx - sx * w, cy - 0.03), (cx + sx * w * 0.7, cy), (cx - sx * w, cy + 0.03)],
+                       width=p.lw * 1.3)
+                continue
             if h < 0.008:                       # nhắm / cười híp
                 arc = -1 if e in ("happy", "laughing") else 1
                 p.line(_crs([(cx - w, cy), (cx, cy + arc * 0.035 if arc < 0 else cy + 0.01), (cx + w, cy)],
@@ -674,7 +707,7 @@ class Figure:
             lo = [(cx + ii * w * 0.98, cy - h * 0.05), (cx + ii * w * 0.5, cy + h * 0.85), (cx, cy + h * 1.08),
                   (cx - ii * w * 0.5, cy + h * 0.88), (cx - ii * w * 1.06, cy + h * 0.08)]
             p.poly(_crs(up + lo[1:-1], 8), (255, 255, 255, 255), line=False)
-            pr = 0.027 if e not in ("shocked", "scared") else 0.019
+            pr = 0.027 if e not in ("shocked", "scared", "glare", "panic") else (0.019 if e != "panic" else 0.013)
             px = cx + lx * 0.03 + (0.012 if e == "smirk" else 0)
             py = cy - h * 0.05 + ly * 0.015
             p.dot(px, py, min(pr, h * 1.05))
@@ -685,6 +718,8 @@ class Figure:
             if e == "angry":
                 p.line([(cx - w, cy - h * 0.7 - (0.02 if sx > 0 else 0.04)),
                         (cx + w, cy - h * 0.7 - (0.04 if sx > 0 else 0.02))])
+            if e == "deadpan":                   # mí mắt nặng che nửa tròng: nhìn lờ đờ, khinh
+                p.line([(cx - w * 1.05, cy - h * 0.55), (cx + w * 1.05, cy - h * 0.55)], width=p.lw * 1.5)
         # ---- mũi: hai nét dài hơi chụm + cánh mũi cong + nếp cười dài như dấu ngoặc
         for sx in (-1, 1):
             p.line(_crs([(X + sx * 0.042, Y - 0.07), (X + sx * 0.038, Y + 0.03), (X + sx * 0.04, Y + 0.11)],
@@ -708,14 +743,18 @@ class Figure:
         my = Y + 0.28
         m = max(0.0, min(1.0, st.mouth))
         mw = {"shocked": 0.07, "scared": 0.08, "happy": 0.12, "laughing": 0.13, "angry": 0.1,
-              "crying": 0.1, "desperate": 0.1}.get(e, 0.09)
+              "crying": 0.1, "desperate": 0.1, "deadpan": 0.07, "disgusted": 0.09, "cringe": 0.1,
+              "glare": 0.08, "panic": 0.09}.get(e, 0.09)
         curve = {"happy": 0.04, "laughing": 0.05, "smirk": 0.02, "relieved": 0.015, "sad": -0.03,
                  "crying": -0.035, "worried": -0.015, "angry": -0.02, "scared": -0.02,
-                 "desperate": -0.03}.get(e, 0.0)
+                 "desperate": -0.03, "disgusted": -0.03, "cringe": -0.035, "glare": -0.015,
+                 "panic": -0.02}.get(e, 0.0)
         base_open = {"shocked": 0.55, "scared": 0.3, "laughing": 0.6, "crying": 0.25,
-                     "desperate": 0.3}.get(e, 0.0)
+                     "desperate": 0.3, "disgusted": 0.18, "panic": 0.4}.get(e, 0.0)
         o = max(m, base_open)
         lip = (214, 120, 120, 255) if fem else None
+        if "makeup" in lk.features:
+            lip = (196, 48, 62, 255)                       # son đỏ
         if o < 0.08:
             if e == "smirk":
                 p.line(_crs([(X - mw, my), (X + 0.01, my + 0.01), (X + mw, my - 0.03)], 5, closed=False))
@@ -759,7 +798,20 @@ class Figure:
         if "bruise" in st.extras:
             p.poly(_ellipse(X + 0.24, Y + 0.15, 0.06, 0.04, 12), (130, 110, 120, 90), line=False)
             p.poly(_ellipse(X - 0.15, Y - 0.2, 0.045, 0.035, 12), (130, 110, 120, 80), line=False)
-        if e in ("scared", "desperate") or "shadow" in st.extras:
+        if e == "disgusted":                               # nếp nhăn giữa hai lông mày
+            for sx in (-1, 1):
+                p.line(_crs([(X + sx * 0.05, Y - 0.2), (X + sx * 0.03, Y - 0.15), (X + sx * 0.045, Y - 0.1)], 4,
+                            closed=False), width=p.lw * 0.7)
+        if "freckles" in lk.features:
+            for sx in (-1, 1):
+                for k in range(4):
+                    p.dot(X + sx * (0.17 + 0.035 * (k % 2)), Y + 0.13 + 0.025 * (k // 2), 0.007,
+                          (150, 100, 80, 200))
+        if "eye_bags" in lk.features:
+            for sx in (-1, 1):
+                p.line(_crs([(X + sx * 0.11, Y + 0.075), (X + sx * 0.17, Y + 0.095), (X + sx * 0.23, Y + 0.075)], 4,
+                            closed=False), width=p.lw * 0.6)
+        if e in ("scared", "desperate", "panic") or "shadow" in st.extras:
             # mặt tái kiểu truyện tranh: mấy vạch sọc trên trán
             for k in range(5):
                 x0 = X - 0.16 + k * 0.08

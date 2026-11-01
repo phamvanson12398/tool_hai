@@ -63,6 +63,11 @@ EXPR_EN = {
     "thinking": "thinking expression, looking slightly up, mouth closed",
     "relieved": "relieved expression, soft smile, mouth closed",
     "desperate": "desperate expression, eyebrows raised, eyes teary, mouth slightly open",
+    "deadpan": "deadpan unimpressed look, heavy half-closed eyelids, flat mouth, staring coldly",
+    "disgusted": "disgusted, appalled expression, frown lines between the brows, one corner of the mouth pulled down",
+    "cringe": "cringing, eyes squeezed shut like > <, face scrunched up, mouth twisted",
+    "glare": "glaring sharply, narrowed eyes with small pupils, eyebrows slanted down hard",
+    "panic": "panicking, eyes wide with tiny pupils, blue vertical shadow lines on the forehead, sweat drop, mouth open",
 }
 STYLE_EN = wst.PRESETS[wst.DEFAULT]["prompt"]       # nét vẽ mặc định (chọn nét khác: webtoon_styles)
 
@@ -99,7 +104,12 @@ def describe(c: dict) -> str:
     if lk.beard:
         extra.append({"stubble": "light stubble", "mustache": "a mustache", "full": "a full beard"}.get(lk.beard, ""))
     skin = {"light": "light", "fair": "fair", "tan": "tanned", "dark": "dark"}.get(lk.skin, "fair")
-    s = f"a {age} Korean {who}, {skin} skin, {hc} {hair}, {tc} {top}".replace("  ", " ")
+    build = {"slim": "slim build", "chubby": "chubby round build with a round full face",
+             "muscular": "broad-shouldered muscular build"}.get(lk.build, "")
+    feats = {"makeup": "glamorous makeup with red lipstick", "earrings": "earrings",
+             "eye_bags": "dark eye bags", "freckles": "freckles"}
+    extra += [feats[f] for f in lk.features if f in feats]
+    s = f"a {age} Korean {who}{', ' + build if build else ''}, {skin} skin, {hc} {hair}, {tc} {top}".replace("  ", " ")
     return s + (", " + ", ".join(x for x in extra if x) if extra else "")
 
 

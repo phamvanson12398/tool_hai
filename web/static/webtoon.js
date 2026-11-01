@@ -11,7 +11,10 @@
   var W = { id: null, data: null, polling: null };
   var EXPR_VI = { neutral: "Bình thường", worried: "Lo lắng", shocked: "Sốc", scared: "Sợ hãi", sad: "Buồn",
     crying: "Khóc", angry: "Giận", happy: "Vui", laughing: "Cười to", smirk: "Nhếch mép", tired: "Mệt mỏi",
-    thinking: "Suy nghĩ", relieved: "Nhẹ nhõm", desperate: "Tuyệt vọng" };
+    thinking: "Suy nghĩ", relieved: "Nhẹ nhõm", desperate: "Tuyệt vọng", deadpan: "Lờ đờ khinh (cạn lời)",
+    disgusted: "Nhăn mặt ghê", cringe: "Nhắm tịt mắt", glare: "Lườm", panic: "Hoảng loạn" };
+  var BUILD_VI = { slim: "Gầy", average: "Vừa", chubby: "Mập, mặt tròn", muscular: "Vạm vỡ" };
+  var FEAT_VI = { makeup: "trang điểm đậm", earrings: "hoa tai", eye_bags: "quầng thâm", freckles: "tàn nhang" };
   var POSE_VI = { down: "Tay buông", phone_ear: "Áp điện thoại", phone_look: "Xem điện thoại",
     hand_head: "Ôm đầu", hands_head: "Hai tay ôm đầu", cross: "Khoanh tay", point: "Chỉ tay", wave: "Vẫy tay",
     hands_face: "Hai tay che mặt", hands_hips: "Chống nạnh", shrug: "Nhún vai", fist: "Nắm tay", hold_out: "Chìa tay",
@@ -122,6 +125,8 @@
         row.querySelectorAll("[data-look]").forEach(function (f) {
           look[f.getAttribute("data-look")] = f.type === "checkbox" ? f.checked : f.value;
         });
+        look.features = Array.prototype.filter.call(row.querySelectorAll("[data-feat]"), function (f) { return f.checked; })
+          .map(function (f) { return f.getAttribute("data-feat"); });
         b.characters.push({ id: row.getAttribute("data-id"), name: row.querySelector(".name").value,
           look: look, voice: { instruct: row.querySelector(".voice").value } });
       });
@@ -298,9 +303,10 @@
        ["age", [["child", "Trẻ con"], ["teen", "Thiếu niên"], ["young", "Thanh niên"], ["adult", "Người lớn"],
                 ["middle", "Trung niên"], ["old", "Người già"]]],
        ["hair", o.hairs || []], ["hair_color", o.hair_colors || []], ["top", o.tops || []],
-       ["top_color", o.colors || []], ["bottom_color", o.colors || []], ["skin", o.skins || []]
+       ["top_color", o.colors || []], ["bottom_color", o.colors || []], ["skin", o.skins || []],
+       ["build", (o.builds || ["slim", "average", "chubby", "muscular"]).map(function (b) { return [b, BUILD_VI[b] || b]; })]
       ].forEach(function (kv) {
-        var s = sel(kv[1], lk[kv[0]]);
+        var s = sel(kv[1], lk[kv[0]] || (kv[0] === "build" ? "average" : undefined));
         s.setAttribute("data-look", kv[0]);
         s.title = kv[0];
         s.addEventListener("change", function () { save(true); });
@@ -312,6 +318,15 @@
       cb.addEventListener("change", function () { save(true); });
       g.appendChild(cb); g.appendChild(document.createTextNode(" kính"));
       f.appendChild(g);
+      (o.features || ["makeup", "earrings", "eye_bags", "freckles"]).forEach(function (ft) {
+        var lb = document.createElement("label");
+        var fc = document.createElement("input");
+        fc.type = "checkbox"; fc.checked = (lk.features || []).indexOf(ft) >= 0; fc.setAttribute("data-feat", ft);
+        fc.addEventListener("change", function () { save(true); });
+        lb.appendChild(fc); lb.appendChild(document.createTextNode(" " + (FEAT_VI[ft] || ft)));
+        f.appendChild(lb);
+      });
+      if (c.role) f.appendChild(el("div", "muted wt-role", c.role));
       var v = document.createElement("input");
       v.className = "voice"; v.value = (c.voice || {}).instruct || ""; v.placeholder = "Giọng: vd male, middle-aged, low pitch";
       f.appendChild(v);

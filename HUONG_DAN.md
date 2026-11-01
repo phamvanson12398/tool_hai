@@ -1104,6 +1104,22 @@ viết khéo và gắn với đúng câu chuyện vừa kể:
 Không muốn có đoạn này thì chọn **Không**. Câu viết ra sửa được trong danh sách cảnh quay
 như mọi câu thoại khác.
 
+### Nội dung và nhân vật kiểu kênh 썰 / 사연 nhiều người xem
+AI viết truyện webtoon học theo các video 썰 / 사연 được xem nhiều:
+- **Tên tập** gây tò mò, hứa một lời giải: "[hoàn cảnh] + [nhân vật] + 정체" ("30대 소개팅에 나온
+  비매너남 정체"), "순식간에 [kết quả] 되기" ("순식간에 동네 히어로 되기").
+- **Nhân vật** là những "kiểu người" dễ nhớ, khác hẳn nhau, mỗi người lộ tính cách qua một chi
+  tiết đắt giá (đồng hồ hàng hiệu mà giày rách, gắp đồ ăn bằng đũa của mình...). Mỗi nhân vật có
+  một dòng **vai / tính cách** (hiện dưới nhân vật ở mục 2). Có nhân vật xuất hiện bất ngờ làm
+  truyện rẽ hướng; gài chi tiết sớm để cuối phần mới vỡ lẽ.
+- **Nhịp**: câu nói "khó đỡ" → cảnh cận mặt người nghe phản ứng không thoại → câu đáp trả.
+  Thoại ngắn, châm biếm, có câu tự nói trong đầu; chi tiết thật (con số, tên món, tiền).
+  Chuyện tự kể hài (썰): người kể tự giễu, phóng đại vui, kết bằng cú ngược đời.
+- **Vóc dáng** nhân vật: gầy / vừa / mập mặt tròn / vạm vỡ. **Nét riêng**: trang điểm đậm (son
+  đỏ), hoa tai, quầng thâm, tàn nhang. Chỉnh ở mục 2; câu lệnh vẽ ảnh AI cũng tả theo.
+- **5 nét mặt phản ứng mới**: Lờ đờ khinh (cạn lời), Nhăn mặt ghê, Nhắm tịt mắt (> <), Lườm,
+  Hoảng loạn (mồ hôi, sọc xanh trên trán) — tool tự vẽ được và có trong câu lệnh vẽ ảnh AI.
+
 ### Nét vẽ nhân vật (mục 1, ô "Nét vẽ nhân vật")
 Chọn nét vẽ cho ảnh nhân vật AI của truyện. Câu lệnh vẽ ở mục 2b (và file câu lệnh) đổi
 theo nét đã chọn:

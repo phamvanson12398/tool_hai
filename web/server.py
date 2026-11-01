@@ -2687,6 +2687,7 @@ def _webtoon_view(pid: str, data: dict) -> dict:
         "narr_voices": [[k, v] for k, v in wf.NARR_VOICES.items()],
         "types": list(wf.SHOT_TYPES), "cameras": list(wf.CAMERAS), "exprs": list(wa.EXPRS),
         "poses": list(wa.POSES), "hairs": list(wa.HAIRS), "hair_colors": list(wa.HAIR),
+        "builds": list(wa.BUILDS), "features": list(wa.FEATURES),
         "tops": list(wa.TOPS), "colors": list(wa.CLOTH), "skins": list(wa.SKIN),
         "kinds": [[k, v] for k, v in wf.PLACE_KINDS.items()],
         "screens": ["chat", "call", "wifi", "notice", "alert", "video", "noise", "lock", "loading", "app"],
@@ -2818,7 +2819,9 @@ def api_webtoon_save(pid):
         wt["narrator"] = {"voice": str(body["narrator"].get("voice") or ""),
                           "instruct": str(body["narrator"].get("instruct") or "")}
     if isinstance(body.get("characters"), list):
+        old_roles = {x.get("id"): x.get("role") for x in wt.get("characters") or []}
         wt["characters"] = [{"id": wf.wa_slug(c.get("id") or c.get("name")), "name": str(c.get("name") or ""),
+                             "role": str(c.get("role") or old_roles.get(c.get("id")) or "")[:200],
                              "look": wa.Look.from_dict(c.get("look")).to_dict(),
                              "voice": {"voice": str((c.get("voice") or {}).get("voice") or ""),
                                        "instruct": str((c.get("voice") or {}).get("instruct") or "")},

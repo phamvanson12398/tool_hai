@@ -1035,3 +1035,4 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 .nc-scene .ctl .wide { flex: 1 1 100%; max-width: none; }
 .nc-bar { margin: 4px 0 8px; align-items: center; }
 .nc-voice-row { display: flex; gap: 6px; align-items: center; } .nc-voice-row select { flex: 1 1 auto; min-width: 0; }
+.wt-role { font-size: 12px; flex-basis: 100%; }

@@ -875,7 +875,8 @@ def _catalog() -> dict:
     return {"hairs": " | ".join(wa.HAIRS), "hair_colors": " | ".join(wa.HAIR),
             "tops": " | ".join(wa.TOPS), "colors": " | ".join(wa.CLOTH),
             "kinds": ", ".join(f"{k} ({v})" for k, v in PLACE_KINDS.items()),
-            "exprs": ", ".join(wa.EXPRS), "poses": ", ".join(wa.POSES)}
+            "exprs": ", ".join(wa.EXPRS), "poses": ", ".join(wa.POSES),
+            "builds": " | ".join(wa.BUILDS), "features": ", ".join(wa.FEATURES)}
 
 
 IDEA_ANGLES = (
@@ -927,7 +928,8 @@ def _cast_block(st: dict) -> str:
     if not (st.get("prev_summary") or "").strip() or not st.get("characters"):
         return ""
     cs = "\n".join(f"- {c['id']}: {c.get('name')} — {json.dumps(c.get('look') or {}, ensure_ascii=False)}"
-                   f", home: {c.get('home') or ''}" for c in st.get("characters") or [])
+                   f", home: {c.get('home') or ''}" + (f", role: {c['role']}" if c.get("role") else "")
+                   for c in st.get("characters") or [])
     ps = "\n".join(f"- {p['id']}: {p.get('name')} — kind {p.get('kind')}, time {p.get('time')}, look: {p.get('look') or ''}"
                    for p in st.get("places") or [])
     return ("\n### Nhân vật và địa điểm ĐÃ CÓ từ phần trước — GIỮ NGUYÊN id, tên, look (chép y nguyên vào "
@@ -1001,6 +1003,7 @@ def write(st: dict, progress=None) -> dict:
     old_c = {c["id"]: c for c in st.get("characters") or []} if prev else {}
     old_p = {p["id"]: p for p in st.get("places") or []} if prev else {}
     st["characters"] = [{"id": wa_slug(c.get("id") or c.get("name")), "name": str(c.get("name") or ""),
+                         "role": str(c.get("role") or "")[:200],
                          "look": wa.Look.from_dict(c.get("look")).to_dict(), "voice": c.get("voice") or {},
                          "home": wa_slug(c.get("home")) if c.get("home") else ""}
                         for c in plan_.get("characters") or [] if isinstance(c, dict)][:6]
@@ -1033,7 +1036,8 @@ def write(st: dict, progress=None) -> dict:
     st["summary"] = episode_summary(st)
     ids = {c["id"] for c in st["characters"]}
     chars_txt = "\n".join(f"- {c['id']}: {c['name']} — {c['look']['sex']}, {c['look']['age']}, "
-                          f"{c['look']['hair']}, áo {c['look']['top_color']} — ở {c.get('home') or '?'}"
+                          f"{c['look']['hair']}, áo {c['look']['top_color']}, {c['look'].get('build', 'average')}"
+                          f" — ở {c.get('home') or '?'}" + (f" — {c['role']}" if c.get("role") else "")
                           for c in st["characters"])
     places_txt = "\n".join(f"- {p['id']}: {p['name']} — {p['kind']}, {p['time']}" for p in st["places"])
     nid = st.get("narrator_id") or ""

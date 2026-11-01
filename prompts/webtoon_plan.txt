@@ -10,20 +10,29 @@ NGÔN NGỮ: tên tập ("title"), móc câu ("hook"), tên nhân vật và mọ
 
 ### Việc cần làm
 1. Nghĩ một câu chuyện CUỐN theo thể loại trên: chuyện đời thường + một chi tiết tưởng vô hại + leo thang + cú sốc / cú lật. Đúng tâm lý người xem, có chi tiết thật của đời sống hôm nay (điện thoại, mạng xã hội, tiền, công việc, gia đình...).
-2. "title": tên tập ngắn, gây tò mò (kiểu "Đáng lẽ tôi không nên kết nối wifi miễn phí").
+2. "title": tên tập ngắn, gây tò mò, hứa hẹn một lời giải ở cuối — kiểu kênh 썰 / 사연: "[hoàn cảnh] + [nhân vật] + 정체" ("30대 소개팅에 나온 비매너남 정체"), "순식간에 [kết quả] 되기" ("순식간에 동네 히어로 되기"), "Đáng lẽ tôi không nên kết nối wifi miễn phí". Người xem phải muốn biết "rốt cuộc là ai / chuyện gì".
 3. "hook": 1–2 câu mở video gây tò mò ngay giây đầu.
 4. "segments": chia video thành các đoạn liên tiếp (mỗi đoạn khoảng 1 phút, đủ {{minutes}} phút), mỗi đoạn tóm tắt 2–4 câu: chuyện gì xảy ra, ai nói với ai, ở đâu. {{ending_rule}}
 5. "characters": mọi nhân vật (tối đa 6), mỗi người: "id" ngắn không dấu, "name" (tên theo ngôn ngữ thoại), "look" CHỌN ĐÚNG giá trị:
    sex: male | female; age: child | teen | young | adult | middle | old;
    skin: light | fair | tan | dark; hair: {{hairs}}; hair_color: {{hair_colors}};
    top: {{tops}}; top_color / bottom_color: {{colors}}; glasses: true | false; beard: "" | stubble | mustache | full.
-   Các nhân vật phải trông KHÁC NHAU rõ (tóc, màu áo, tuổi).
+   build (vóc dáng): {{builds}}; features (nét riêng, tuỳ chọn, mảng): {{features}}.
+   Các nhân vật phải trông KHÁC NHAU rõ (tóc, màu áo, tuổi, vóc dáng) — mỗi người một "kiểu người" dễ nhớ như truyện tranh: vd gã đi xem mắt bất lịch sự mặt tròn mập ("build":"chubby"), cô bạn thân đeo kính tròn quầng thâm, anh đồng nghiệp đẹp trai lạnh lùng ("build":"muscular" hoặc slim), cô người yêu cũ trang điểm đậm đeo hoa tai ("features":["makeup","earrings"]), ông trưởng phòng trung niên tóc vuốt. Thêm "role": vai và tính cách trong 1 câu tiếng Việt (vd "gã xem mắt tự cao, ăn uống thô lỗ, khoe đồng hồ hàng hiệu").
 6. "places": các địa điểm (tối đa 6): "id", "name", "kind" (mẫu bối cảnh gần nhất: {{kinds}}), "time" (ngay | dem). Người nói chuyện qua điện thoại / nhắn tin ở chỗ khác (kẻ gọi điện, người nhà ở xa...) phải có địa điểm RIÊNG của họ.
    Mỗi địa điểm thêm "look": tả bối cảnh ĐÚNG như trong truyện bằng TIẾNG ANH, 1–2 câu cụ thể để AI vẽ nền: loại nơi chốn, đất nước / thành phố, đồ vật đặc trưng, chất liệu, ánh sáng, không khí (vd "a small public restroom inside a Seoul subway station, white tiled walls, metal stall doors, a mirror with a crack, flickering fluorescent ceiling light"). KHÔNG tả người.
    Mỗi nhân vật thêm "home": id địa điểm người đó thường ở trong truyện.
 7. "narrator": {{narrator_rule}}
 
+### Cách kể cho cuốn (học từ các kênh 썰 / 사연 nhiều người xem)
+- Nhân vật lộ tính cách qua MỘT chi tiết cụ thể, đắt giá thay vì kể chung chung: đồng hồ hàng hiệu mà giày rách, gắp đồ ăn bằng đũa của mình rồi chấm chung, gọi món đắt nhất rồi bảo chia đôi, nhắc tên người yêu cũ giữa buổi hẹn...
+- Có nhân vật gây cười / gây ức chế rõ ràng và nhân vật "bình thường" để người xem đứng về phía mình; có ít nhất một nhân vật xuất hiện bất ngờ (người yêu cũ, sếp, bạn cũ) làm câu chuyện rẽ hướng.
+- Nhịp: tình huống → câu nói / hành động "khó đỡ" → mặt phản ứng câm lặng của người kia → câu đáp trả. Thoại ngắn, có châm biếm, có câu tự nói trong đầu ("하 진짜 부장님은 뭘 보고...").
+- Chi tiết thật, cụ thể (con số, tên món, tên chỗ, tiền): "체중 65kg에서 70kg", "파전에 막걸리", "4년 연애".
+- Nếu là chuyện tự kể ngôi thứ nhất kiểu hài (썰): người kể tự giễu mình, phóng đại vui, leo thang từng bước, kết bằng một cú ngược đời buồn cười.
+- Gài sớm một chi tiết nhỏ để cuối phần mới vỡ lẽ (chính là "정체" trong tên tập).
+
 Output JSON đúng dạng này, không có gì khác:
 {"title":"...","hook":"...","segments":[{"summary":"..."}],
- "characters":[{"id":"bo","name":"...","look":{"sex":"male","age":"middle","skin":"fair","hair":"short_part","hair_color":"black","top":"sweater","top_color":"beige","bottom_color":"navy","glasses":false,"beard":""},"home":"ga"}],
+ "characters":[{"id":"bo","name":"...","role":"...","look":{"sex":"male","age":"middle","skin":"fair","hair":"short_part","hair_color":"black","top":"sweater","top_color":"beige","bottom_color":"navy","glasses":false,"beard":"","build":"average","features":[]},"home":"ga"}],
  "places":[{"id":"ga","name":"...","kind":"duong_pho","time":"dem","look":"a busy subway station platform in Seoul at night, ..."}],"narrator":false}
