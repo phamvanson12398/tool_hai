@@ -113,10 +113,15 @@ def describe(c: dict) -> str:
     return s + (", " + ", ".join(x for x in extra if x) if extra else "")
 
 
-def prompt(c: dict, key: str, first: bool, style: str = STYLE_EN, avoid: str = "") -> str:
+def prompt(c: dict, key: str, first: bool, style: str = STYLE_EN, avoid: str = "", style_ref: bool = False) -> str:
     pose, expr = split_key(key)
-    ref = ("" if first else "Use the attached image as the character reference: keep exactly the same face, "
-           "hairstyle, clothes and colors. ")
+    if first and style_ref:                      # ảnh đầu: gửi kèm ảnh mẫu nét vẽ
+        ref = ("The attached image is a STYLE SAMPLE: copy its drawing style exactly (line work, coloring, "
+               "shading, face shapes and proportions, level of detail) but draw a completely NEW character "
+               "described below, not the person in the sample. ")
+    else:
+        ref = ("" if first else "Use the attached image as the character reference: keep exactly the same face, "
+               "hairstyle, clothes, colors and drawing style. ")
     return (f"{ref}{style} Draw {describe(c)} ({c.get('name') or c.get('id')}), {POSE_EN.get(pose, POSE_EN['down'])}, "
             f"{EXPR_EN.get(expr, EXPR_EN['neutral'])}. Waist-up shot, character centered and facing the viewer, "
             "both eyes clearly visible, the whole head and hands inside the frame. "
@@ -149,6 +154,7 @@ def needed(st: dict) -> list[dict]:
     out = []
     style = wst.prompt_of(st.get("art"))
     avoid = wst.avoid_of(st.get("art"))
+    has_ref = wst.ref_path(st.get("art") or wst.DEFAULT) is not None
     for cid, c in chars.items():
         keys = sorted({k for (ci, k) in cnt if ci == cid}, key=lambda k: (SEP in k, -cnt[(cid, k)], k))
         keys = ["down"] + [k for k in keys if k != "down"]   # ảnh gốc vẽ trước, làm mẫu cho các ảnh sau
@@ -157,7 +163,7 @@ def needed(st: dict) -> list[dict]:
             out.append({"cid": cid, "key": k, "pose": pose, "expr": expr, "shots": cnt.get((cid, k), 0),
                         "required": SEP not in k, "have": k in (have.get(cid) or {}),
                         "has_open": bool(((have.get(cid) or {}).get(k) or {}).get("open")),
-                        "prompt": prompt(c, k, k == "down", style, avoid)})
+                        "prompt": prompt(c, k, k == "down", style, avoid, has_ref)})
     return out
 
 

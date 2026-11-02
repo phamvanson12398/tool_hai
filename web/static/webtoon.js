@@ -181,7 +181,44 @@
     artInfo();
   }
   // tả nét đang chọn + gợi ý nét hợp thể loại + danh sách nét chị tự thêm
+  function artRef() {
+    var id = $("wt-art").value, a = artOf(id) || {};
+    var url = "/api/webtoon/art-styles/" + encodeURIComponent(id) + "/ref";
+    $("wt-ref-img").hidden = !a.has_ref;
+    if (a.has_ref) $("wt-ref-img").src = url + "?v=" + Date.now() % 100000;
+    $("wt-ref-dl").hidden = !a.has_ref;
+    $("wt-ref-dl").href = url + "?dl=1";
+    $("wt-ref-rm").hidden = !a.has_ref;
+    $("wt-ref-state").textContent = a.has_ref ? "— đã có, câu lệnh ảnh đầu tiên dặn AI vẽ theo ảnh này" :
+      "— chưa có (chỉ tả bằng chữ, dễ lệch nét)";
+  }
+  function refSaved(d) {
+    if (d.arts) ARTS = d.arts;
+    artRef();
+    if (W.id) save(true);                 // lấy lại câu lệnh vẽ (đã dặn gửi kèm ảnh mẫu)
+  }
+  function initRef() {
+    $("wt-ref-up").addEventListener("click", function () {
+      var f = document.createElement("input");
+      f.type = "file"; f.accept = "image/*";
+      f.addEventListener("change", function () {
+        if (!f.files || !f.files[0]) return;
+        var fd = new FormData();
+        fd.append("file", f.files[0]);
+        api("/api/webtoon/art-styles/" + encodeURIComponent($("wt-art").value) + "/ref", { method: "POST", body: fd })
+          .then(function (d) { refSaved(d); toast("ok", "Đã lưu ảnh mẫu nét vẽ", "Câu lệnh vẽ đã đổi: nhớ gửi kèm ảnh mẫu khi vẽ ảnh đầu tiên."); })
+          .catch(function (e) { toast("error", "Không lưu được ảnh mẫu", e.message); });
+      });
+      f.click();
+    });
+    $("wt-ref-rm").addEventListener("click", function () {
+      api("/api/webtoon/art-styles/" + encodeURIComponent($("wt-art").value) + "/ref", { method: "DELETE" })
+        .then(refSaved).catch(function (e) { toast("error", "Không bỏ được", e.message); });
+    });
+  }
+
   function artInfo() {
+    artRef();
     var a = artOf($("wt-art").value);
     $("wt-art-note").textContent = a ? (a.note || a.prompt) : "";
     var g = $("wt-genre").value, hint = $("wt-art-hint");
@@ -531,6 +568,16 @@
             card.appendChild(el("div", "sub", "Mắt, miệng do tool tự tìm — bấm ảnh để kiểm tra"));
           }
           openRow(card, c, n, meta);
+          var asRef = el("button", "btn btn-ghost btn-sm", "Dùng làm mẫu nét vẽ");
+          asRef.type = "button";
+          asRef.title = "Lấy ảnh này làm ảnh mẫu nét vẽ: các nhân vật khác vẽ cùng một nét như ảnh này";
+          asRef.addEventListener("click", function () {
+            api(picUrl(c.id, n.key) + "/as-ref", { method: "POST", body: {} }).then(function (d) {
+              W.data = d; if (d.options && d.options.arts) ARTS = d.options.arts;
+              render(); toast("ok", "Đã lấy làm ảnh mẫu nét vẽ", "Nhân vật khác: gửi kèm ảnh mẫu khi vẽ ảnh đầu tiên.");
+            }).catch(function (e) { toast("error", "Không lấy được", e.message); });
+          });
+          card.appendChild(asRef);
         } else {
           card.appendChild(el("div", "ph", "Chưa có ảnh"));
         }
@@ -989,6 +1036,7 @@
       if (!ARTS.length) { ARTS = d.arts || []; fillArt((wt() || {}).art || "saeon"); }
     }).catch(function () {});
     $("wt-art").addEventListener("change", artChanged);
+    initRef();
     $("wt-genre").addEventListener("change", artInfo);
     $("wt-art-save").addEventListener("click", addArt);
     fillSelect("wt-idea-genre", [["", "Mọi thể loại"]].concat(g), "");

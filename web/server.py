@@ -2751,6 +2751,47 @@ def api_webtoon_art_add():
     return jsonify({"id": sid, "arts": wst.options()})
 
 
+@app.route("/api/webtoon/art-styles/<sid>/ref", methods=["GET", "POST", "DELETE"])
+def api_webtoon_art_ref(sid):
+    """Ảnh mẫu nét vẽ của một nét: xem / tải về (?dl=1), tải lên, bỏ."""
+    from core import webtoon_styles as wst
+    if not wst.valid(sid):
+        return _err("Nét vẽ không có.", 404)
+    if request.method == "GET":
+        p = wst.ref_path(sid)
+        if not p:
+            return _err("Chưa có ảnh mẫu nét vẽ.", 404)
+        return send_file(str(p), mimetype="image/png", max_age=0, as_attachment=bool(request.args.get("dl")),
+                         download_name=f"mau_net_ve_{sid}.png")
+    if request.method == "DELETE":
+        wst.remove_ref(sid)
+    else:
+        f = request.files.get("file")
+        if not f or not f.filename:
+            return _err("Chưa chọn ảnh.")
+        try:
+            wst.save_ref(sid, f.stream)
+        except Exception as e:  # noqa: BLE001
+            return _err(f"Không đọc được ảnh: {_short_err(e, 200)}")
+    return jsonify({"ok": True, "arts": wst.options()})
+
+
+@app.post("/api/webtoon/<pid>/pic/<cid>/<key>/as-ref")
+def api_webtoon_pic_as_ref(pid, cid, key):
+    """Lấy ảnh nhân vật đã ưng làm ảnh mẫu nét vẽ cho nét đang chọn của truyện."""
+    from core import webtoon_styles as wst
+    try:
+        data, wt = _load_webtoon(pid)
+        p = _pic_path(pid, cid, key)
+    except (FileNotFoundError, ValueError) as e:
+        return _err(str(e), 404)
+    if not p.exists():
+        return _err("Chưa có ảnh này.", 404)
+    art = wt.get("art") or wst.DEFAULT
+    wst.save_ref(art, p)
+    return jsonify(_webtoon_view(pid, data))
+
+
 @app.delete("/api/webtoon/art-styles/<sid>")
 def api_webtoon_art_delete(sid):
     from core import webtoon_styles as wst

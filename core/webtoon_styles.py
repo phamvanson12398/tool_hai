@@ -12,10 +12,12 @@ import json
 import re
 import time
 import unicodedata
+from pathlib import Path
 
 from . import config
 
 FILE = config.LIBRARY / "webtoon_styles.json"
+REF_DIR = config.LIBRARY / "webtoon_style_refs"      # ảnh mẫu nét vẽ của từng nét (chị tải lên)
 DEFAULT = "saeon"
 
 PRESETS = {
@@ -110,11 +112,45 @@ def all_styles() -> dict:
 
 def options() -> list[dict]:
     return [{"id": k, "label": v["label"], "note": v.get("note", ""), "genres": v.get("genres") or [],
-             "prompt": v["prompt"], "custom": v["custom"]} for k, v in all_styles().items()]
+             "prompt": v["prompt"], "custom": v["custom"], "has_ref": ref_path(k) is not None}
+            for k, v in all_styles().items()]
 
 
 def valid(sid: str) -> bool:
     return sid in all_styles()
+
+
+def ref_path(sid: str | None) -> Path | None:
+    """Ảnh mẫu nét vẽ của một nét (gửi kèm khi vẽ ảnh đầu tiên của mỗi nhân vật)."""
+    if not sid or not re.fullmatch(r"[a-z0-9_]+", sid):
+        return None
+    p = REF_DIR / f"{sid}.png"
+    return p if p.exists() else None
+
+
+def save_ref(sid: str, src) -> None:
+    """Lưu ảnh mẫu nét vẽ (ảnh nền trong thì đặt lên nền trắng)."""
+    from PIL import Image
+    if not valid(sid):
+        raise ValueError("Nét vẽ không có.")
+    im = Image.open(src)
+    if im.mode in ("RGBA", "LA", "P"):
+        im = im.convert("RGBA")
+        bg = Image.new("RGBA", im.size, (255, 255, 255, 255))
+        bg.alpha_composite(im)
+        im = bg
+    im = im.convert("RGB")
+    im.thumbnail((1400, 1400))
+    REF_DIR.mkdir(parents=True, exist_ok=True)
+    im.save(REF_DIR / f"{sid}.png")
+
+
+def remove_ref(sid: str) -> bool:
+    p = ref_path(sid)
+    if not p:
+        return False
+    p.unlink()
+    return True
 
 
 def avoid_of(sid: str | None) -> str:

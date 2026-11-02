@@ -1036,3 +1036,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 .nc-bar { margin: 4px 0 8px; align-items: center; }
 .nc-voice-row { display: flex; gap: 6px; align-items: center; } .nc-voice-row select { flex: 1 1 auto; min-width: 0; }
 .wt-role { font-size: 12px; flex-basis: 100%; }
+.wt-ref { display: flex; gap: 10px; align-items: flex-start; margin: 6px 0 10px; }
+.wt-ref img { width: 90px; height: 90px; object-fit: contain; background: #fff; border-radius: 6px; flex: none; }
+.wt-ref .hint { margin: 4px 0 0; }
