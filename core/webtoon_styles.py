@@ -70,16 +70,18 @@ PRESETS = {
         "note": ("Như video chuyện hài tự kể: hoạt hình 2D biếm hoạ kiểu 병맛, màu phẳng, viền đen, mặt xấu-hài "
                  "phóng đại (mắt sụp lờ đờ, mũi bè, môi dày, nếp má sâu), da vàng tái, đầu to cổ ngắn."),
         "genres": ["funny_story", "comedy", "school"],
-        "prompt": ("Korean B-grade comedy cartoon (병맛 썰툰) style like humorous Korean YouTube story-animation "
-                   "channels: a flat 2D cartoon drawing, NOT realistic. Clean black ink outlines of medium "
-                   "thickness, flat cel colors with only one simple darker shadow tone, no gradients, no "
-                   "hatching. Ugly-funny caricature face: large head on a short stubby neck, droopy half-closed "
-                   "sleepy eyelids with small dark pupils, a wide flat nose, thick lips, deep smile lines from "
-                   "nose to mouth, sunken cheeks, sallow yellowish skin, messy thick black hair drawn as a flat "
-                   "dark shape with a few spiky strands, simple everyday clothes with a few fold lines. Looks "
-                   "like a funny comic panel, deadpan and awkward."),
-        "avoid": ("Do NOT make it photorealistic or semi-realistic, no realistic skin texture, no cross-hatching "
-                  "or pencil shading, no 3D, no anime big shiny eyes, no handsome idealized face."),
+        "prompt": ("Korean B-grade comedy manhwa (병맛 썰툰) style like humorous Korean YouTube story-animation "
+                   "channels, a 2D Korean comic drawing (NOT American cartoon, NOT realistic). Hand-inked black "
+                   "brush lines with varying width, slightly rough and sketchy, thin fine lines inside the face. "
+                   "Korean caricature face: narrow monolid eyes with a heavy upper eyelid line, small dark pupils, "
+                   "droopy sleepy look, 2 to 3 fine lines under the eyes, high cheekbones, fine wrinkle and smile "
+                   "lines drawn with thin ink strokes, wide flat nose, thick lips, slightly sunken cheeks. Muted "
+                   "desaturated warm colors, sallow olive-yellow skin with one soft shadow tone under the hair, "
+                   "jaw and neck. Hair drawn as dark ink with many sharp brush strand lines. Plain everyday "
+                   "clothes in muted colors with a few fold lines. Deadpan, awkward, funny mood."),
+        "avoid": ("Do NOT draw it like an American cartoon (no Family Guy, Simpsons or King of the Hill look): no "
+                  "thick uniform vector outlines, no bright saturated colors, no smooth round simple face. Not "
+                  "photorealistic, no 3D, no anime big shiny eyes, no handsome idealized face."),
     },
     "manhwa": {
         "label": "Manhwa bán thực — mặt chi tiết, đổ bóng nhẹ",
