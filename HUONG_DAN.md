@@ -1093,6 +1093,21 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
   nhau suốt truyện. Thiếu ảnh đêm thì tool lấy ảnh ngày làm tối đi; chưa có ảnh nào thì dùng
   nền vẽ tay. Cận mặt thì nền tự mờ, tối như video mẫu.
 
+### Kéo người xem tương tác (mục 1)
+Video xem lâu mà ít bình luận / thích thường vì người xem chỉ "nghe như radio". Các ô mới:
+- **Hỏi ý kiến giữa truyện + thẻ A / B** (mặc định Có): đúng lúc mâu thuẫn căng nhất (khoảng giữa
+  video), người kể hỏi thẳng người xem sẽ làm gì; trên màn hình hiện **thẻ A / B** (vd "A 참는다 /
+  B 엎는다") để người xem bình luận A hoặc B. Thẻ sửa được ở từng cảnh quay (ô "Thẻ chọn A / B").
+- **Xin thích lúc hả hê (사이다)** (mặc định Có): ngay sau khoảnh khắc đã nhất, người kể xin thích
+  một câu tự nhiên — thay vì chỉ xin ở cuối khi nhiều người đã lướt đi.
+- **Kiểu truyện**: Bình thường / **Để người xem phán xử** (cố ý để nhân vật chính cũng có điểm gây
+  tranh cãi, cuối truyện hỏi ai đúng ai sai) / **Người xem chọn phần sau** (kết ở ngã rẽ A / B, hỏi
+  người xem chọn hướng cho phần sau).
+- **Gói đăng video** (khung bên phải, dưới Dựng video): AI soạn sẵn **bình luận ghim** (một câu hỏi
+  chia phe), **khảo sát** cho mục Cộng đồng và **3 tên tập dạng câu hỏi** — sửa được, bấm Chép.
+  Mẹo: đăng bình luận ghim bằng tài khoản kênh, trả lời vài bình luận trong 1 giờ đầu.
+- Không dùng bình luận giả hay lời xin thích kiểu doạ dẫm — dễ bị YouTube hạ đề xuất.
+
 ### Lời mời chia sẻ cuối video (mục 1, mặc định: Có)
 AI viết thêm 2–3 câu cuối, do người kể nói, để người xem muốn chia sẻ và bình luận. Câu
 viết khéo và gắn với đúng câu chuyện vừa kể:

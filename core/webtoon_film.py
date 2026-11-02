@@ -46,11 +46,23 @@ PLACE_KINDS = {"spot": "Nền trơn có vòng sáng (lúc kể chuyện)",
 STYLES = {"saeon": "Kể chuyện 사연 (nhân vật chính tự kể + thoại, như kênh 썰)",
           "drama": "Toàn thoại (rất ít lời kể)"}
 FRONTS = ("table", "dining", "bed", "car", "desk", "sofa")
+# kiểu truyện để kéo tương tác
+STORY_MODES = {"normal": "Bình thường",
+               "judge": "Để người xem phán xử (cố ý để điểm tranh cãi, hỏi ai đúng ai sai)",
+               "vote_next": "Người xem chọn phần sau (kết ở ngã rẽ A / B)"}
+ENGAGE_MODE_RULE = {
+    "judge": ("KIỂU TRUYỆN: ĐỂ NGƯỜI XEM PHÁN XỬ — cố ý để nhân vật chính cũng có MỘT điểm gây tranh cãi "
+              "(phản ứng hơi quá, quyết định táo bạo, nói lời khó nghe...), không ai hoàn toàn đúng, để người xem "
+              "chia phe. Cuối truyện người kể hỏi thẳng người xem ai đúng ai sai / họ đứng về phía ai."),
+    "vote_next": ("KIỂU TRUYỆN: NGƯỜI XEM CHỌN PHẦN SAU — kết phần này ở một NGÃ RẼ có HAI lựa chọn rõ ràng "
+                  "(vd tha thứ / trả đũa, nói ra / giấu đi); cuối truyện người kể hỏi người xem chọn hướng nào, "
+                  "bình luận nhiều hơn thì phần sau đi theo hướng đó."),
+}
 
 
 def default_story() -> dict:
     return {"title": "", "brief": "", "genre": "marriage", "language": "ko", "minutes": 4, "style": "saeon",
-            "bg_mode": "2d", "cta": True,
+            "bg_mode": "2d", "cta": True, "story_mode": "normal", "mid_q": True, "like_ask": True,
             "part": 1, "subtitles": True, "characters": [], "places": [], "shots": []}
 
 
@@ -87,6 +99,12 @@ def clean_shot(s: dict, ids: set, k: int) -> dict:
     else:
         s["line"] = {}
     s["front"] = s.get("front") if s.get("front") in FRONTS else ""
+    ch = s.get("choice") if isinstance(s.get("choice"), dict) else {}
+    a, b = str(ch.get("a") or "").strip()[:16], str(ch.get("b") or "").strip()[:16]
+    if a and b:
+        s["choice"] = {"a": a, "b": b}                  # thẻ chọn A / B hiện trên màn hình
+    else:
+        s.pop("choice", None)
     s["extras"] = [x for x in (s.get("extras") or []) if x in ("sweat", "tears", "blush", "bags",
                                                                "bruise", "shadow")]
     return s
@@ -614,9 +632,41 @@ class Shot:
         return cv2.warpAffine(np.ascontiguousarray(arr), M, (W, H), flags=cv2.INTER_LINEAR,
                               borderMode=cv2.BORDER_REFLECT)
 
+    def _choice(self, arr: np.ndarray, t: float) -> np.ndarray:
+        """Thẻ chọn A / B (người xem bình luận A hoặc B): hai ô màu phía trên khung, hiện dần."""
+        ch = self.s.get("choice")
+        if not ch:
+            return arr
+        if not hasattr(self, "_ch"):
+            W, H = self.W, self.H
+            lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+            d = ImageDraw.Draw(lay)
+            f = wp.font(int(H * 0.05), True, self.lang)
+            bw, bh = int(W * 0.34), int(H * 0.12)
+            for k, (tag, txt, col) in enumerate((("A", ch["a"], (226, 64, 80)), ("B", ch["b"], (52, 108, 222)))):
+                x0 = int(W * (0.12 if k == 0 else 0.54))
+                y0 = int(H * 0.06)
+                d.rounded_rectangle([x0 + 6, y0 + 8, x0 + bw + 6, y0 + bh + 8], radius=bh // 3, fill=(0, 0, 0, 90))
+                d.rounded_rectangle([x0, y0, x0 + bw, y0 + bh], radius=bh // 3, fill=col + (240,),
+                                    outline=(255, 255, 255, 255), width=max(3, int(H * 0.005)))
+                label = f"{tag}  {txt}"
+                w = d.textlength(label, font=f)
+                d.text((x0 + (bw - w) / 2, y0 + bh / 2), label, font=f, fill=(255, 255, 255), anchor="lm",
+                       stroke_width=2, stroke_fill=(30, 30, 40))
+            bb = lay.getbbox()
+            a = np.asarray(lay.crop(bb)).astype(np.float32)
+            self._ch = (bb, a[:, :, :3], a[:, :, 3:4] / 255.0)
+        (x0, y0, x1, y1), rgb, al = self._ch
+        k = min(1.0, t / 0.25)
+        out = np.array(arr, copy=True)
+        reg = out[y0:y1, x0:x1].astype(np.float32)
+        out[y0:y1, x0:x1] = (reg * (1 - al * k) + rgb * al * k).astype(np.uint8)
+        return out
+
     def subtitle(self, arr: np.ndarray, t: float, name: str = "") -> np.ndarray:
         """Phụ đề như video mẫu: chữ trắng to, viền đen dày, không nền. Chữ cả cảnh như nhau
         nên vẽ một lần rồi chỉ trộn vào vùng chữ ở mỗi khung (dựng nhanh)."""
+        arr = self._choice(arr, t)
         ln = self.s.get("line") or {}
         if not ln.get("text") or not self.st.get("subtitles", True):
             return arr
@@ -999,12 +1049,13 @@ def write(st: dict, progress=None) -> dict:
                    + _cast_block(st),
         ending_rule=("Đoạn cuối DỪNG ở cao trào / cú sốc, bỏ lửng cho người xem chờ phần sau."
                      if st.get("cliffhanger", True) else "Đoạn cuối kết trọn vẹn."),
-        style_block=style_block, narrator_rule=narrator_rule,
+        style_block=style_block, narrator_rule=narrator_rule, engage_block=_engage_block(st, lang),
         **cat), task="story", timeout=600)
     if not isinstance(plan_, dict) or not plan_.get("segments"):
         raise RuntimeError("AI không lập được dàn ý.")
     st["title"] = st.get("title") or str(plan_.get("title") or "")[:120]
     st["hook"] = str(plan_.get("hook") or "")[:300]
+    st["engage"] = _clean_engage(plan_.get("engage"))
     old_c = {c["id"]: c for c in st.get("characters") or []} if prev else {}
     old_p = {p["id"]: p for p in st.get("places") or []} if prev else {}
     st["characters"] = [{"id": wa_slug(c.get("id") or c.get("name")), "name": str(c.get("name") or ""),
@@ -1072,6 +1123,7 @@ def write(st: dict, progress=None) -> dict:
                                       lang_label=LANGS.get(lang, lang))
     outline = "\n".join(f"{i + 1}. {s.get('summary')}" for i, s in enumerate(segs))
     per = minutes * 60 / max(1, len(segs))
+    q_seg, s_seg = _engage_segments(plan_, len(segs))
     shots: list = []
     for i, sg in enumerate(segs):
         say(0.1 + 0.85 * i / len(segs), f"AI phân cảnh đoạn {i + 1}/{len(segs)}")
@@ -1084,6 +1136,7 @@ def write(st: dict, progress=None) -> dict:
             segment_rule=("Mở video bằng MÓC CÂU." if i == 0 else "") +
                          (" Đây là đoạn CUỐI: dừng ở cú sốc, câu chuyện kết bằng một câu bỏ lửng."
                           if i == len(segs) - 1 and st.get("cliffhanger", True) else "") +
+                         _engage_rule(st, lang, i, len(segs), q_seg, s_seg) +
                          ("\n\n" + cta if cta and i == len(segs) - 1 else ""),
             before_block=("### Thoại ngay trước đó (nối tiếp, không lặp lại)\n" + "\n".join(before)) if before else "",
             style_rule=style_rule, **cat), task="story", timeout=600)
@@ -1095,6 +1148,73 @@ def write(st: dict, progress=None) -> dict:
     fix_places(st)
     say(1.0, "xong")
     return st
+
+
+def _engage_block(st: dict, lang: str) -> str:
+    """Phần dặn AI khi lập dàn ý: kiểu truyện kéo tương tác + gói tương tác khi đăng."""
+    lab = LANGS.get(lang, lang)
+    out = []
+    rule = ENGAGE_MODE_RULE.get(st.get("story_mode") or "normal")
+    if rule:
+        out.append(rule)
+    out.append(
+        '"question_segment": số thứ tự đoạn (1, 2...) có lúc mâu thuẫn CĂNG NHẤT trước khi được giải quyết '
+        '(thường ở giữa video) — chỗ hỏi ý kiến người xem. "saida_segment": số thứ tự đoạn có khoảnh khắc '
+        'hả hê nhất (사이다), không có thì 0.\n'
+        f'"engage": gói tương tác khi đăng video, viết bằng {lab}: "pinned_comment" (bình luận ghim của kênh: '
+        'một câu hỏi chia phe khiến người xem muốn trả lời ngay, gắn với chi tiết của truyện, ≤ 120 chữ), "poll" '
+        '({"question": câu hỏi khảo sát, "options": 2–4 lựa chọn ngắn}), "titles" (3 tên tập dạng câu hỏi gây '
+        'tranh luận, vd "...제가 예민한 건가요?").')
+    return "### Kéo người xem tương tác (bình luận, thích, chia sẻ)\n" + "\n".join(out)
+
+
+def _clean_engage(e) -> dict:
+    e = e if isinstance(e, dict) else {}
+    poll = e.get("poll") if isinstance(e.get("poll"), dict) else {}
+    return {"pinned_comment": str(e.get("pinned_comment") or "")[:400],
+            "poll": {"question": str(poll.get("question") or "")[:200],
+                     "options": [str(x)[:60] for x in (poll.get("options") or []) if str(x).strip()][:4]},
+            "titles": [str(x)[:120] for x in (e.get("titles") or []) if str(x).strip()][:5]}
+
+
+def _engage_segments(plan_: dict, n: int) -> tuple[int, int]:
+    """(đoạn hỏi ý kiến, đoạn hả hê) — chỉ số từ 0; -1 nếu không có."""
+    def idx(v, default):
+        try:
+            k = int(v) - 1
+        except (TypeError, ValueError):
+            return default
+        return k if 0 <= k < n else default
+    q = idx(plan_.get("question_segment"), n // 2)
+    if n > 1 and q == n - 1:                 # câu hỏi giữa truyện không trùng đoạn cuối (đã có lời mời cuối)
+        q = n - 2
+    return q, idx(plan_.get("saida_segment"), -1)
+
+
+def _engage_rule(st: dict, lang: str, i: int, n: int, q_seg: int, s_seg: int) -> str:
+    """Phần dặn thêm cho từng đoạn khi phân cảnh."""
+    lab = LANGS.get(lang, lang)
+    out = []
+    if st.get("mid_q", True) and i == q_seg:
+        out.append(
+            "HỎI Ý KIẾN NGƯỜI XEM: ngay sau lúc mâu thuẫn căng nhất trong đoạn này, thêm đúng 1 câu người kể "
+            f'("who":"narr") hỏi thẳng người xem họ sẽ làm gì, viết bằng {lab}, tự nhiên, ≤ 25 chữ (vd '
+            '"여러분이라면 참으시겠어요, 아니면 바로 말하시겠어요?"). Cảnh của câu đó thêm "choice":{"a":"...","b":"..."} '
+            "— hai lựa chọn rất ngắn (≤ 8 chữ) hiện thành thẻ A / B trên màn hình để người xem bình luận A hoặc B. "
+            "Chỉ MỘT lần, rồi truyện tiếp tục ngay.")
+    if st.get("like_ask", True) and i == s_seg:
+        out.append(
+            "XIN THÍCH ĐÚNG LÚC: ngay sau khoảnh khắc hả hê nhất (사이다) trong đoạn này, thêm 1 câu người kể "
+            f"xin thích thật tự nhiên, gắn với cảm xúc lúc đó, viết bằng {lab}, ≤ 20 chữ (vd \"속 시원하셨다면 "
+            "좋아요 한 번 눌러주세요\"). Chỉ một lần.")
+    mode = st.get("story_mode") or "normal"
+    if i == n - 1 and mode == "judge":
+        out.append("KẾT ĐỂ PHÁN XỬ: câu cuối của truyện (trước lời mời chia sẻ nếu có) người kể hỏi người xem ai đúng "
+                   "ai sai / họ đứng về phía ai.")
+    if i == n - 1 and mode == "vote_next":
+        out.append('KẾT Ở NGÃ RẼ: truyện dừng ở lúc phải chọn giữa HAI hướng; người kể hỏi người xem chọn hướng nào '
+                   'cho phần sau, cảnh đó thêm "choice":{"a":"...","b":"..."} (≤ 8 chữ mỗi lựa chọn).')
+    return ("\n\n" + "\n".join(out)) if out else ""
 
 
 def fix_places(st: dict) -> None:

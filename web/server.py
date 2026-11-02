@@ -2683,6 +2683,7 @@ def _webtoon_view(pid: str, data: dict) -> dict:
     out["options"] = {
         "genres": [[k, v] for k, v in wf.GENRES.items()], "langs": [[k, v] for k, v in wf.LANGS.items()],
         "styles": [[k, v] for k, v in wf.STYLES.items()],
+        "story_modes": [[k, v] for k, v in wf.STORY_MODES.items()],
         "arts": wst.options(),
         "narr_voices": [[k, v] for k, v in wf.NARR_VOICES.items()],
         "types": list(wf.SHOT_TYPES), "cameras": list(wf.CAMERAS), "exprs": list(wa.EXPRS),
@@ -2844,9 +2845,11 @@ def api_webtoon_save(pid):
                 wt[k] = max(lo, min(hi, float(body[k]) if k == "minutes" else int(body[k])))
             except (TypeError, ValueError):
                 pass
-    for k in ("subtitles", "cliffhanger", "cta"):
+    for k in ("subtitles", "cliffhanger", "cta", "mid_q", "like_ask"):
         if k in body:
             wt[k] = bool(body[k])
+    if body.get("story_mode") in wf.STORY_MODES:
+        wt["story_mode"] = body["story_mode"]
     if body.get("bg_mode") in ("draw", "3d", "2d"):
         wt["bg_mode"] = body["bg_mode"]
     if body.get("style") in wf.STYLES:
@@ -2879,6 +2882,8 @@ def api_webtoon_save(pid):
                          **({"bg3d_seed": (old_pl.get(p.get("id")) or {}).get("bg3d_seed")}
                             if (old_pl.get(p.get("id")) or {}).get("bg3d_seed") else {})}
                         for p in body["places"] if isinstance(p, dict)][:10]
+    if isinstance(body.get("engage"), dict):
+        wt["engage"] = wf._clean_engage(body["engage"])
     if isinstance(body.get("shots"), list):
         ids = {c["id"] for c in wt.get("characters") or []}
         wt["shots"] = [wf.clean_shot(s, ids, k) for k, s in enumerate(body["shots"]) if isinstance(s, dict)]
@@ -2949,7 +2954,7 @@ def api_webtoon_next(pid):
         return _err("Tập này chưa có nội dung tóm tắt — bấm 'Tóm tắt bằng AI' hoặc tự gõ vào ô Nội dung tập này.")
     nid = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
     nw = wf.default_story()
-    for k in ("genre", "language", "minutes", "subtitles", "cliffhanger", "narrator", "bg_mode", "pics", "style", "art", "cta",
+    for k in ("genre", "language", "minutes", "subtitles", "cliffhanger", "narrator", "bg_mode", "pics", "style", "art", "cta", "story_mode", "mid_q", "like_ask",
               "narrator_id", "narrator_voice"):
         if k in wt:
             nw[k] = json.loads(json.dumps(wt[k]))

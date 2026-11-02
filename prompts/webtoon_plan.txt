@@ -32,7 +32,10 @@ NGÔN NGỮ: tên tập ("title"), móc câu ("hook"), tên nhân vật và mọ
 - Nếu là chuyện tự kể ngôi thứ nhất kiểu hài (썰): người kể tự giễu mình, phóng đại vui, leo thang từng bước, kết bằng một cú ngược đời buồn cười.
 - Gài sớm một chi tiết nhỏ để cuối phần mới vỡ lẽ (chính là "정체" trong tên tập).
 
+{{engage_block}}
+
 Output JSON đúng dạng này, không có gì khác:
-{"title":"...","hook":"...","segments":[{"summary":"..."}],
+{"title":"...","hook":"...","segments":[{"summary":"..."}],"question_segment":2,"saida_segment":4,
+ "engage":{"pinned_comment":"...","poll":{"question":"...","options":["...","..."]},"titles":["...","...","..."]},
  "characters":[{"id":"bo","name":"...","role":"...","look":{"sex":"male","age":"middle","skin":"fair","hair":"short_part","hair_color":"black","top":"sweater","top_color":"beige","bottom_color":"navy","glasses":false,"beard":"","build":"average","features":[]},"home":"ga"}],
  "places":[{"id":"ga","name":"...","kind":"duong_pho","time":"dem","look":"a busy subway station platform in Seoul at night, ..."}],"narrator":false}

@@ -608,6 +608,14 @@
                 <option value="1">Có (viết khéo theo từng truyện)</option><option value="0">Không</option></select></div>
             <div class="field"><label for="wt-subs">Phụ đề</label>
               <select id="wt-subs"><option value="1">Có</option><option value="0">Không</option></select></div>
+          </div>
+          <div class="field-row">
+            <div class="field"><label for="wt-smode">Kiểu truyện (kéo bình luận)</label><select id="wt-smode"></select></div>
+            <div class="field"><label for="wt-midq">Hỏi ý kiến giữa truyện + thẻ A / B</label>
+              <select id="wt-midq" title="Lúc mâu thuẫn căng nhất, người kể hỏi người xem sẽ làm gì; trên màn hình hiện thẻ A / B để bình luận A hoặc B">
+                <option value="1">Có</option><option value="0">Không</option></select></div>
+            <div class="field"><label for="wt-like">Xin thích lúc hả hê (사이다)</label>
+              <select id="wt-like" title="Ngay sau khoảnh khắc hả hê nhất, người kể xin thích một câu tự nhiên"><option value="1">Có</option><option value="0">Không</option></select></div>
             <div class="field"><label for="wt-title">Tên tập</label><input type="text" id="wt-title" placeholder="AI tự đặt nếu để trống"></div>
           </div>
           <div class="field">
@@ -660,6 +668,16 @@
             <video id="wt-video" controls style="width:100%"></video>
             <a class="btn btn-sm" id="wt-dl" download="truyen_webtoon.mp4">Tải mp4</a>
           </div>
+        </section>
+        <section class="card" id="wt-engage" hidden>
+          <h2 class="card-title">Gói đăng video (kéo tương tác)</h2>
+          <p class="hint">AI soạn theo đúng truyện này. Bình luận ghim: đăng bằng tài khoản kênh rồi ghim lên đầu, và trả lời vài bình luận trong 1 giờ đầu. Khảo sát: đăng ở mục Cộng đồng.</p>
+          <div class="field"><label for="wt-eg-pin">Bình luận ghim</label><textarea id="wt-eg-pin" rows="3"></textarea>
+            <button class="btn btn-sm" type="button" data-copy="wt-eg-pin">Chép</button></div>
+          <div class="field"><label for="wt-eg-poll">Khảo sát (dòng đầu là câu hỏi, mỗi dòng sau một lựa chọn)</label><textarea id="wt-eg-poll" rows="4"></textarea>
+            <button class="btn btn-sm" type="button" data-copy="wt-eg-poll">Chép</button></div>
+          <div class="field"><label for="wt-eg-titles">Tên tập dạng câu hỏi (mỗi dòng một tên)</label><textarea id="wt-eg-titles" rows="3"></textarea>
+            <button class="btn btn-sm" type="button" data-copy="wt-eg-titles">Chép</button></div>
         </section>
       </aside>
     </div>

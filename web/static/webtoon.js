@@ -113,10 +113,12 @@
       style: $("wt-style").value, narrator_voice: $("wt-narrv").value, art: $("wt-art").value,
       language: $("wt-lang").value, minutes: parseFloat($("wt-minutes").value) || 4,
       part: parseInt($("wt-part").value, 10) || 1, cliffhanger: $("wt-cliff").value === "1",
-      subtitles: $("wt-subs").value === "1", cta: $("wt-cta").value === "1", prev_summary: $("wt-prev").value,
+      subtitles: $("wt-subs").value === "1", cta: $("wt-cta").value === "1",
+      story_mode: $("wt-smode").value || "normal", mid_q: $("wt-midq").value === "1", like_ask: $("wt-like").value === "1", prev_summary: $("wt-prev").value,
       summary: $("wt-summary").value
     };
     if ($("wt-bgmode")) b.bg_mode = $("wt-bgmode").value;
+    if (!$("wt-engage").hidden) b.engage = collectEngage();
     var cur = wt();
     if ((cur.characters || []).length) {
       b.characters = [];
@@ -143,6 +145,11 @@
     document.querySelectorAll("#wt-shots .wt-shot").forEach(function (row) {
       var s = JSON.parse(row.getAttribute("data-raw") || "{}");
       row.querySelectorAll("[data-k]").forEach(function (f) { s[f.getAttribute("data-k")] = f.value; });
+      var ca = row.querySelector("[data-choice=a]"), cb2 = row.querySelector("[data-choice=b]");
+      if (ca && cb2) {
+        if (ca.value.trim() && cb2.value.trim()) s.choice = { a: ca.value.trim(), b: cb2.value.trim() };
+        else delete s.choice;
+      }
       var who = row.querySelector(".lwho"), text = row.querySelector(".text");
       s.line = text && text.value.trim() ? { who: who.value, text: text.value.trim() } : {};
       var ph = row.querySelector(".phone");
@@ -295,6 +302,25 @@
     }).catch(function (e) { toast("error", "Chưa thêm được", e.message); });
   }
 
+  /* ---------------------------- gói đăng (kéo tương tác) ---------------------------- */
+
+  var SMODE_LIST = [["normal", "Bình thường"], ["judge", "Để người xem phán xử (cố ý để điểm tranh cãi, hỏi ai đúng ai sai)"],
+                    ["vote_next", "Người xem chọn phần sau (kết ở ngã rẽ A / B)"]];
+  function renderEngage(e) {
+    e = e || {};
+    var has = e.pinned_comment || (e.poll && e.poll.question) || (e.titles || []).length;
+    $("wt-engage").hidden = !has;
+    if (!has) return;
+    $("wt-eg-pin").value = e.pinned_comment || "";
+    $("wt-eg-poll").value = [(e.poll || {}).question || ""].concat((e.poll || {}).options || []).join("\n");
+    $("wt-eg-titles").value = (e.titles || []).join("\n");
+  }
+  function collectEngage() {
+    var lines = $("wt-eg-poll").value.split("\n").map(function (x) { return x.trim(); }).filter(Boolean);
+    return { pinned_comment: $("wt-eg-pin").value.trim(), poll: { question: lines[0] || "", options: lines.slice(1) },
+             titles: $("wt-eg-titles").value.split("\n").map(function (x) { return x.trim(); }).filter(Boolean) };
+  }
+
   /* ---------------------------- vẽ giao diện ---------------------------- */
 
   function fillSelect(id, list, value) {
@@ -319,6 +345,10 @@
     $("wt-cliff").value = w.cliffhanger === false ? "0" : "1";
     $("wt-subs").value = w.subtitles === false ? "0" : "1";
     $("wt-cta").value = w.cta === false ? "0" : "1";
+    fillSelect("wt-smode", o.story_modes || SMODE_LIST, w.story_mode || "normal");
+    $("wt-midq").value = w.mid_q === false ? "0" : "1";
+    $("wt-like").value = w.like_ask === false ? "0" : "1";
+    renderEngage(w.engage);
     $("wt-prev").value = w.prev_summary || "";
     $("wt-summary").value = w.summary || "";
     if ($("wt-open").value !== W.id && W.id) $("wt-open").value = W.id;
@@ -840,6 +870,14 @@
       var tx = document.createElement("input");
       tx.className = "text"; tx.value = ln.text || ""; tx.placeholder = "Câu nói (để trống nếu không có)";
       ctl.appendChild(tx);
+      if (s.type !== "phone" && s.type !== "black") {
+        ["a", "b"].forEach(function (k) {
+          var ci = document.createElement("input");
+          ci.className = "choice"; ci.value = (s.choice || {})[k] || ""; ci.setAttribute("data-choice", k);
+          ci.placeholder = "Thẻ chọn " + k.toUpperCase(); ci.title = "Thẻ chọn A / B hiện trên màn hình (để trống: không có)";
+          ctl.appendChild(ci);
+        });
+      }
       if (s.type === "phone") {
         var ph = document.createElement("textarea");
         ph.className = "phone"; ph.rows = 3;
@@ -1046,6 +1084,18 @@
     }).catch(function () {});
     $("wt-art").addEventListener("change", artChanged);
     initRef();
+    document.querySelectorAll("#wt-engage [data-copy]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        copyText($(b.getAttribute("data-copy")).value || "").then(function () { toast("ok", "Đã chép"); });
+      });
+    });
+    ["wt-smode", "wt-midq", "wt-like"].forEach(function (id) {
+      $(id).addEventListener("change", function () { if (W.id) save(true); });
+    });
+    ["wt-eg-pin", "wt-eg-poll", "wt-eg-titles"].forEach(function (id) {
+      $(id).addEventListener("change", function () { if (W.id) save(true); });
+    });
+    fillSelect("wt-smode", SMODE_LIST, "normal");
     $("wt-genre").addEventListener("change", artInfo);
     $("wt-art-save").addEventListener("click", addArt);
     fillSelect("wt-idea-genre", [["", "Mọi thể loại"]].concat(g), "");
