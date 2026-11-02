@@ -113,7 +113,7 @@ def describe(c: dict) -> str:
     return s + (", " + ", ".join(x for x in extra if x) if extra else "")
 
 
-def prompt(c: dict, key: str, first: bool, style: str = STYLE_EN) -> str:
+def prompt(c: dict, key: str, first: bool, style: str = STYLE_EN, avoid: str = "") -> str:
     pose, expr = split_key(key)
     ref = ("" if first else "Use the attached image as the character reference: keep exactly the same face, "
            "hairstyle, clothes and colors. ")
@@ -121,7 +121,7 @@ def prompt(c: dict, key: str, first: bool, style: str = STYLE_EN) -> str:
             f"{EXPR_EN.get(expr, EXPR_EN['neutral'])}. Waist-up shot, character centered and facing the viewer, "
             "both eyes clearly visible, the whole head and hands inside the frame. "
             "Plain solid bright green (#00FF00) background like a green screen, nothing else in the image, "
-            "no green on the character, no text, no frame. Vertical 3:4 image.")
+            "no green on the character, no text, no frame. Vertical 3:4 image." + (f" {avoid}" if avoid else ""))
 
 
 def prompt_open() -> str:
@@ -148,6 +148,7 @@ def needed(st: dict) -> list[dict]:
                 cnt[(cid, k)] = cnt.get((cid, k), 0) + 1
     out = []
     style = wst.prompt_of(st.get("art"))
+    avoid = wst.avoid_of(st.get("art"))
     for cid, c in chars.items():
         keys = sorted({k for (ci, k) in cnt if ci == cid}, key=lambda k: (SEP in k, -cnt[(cid, k)], k))
         keys = ["down"] + [k for k in keys if k != "down"]   # ảnh gốc vẽ trước, làm mẫu cho các ảnh sau
@@ -156,7 +157,7 @@ def needed(st: dict) -> list[dict]:
             out.append({"cid": cid, "key": k, "pose": pose, "expr": expr, "shots": cnt.get((cid, k), 0),
                         "required": SEP not in k, "have": k in (have.get(cid) or {}),
                         "has_open": bool(((have.get(cid) or {}).get(k) or {}).get("open")),
-                        "prompt": prompt(c, k, k == "down", style)})
+                        "prompt": prompt(c, k, k == "down", style, avoid)})
     return out
 
 

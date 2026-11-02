@@ -67,15 +67,19 @@ PRESETS = {
     },
     "ssul_caricature": {
         "label": "썰툰 biếm hoạ hài — mặt phóng đại, nét dày (như video 동네 히어로)",
-        "note": ("Như video chuyện hài tự kể: biếm hoạ phóng đại, nét đen dày, đổ bóng sần, má hóp, quầng mắt, "
-                 "da hơi vàng sạm, cơ bắp và nếp nhăn rõ, rất hợp chuyện hài thời đi học / đi lính."),
+        "note": ("Như video chuyện hài tự kể: hoạt hình 2D biếm hoạ kiểu 병맛, màu phẳng, viền đen, mặt xấu-hài "
+                 "phóng đại (mắt sụp lờ đờ, mũi bè, môi dày, nếp má sâu), da vàng tái, đầu to cổ ngắn."),
         "genres": ["funny_story", "comedy", "school"],
-        "prompt": ("Korean comic caricature style like humorous Korean 썰 story-animation channels: exaggerated "
-                   "realistic faces with gaunt cheeks, strong cheekbones, heavy eye bags and wrinkles, slightly "
-                   "yellowish tanned skin, thick inky black outlines, gritty cel shading with rough hatching "
-                   "texture, comically intense expressions (bulging eyes, clenched jaw, sly squint), slightly "
-                   "large heads on realistic bodies, everyday clothes like school uniforms, sleeveless shirts "
-                   "and track suits."),
+        "prompt": ("Korean B-grade comedy cartoon (병맛 썰툰) style like humorous Korean YouTube story-animation "
+                   "channels: a flat 2D cartoon drawing, NOT realistic. Clean black ink outlines of medium "
+                   "thickness, flat cel colors with only one simple darker shadow tone, no gradients, no "
+                   "hatching. Ugly-funny caricature face: large head on a short stubby neck, droopy half-closed "
+                   "sleepy eyelids with small dark pupils, a wide flat nose, thick lips, deep smile lines from "
+                   "nose to mouth, sunken cheeks, sallow yellowish skin, messy thick black hair drawn as a flat "
+                   "dark shape with a few spiky strands, simple everyday clothes with a few fold lines. Looks "
+                   "like a funny comic panel, deadpan and awkward."),
+        "avoid": ("Do NOT make it photorealistic or semi-realistic, no realistic skin texture, no cross-hatching "
+                  "or pencil shading, no 3D, no anime big shiny eyes, no handsome idealized face."),
     },
     "manhwa": {
         "label": "Manhwa bán thực — mặt chi tiết, đổ bóng nhẹ",
@@ -109,6 +113,11 @@ def options() -> list[dict]:
 
 def valid(sid: str) -> bool:
     return sid in all_styles()
+
+
+def avoid_of(sid: str | None) -> str:
+    """Điều cấm riêng của nét vẽ (đặt cuối câu lệnh để AI không vẽ lệch nét)."""
+    return (all_styles().get(sid or DEFAULT) or {}).get("avoid", "")
 
 
 def prompt_of(sid: str | None) -> str:
