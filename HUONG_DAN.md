@@ -1143,7 +1143,9 @@ theo nét đã chọn:
   hoạt hình Mỹ, lúc ra bán thật). Có ảnh mẫu thì câu lệnh ảnh đầu tiên (Tay buông) của mỗi nhân vật
   dặn AI **chép đúng nét của ảnh mẫu** nhưng vẽ người mới: khi vẽ, **gửi kèm ảnh mẫu** (nút
   **Tải về để gửi kèm**) rồi dán câu lệnh. Cách hay nhất: vẽ được một nhân vật ưng ý thì bấm
-  **Dùng làm mẫu nét vẽ** ở ảnh đó (mục 2b) — mọi nhân vật sau cùng một nét. Mỗi nét vẽ có ảnh mẫu
+  **Dùng làm mẫu nét vẽ** ở ảnh đó (mục 2b) — mọi nhân vật sau cùng một nét. **Tool tự làm**: nét vẽ
+  nào chưa có ảnh mẫu thì ảnh Tay buông đầu tiên chị tải lên ở mục 2b tự thành ảnh mẫu (tool giữ ảnh,
+  chị khỏi lưu); muốn đổi thì bấm Dùng làm mẫu nét vẽ ở ảnh khác. Mỗi nét vẽ có ảnh mẫu
   riêng, dùng cho mọi truyện. Nên dùng ảnh của chính chị, không cắt khung hình từ video của kênh khác.
 - **Thêm nét vẽ mới**: mở **＋ Thêm nét vẽ mới**, đặt tên, mô tả nét vẽ (nên viết tiếng
   Anh, vd "cute 3D Pixar style, big round eyes, soft lighting"), tick thể loại hợp rồi

@@ -192,6 +192,14 @@
     $("wt-ref-state").textContent = a.has_ref ? "— đã có, câu lệnh ảnh đầu tiên dặn AI vẽ theo ảnh này" :
       "— chưa có (chỉ tả bằng chữ, dễ lệch nét)";
   }
+  // ảnh Tay buông đầu tiên tự thành ảnh mẫu nét vẽ: báo chị biết, cập nhật mục ảnh mẫu
+  function refAuto(d) {
+    if (!d || !d.ref_auto) return;
+    if (d.options && d.options.arts) ARTS = d.options.arts;
+    artRef();
+    toast("ok", "Đã lưu làm ảnh mẫu nét vẽ", "Ảnh này thành mẫu cho nét “" + d.ref_auto.split(" — ")[0] +
+      "”: các nhân vật sau sẽ vẽ cùng nét. Đổi / bỏ ở mục 1 (Ảnh mẫu nét vẽ).");
+  }
   function refSaved(d) {
     if (d.arts) ARTS = d.arts;
     artRef();
@@ -598,6 +606,7 @@
             W.data = d; renderPics(); renderChars(); refreshThumbs(c.id);
             var m = ((d.webtoon.pics || {})[c.id] || {})[n.key];
             toast("ok", "Đã tải ảnh", m && m.auto ? "Bấm vào ảnh để kiểm tra điểm mắt / miệng." : "");
+            refAuto(d);
           }).catch(function (e) {
             up.disabled = false; up.textContent = "Tải ảnh lên";
             toast("error", "Tải ảnh thất bại", e.message);
@@ -657,7 +666,7 @@
       var fd = new FormData();
       fd.append("file", files[k]);
       api(picUrl(c.id, miss[k].key), { method: "POST", body: fd })
-        .then(function (d) { W.data = d; })
+        .then(function (d) { W.data = d; refAuto(d); })
         .catch(function (e) { bad += 1; toast("error", "Ảnh " + files[k].name + " lỗi", e.message); })
         .then(function () { k += 1; next(); });
     }

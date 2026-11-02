@@ -3059,7 +3059,18 @@ def api_webtoon_pic_upload(pid, cid, key):
     meta["v"] = uuid.uuid4().hex[:8]                                  # phiên bản ảnh (trình duyệt dùng lại ảnh cũ)
     wt.setdefault("pics", {}).setdefault(cid, {})[key] = meta
     _save_project(pid, data)
-    return jsonify(_webtoon_view(pid, data))
+    out = _webtoon_view(pid, data)
+    # nét vẽ chưa có ảnh mẫu: ảnh Tay buông đầu tiên chị tải lên tự thành ảnh mẫu nét vẽ (chị khỏi lưu ảnh)
+    from core import webtoon_styles as wst
+    art = wt.get("art") or wst.DEFAULT
+    if key == "down" and wst.ref_path(art) is None:
+        try:
+            wst.save_ref(art, dst)
+            out = _webtoon_view(pid, data)
+            out["ref_auto"] = next((a["label"] for a in wst.options() if a["id"] == art), art)
+        except Exception:  # noqa: BLE001
+            traceback.print_exc()
+    return jsonify(out)
 
 
 @app.get("/api/webtoon/<pid>/pics_prompts.txt")
