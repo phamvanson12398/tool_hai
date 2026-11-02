@@ -22,7 +22,7 @@ PRESETS = {
     "saeon": {
         "label": "사연 썰툰 — người thật, nét đậm, màu phẳng (mặc định)",
         "note": "Như các kênh 썰 / 사연: người lớn tỉ lệ thật, viền đen đều, màu pastel phẳng, mắt đen to.",
-        "genres": ["marriage", "revenge", "sogaeting", "funny_story"],
+        "genres": ["marriage", "revenge"],
         "prompt": ("Korean webtoon style exactly like Korean YouTube story-animation channels (\"썰\" / 사연 "
                    "animation): clean bold uniform black outlines, flat pastel colors, NO shading, no gradients, "
                    "no textures, simple neat line art, natural adult proportions, large oval solid black pupils "
@@ -51,6 +51,31 @@ PRESETS = {
                    "highlights and a bold upper eyelid (women have small eyelashes), thin straight eyebrows, nose "
                    "as one small line, small mouth, light pink blush, thin clean dark outlines, flat colors with "
                    "one simple soft cel-shade tone, glossy hair with a light highlight streak."),
+    },
+    "ssul_react": {
+        "label": "썰툰 phản ứng — mặt cạn lời, nhăn mặt (như video 소개팅)",
+        "note": ("Như video xem mắt: nét đen mảnh đều, màu phẳng sáng, da trắng hồng, mặt biểu cảm phóng đại "
+                 "(mắt lờ đờ, lườm, nhăn), mỗi người một kiểu dễ nhớ (mập mặt tròn, đẹp trai sắc nét...)."),
+        "genres": ["sogaeting", "romance", "office"],
+        "prompt": ("Korean 썰툰 comedy-drama style exactly like popular Korean YouTube / TikTok story-animation "
+                   "channels about blind dates and office life: clean thin uniform black outlines, flat bright "
+                   "colors with NO shading, pale pinkish skin, simple line nose, eyes drawn as white ovals with "
+                   "small black pupils that become exaggerated in reactions (heavy half-closed deadpan lids, "
+                   "sharp glares, scrunched cringe, sweat drops, stress lines on the forehead), glossy hair with "
+                   "a few strand lines, caricature body types that make each character instantly recognizable "
+                   "(round chubby face, sharp handsome jaw, round glasses), simple modern clothes."),
+    },
+    "ssul_caricature": {
+        "label": "썰툰 biếm hoạ hài — mặt phóng đại, nét dày (như video 동네 히어로)",
+        "note": ("Như video chuyện hài tự kể: biếm hoạ phóng đại, nét đen dày, đổ bóng sần, má hóp, quầng mắt, "
+                 "da hơi vàng sạm, cơ bắp và nếp nhăn rõ, rất hợp chuyện hài thời đi học / đi lính."),
+        "genres": ["funny_story", "comedy", "school"],
+        "prompt": ("Korean comic caricature style like humorous Korean 썰 story-animation channels: exaggerated "
+                   "realistic faces with gaunt cheeks, strong cheekbones, heavy eye bags and wrinkles, slightly "
+                   "yellowish tanned skin, thick inky black outlines, gritty cel shading with rough hatching "
+                   "texture, comically intense expressions (bulging eyes, clenched jaw, sly squint), slightly "
+                   "large heads on realistic bodies, everyday clothes like school uniforms, sleeveless shirts "
+                   "and track suits."),
     },
     "manhwa": {
         "label": "Manhwa bán thực — mặt chi tiết, đổ bóng nhẹ",

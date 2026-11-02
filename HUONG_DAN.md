@@ -1132,6 +1132,10 @@ theo nét đã chọn:
 - **Mochi 둥글이**: đầu bánh gạo to, mắt chấm, má hồng, miệng ω, thân nhỏ mũm mĩm.
 - **Webtoon 웹툰**: người mảnh chân dài, mặt cằm V, mắt to long lanh, đổ bóng một tông.
 - **Manhwa bán thực**: tỉ lệ người thật, mặt chi tiết, mắt sắc, đổ bóng hai tông.
+- **썰툰 phản ứng** (như video xem mắt 소개팅): nét đen mảnh đều, màu phẳng sáng, mặt biểu cảm
+  phóng đại (lờ đờ, lườm, nhăn), mỗi người một kiểu dễ nhớ. Gợi ý cho Xem mắt / hẹn hò, Tình cảm, Công sở.
+- **썰툰 biếm hoạ hài** (như video 동네 히어로): biếm hoạ phóng đại, nét dày, đổ bóng sần, má
+  hóp, quầng mắt, da hơi vàng sạm. Gợi ý cho Chuyện hài tự kể, Hài, Học đường.
 - **Gợi ý theo thể loại**: chọn thể loại thì dưới ô hiện gợi ý (Hài, Gia đình → Mochi;
   Tình cảm, Học đường, Công sở → Webtoon; Giật gân, Kinh dị, Bí ẩn → Manhwa; Nhà chồng,
   Trả thù → 사연 썰툰). Bấm **Dùng nét này** mới đổi.
