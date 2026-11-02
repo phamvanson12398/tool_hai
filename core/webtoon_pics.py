@@ -109,7 +109,9 @@ def describe(c: dict) -> str:
     feats = {"makeup": "glamorous makeup with red lipstick", "earrings": "earrings",
              "eye_bags": "dark eye bags", "freckles": "freckles"}
     extra += [feats[f] for f in lk.features if f in feats]
-    s = f"a {age} Korean {who}{', ' + build if build else ''}, {skin} skin, {hc} {hair}, {tc} {top}".replace("  ", " ")
+    bc = lk.bottom_color if isinstance(lk.bottom_color, str) else ""
+    bottom = f", {bc} trousers" if bc and lk.top != "dress" else ""          # màu quần
+    s = f"a {age} Korean {who}{', ' + build if build else ''}, {skin} skin, {hc} {hair}, {tc} {top}{bottom}".replace("  ", " ")
     return s + (", " + ", ".join(x for x in extra if x) if extra else "")
 
 
