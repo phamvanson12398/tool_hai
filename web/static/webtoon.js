@@ -14,6 +14,9 @@
     thinking: "Suy nghĩ", relieved: "Nhẹ nhõm", desperate: "Tuyệt vọng", deadpan: "Lờ đờ khinh (cạn lời)",
     disgusted: "Nhăn mặt ghê", cringe: "Nhắm tịt mắt", glare: "Lườm", panic: "Hoảng loạn" };
   var BUILD_VI = { slim: "Gầy", average: "Vừa", chubby: "Mập, mặt tròn", muscular: "Vạm vỡ" };
+  var FACE_VI = { oval: "Mặt trái xoan", round: "Mặt tròn", long: "Mặt dài", square: "Hàm vuông", v: "Mặt V-line" };
+  var EYE_VI = { normal: "Mắt thường", big: "Mắt to tròn", narrow: "Mắt một mí hẹp", droopy: "Mắt cụp", sharp: "Mắt xếch sắc" };
+  var BROW_VI = { normal: "Mày thường", thin: "Mày mảnh", thick: "Mày rậm" };
   var FEAT_VI = { makeup: "trang điểm đậm", earrings: "hoa tai", eye_bags: "quầng thâm", freckles: "tàn nhang" };
   var POSE_VI = { down: "Tay buông", phone_ear: "Áp điện thoại", phone_look: "Xem điện thoại",
     hand_head: "Ôm đầu", hands_head: "Hai tay ôm đầu", cross: "Khoanh tay", point: "Chỉ tay", wave: "Vẫy tay",
@@ -379,9 +382,12 @@
                 ["middle", "Trung niên"], ["old", "Người già"]]],
        ["hair", o.hairs || []], ["hair_color", o.hair_colors || []], ["top", o.tops || []],
        ["top_color", o.colors || []], ["bottom_color", o.colors || []], ["skin", o.skins || []],
-       ["build", (o.builds || ["slim", "average", "chubby", "muscular"]).map(function (b) { return [b, BUILD_VI[b] || b]; })]
+       ["build", (o.builds || ["slim", "average", "chubby", "muscular"]).map(function (b) { return [b, BUILD_VI[b] || b]; })],
+       ["face_shape", (o.face_shapes || Object.keys(FACE_VI)).map(function (b) { return [b, FACE_VI[b] || b]; })],
+       ["eye_shape", (o.eye_shapes || Object.keys(EYE_VI)).map(function (b) { return [b, EYE_VI[b] || b]; })],
+       ["brows", (o.brows || Object.keys(BROW_VI)).map(function (b) { return [b, BROW_VI[b] || b]; })]
       ].forEach(function (kv) {
-        var s = sel(kv[1], lk[kv[0]] || (kv[0] === "build" ? "average" : undefined));
+        var s = sel(kv[1], lk[kv[0]] || ({ build: "average", face_shape: "oval", eye_shape: "normal", brows: "normal" })[kv[0]]);
         s.setAttribute("data-look", kv[0]);
         s.title = kv[0];
         s.addEventListener("change", function () { save(true); });

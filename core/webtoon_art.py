@@ -26,7 +26,8 @@ SS = 2                      # vẽ to gấp đôi rồi thu nhỏ cho nét mịn
 SKIN = {"light": (252, 232, 214), "fair": (248, 224, 202), "tan": (230, 192, 158),
         "dark": (182, 136, 104)}
 HAIR = {"black": (42, 42, 46), "brown": (92, 62, 44), "gray": (150, 150, 152),
-        "white": (226, 224, 220), "blonde": (214, 178, 102), "red": (146, 62, 44)}
+        "white": (226, 224, 220), "blonde": (214, 178, 102), "red": (146, 62, 44),
+        "ash": (118, 108, 100), "light_brown": (150, 108, 72)}
 CLOTH = {"beige": (172, 150, 124), "brown": (128, 96, 72), "gray": (140, 142, 148),
          "navy": (52, 64, 98), "black": (48, 48, 54), "white": (238, 236, 232),
          "yellow": (228, 190, 64), "red": (186, 64, 60), "green": (88, 132, 92),
@@ -34,8 +35,18 @@ CLOTH = {"beige": (172, 150, 124), "brown": (128, 96, 72), "gray": (140, 142, 14
          "khaki": (150, 140, 102), "purple": (124, 92, 150)}
 
 HAIRS = ("short_part", "short", "buzz", "bald", "side_part", "long", "long_messy",
+         "two_block", "perm", "pixie", "braid", "wavy_long", "crew_cut",
          "bob", "ponytail", "bun", "curly")
-TOPS = ("sweater", "tshirt", "shirt", "jacket", "hoodie", "suit", "blouse", "dress")
+TOPS = ("sweater", "tshirt", "shirt", "jacket", "hoodie", "suit", "blouse", "dress",
+        "cardigan", "polo", "blazer", "coat", "tracksuit", "apron", "uniform")
+# kiểu tóc / áo mới: ảnh AI tả đúng kiểu; tool tự vẽ thì dùng kiểu gần nhất đã có
+HAIR_DRAW = {"two_block": "short_part", "perm": "curly", "pixie": "short", "braid": "ponytail",
+             "wavy_long": "long_messy", "crew_cut": "buzz"}
+TOP_DRAW = {"cardigan": "sweater", "polo": "shirt", "blazer": "jacket", "coat": "jacket",
+            "tracksuit": "hoodie", "apron": "blouse", "uniform": "shirt"}
+FACE_SHAPES = ("oval", "round", "long", "square", "v")
+EYE_SHAPES = ("normal", "big", "narrow", "droopy", "sharp")
+BROWS = ("normal", "thin", "thick")
 EXPRS = ("neutral", "worried", "shocked", "scared", "sad", "crying", "angry", "happy",
          "laughing", "smirk", "tired", "thinking", "relieved", "desperate",
          # phản ứng kiểu kênh 썰 / 사연 (mắt lờ đờ khinh, nhăn mặt, nhắm tịt, lườm, hoảng loạn)
@@ -61,6 +72,9 @@ class Look:
     glasses: bool = False
     beard: str = ""                 # "" | stubble | mustache | full
     build: str = "average"          # vóc dáng: slim | average | chubby | muscular
+    face_shape: str = "oval"        # dáng mặt: oval | round | long | square | v
+    eye_shape: str = "normal"       # kiểu mắt: normal | big | narrow | droopy | sharp
+    brows: str = "normal"           # lông mày: normal | thin | thick
     features: tuple = ()            # nét riêng: makeup, earrings, eye_bags, freckles
     seed: int = 0
 
@@ -78,6 +92,12 @@ class Look:
         lk.glasses = bool(lk.glasses)
         if lk.build not in BUILDS:
             lk.build = "average"
+        if lk.face_shape not in FACE_SHAPES:
+            lk.face_shape = "oval"
+        if lk.eye_shape not in EYE_SHAPES:
+            lk.eye_shape = "normal"
+        if lk.brows not in BROWS:
+            lk.brows = "normal"
         f = lk.features
         if isinstance(f, str):
             f = [x.strip() for x in f.split(",")]
@@ -327,6 +347,9 @@ class Figure:
     """Một nhân vật: draw(pen, state) vẽ ở gốc chân (0,0) theo đơn vị u."""
 
     def __init__(self, look: Look):
+        from dataclasses import replace
+        # kiểu tóc / áo mới chưa có nét vẽ riêng: vẽ bằng kiểu gần nhất
+        look = replace(look, hair=HAIR_DRAW.get(look.hair, look.hair), top=TOP_DRAW.get(look.top, look.top))
         self.look = look
         self.b = build(look)
         self.skin = skin_of(look)
@@ -629,8 +652,18 @@ class Figure:
         jw = 1.0 if lk.sex == "male" and not child else 0.92
         if lk.build == "chubby":
             jw *= 1.16                                # cằm bầu, má phính
+        fs = lk.face_shape
+        jw *= {"square": 1.18, "v": 0.8, "round": 1.1}.get(fs, 1.0)
         R_ = [(0.0, -0.56), (0.27, -0.52), (0.35, -0.32), (0.36, -0.1), (0.357, 0.08), (0.333, 0.22),
               (0.29 * jw, 0.33), (0.215 * jw, 0.43), (0.12 * jw, 0.508), (0.0, 0.535)]      # má thẳng, cằm tròn
+        if fs == "long":                               # mặt dài: kéo phần dưới mặt xuống
+            R_ = [(x, y * 1.12 if y > 0 else y) for x, y in R_]
+        elif fs == "round":                            # mặt tròn: rộng ra, cằm ngắn lại
+            R_ = [(x * 1.05, y * 0.93 if y > 0 else y) for x, y in R_]
+        elif fs == "square":                           # hàm vuông: góc hàm rộng, cằm phẳng
+            R_[-3] = (0.27 * jw, 0.44)
+            R_[-2] = (0.17 * jw, 0.51)
+            R_[-1] = (0.0, 0.52)
         face = [(X + x * k, Y + y) for x, y in R_] + [(X - x * k, Y + y) for x, y in reversed(R_[1:-1])]
         p.poly(_crs(face, 10), self.skin)
         if lk.beard in ("stubble", "full"):
@@ -664,7 +697,7 @@ class Figure:
                 "relieved": (0.0, 0.03), "deadpan": (0.02, 0.0), "disgusted": (0.03, -0.05),
                 "cringe": (0.03, -0.07), "glare": (0.04, -0.1), "panic": (-0.06, 0.08)}.get(e, (0.0, 0.0))
         # lông mày dày, đầu trong tròn, đuôi ngoài thon cụp xuống (đo theo ảnh mẫu)
-        thick = 1.0 if not fem else 0.62
+        thick = (1.0 if not fem else 0.62) * {"thin": 0.6, "thick": 1.45}.get(lk.brows, 1.0)
         bcol = (40, 38, 42, 255) if lk.hair_color in ("black", "brown") else _shade(self.hair, 0.8)
         BR = [(0.085, -0.122), (0.19, -0.127), (0.28, -0.103), (0.298, -0.068), (0.19, -0.083),
               (0.085, -0.084), (0.07, -0.103)]
@@ -686,6 +719,10 @@ class Figure:
         for sx in (-1, 1):
             cx, cy = X + sx * 0.172, Y + 0.012
             w, h = 0.074, 0.037 * open_
+            es = lk.eye_shape
+            w *= {"big": 1.12, "narrow": 1.05}.get(es, 1.0)
+            h *= {"big": 1.3, "narrow": 0.62, "sharp": 0.85}.get(es, 1.0)
+            tilt = {"droopy": 0.03, "sharp": -0.03}.get(es, 0.0)         # đuôi mắt cụp / xếch
             if "bags" in st.extras or e in ("tired", "desperate"):
                 p.poly(_ellipse(cx, cy + 0.07, 0.1, 0.045, 16, 0, math.pi), (140, 120, 120, 120), line=False)
             if e == "cringe" and st.blink < 0.5:  # nhắm tịt mắt kiểu > <
@@ -702,10 +739,10 @@ class Figure:
             # mắt: lòng trắng, mí trên là nét đậm cong dài hơn mắt, mí dưới nét mảnh rời
             # hai đầu, con ngươi đen tròn (như ảnh mẫu)
             ii = -sx                                  # phía trong (gần mũi)
-            up = [(cx - ii * w * 1.06, cy + h * 0.08), (cx - ii * w * 0.55, cy - h * 0.78), (cx, cy - h),
+            up = [(cx - ii * w * 1.06, cy + h * 0.08 + tilt), (cx - ii * w * 0.55, cy - h * 0.78 + tilt * 0.4), (cx, cy - h),
                   (cx + ii * w * 0.55, cy - h * 0.78), (cx + ii * w * 0.98, cy - h * 0.05)]
             lo = [(cx + ii * w * 0.98, cy - h * 0.05), (cx + ii * w * 0.5, cy + h * 0.85), (cx, cy + h * 1.08),
-                  (cx - ii * w * 0.5, cy + h * 0.88), (cx - ii * w * 1.06, cy + h * 0.08)]
+                  (cx - ii * w * 0.5, cy + h * 0.88 + tilt * 0.4), (cx - ii * w * 1.06, cy + h * 0.08 + tilt)]
             p.poly(_crs(up + lo[1:-1], 8), (255, 255, 255, 255), line=False)
             pr = 0.027 if e not in ("shocked", "scared", "glare", "panic") else (0.019 if e != "panic" else 0.013)
             px = cx + lx * 0.03 + (0.012 if e == "smirk" else 0)

@@ -30,7 +30,7 @@ from pathlib import Path
 import numpy as np
 from PIL import Image, ImageDraw, ImageFilter
 
-from . import scene_art, video, webtoon_art as wa, webtoon_phone as wp, webtoon_pics as wpic
+from . import config, scene_art, video, webtoon_art as wa, webtoon_phone as wp, webtoon_pics as wpic
 
 logger = logging.getLogger(__name__)
 
@@ -931,7 +931,9 @@ def _catalog() -> dict:
             "tops": " | ".join(wa.TOPS), "colors": " | ".join(wa.CLOTH),
             "kinds": ", ".join(f"{k} ({v})" for k, v in PLACE_KINDS.items()),
             "exprs": ", ".join(wa.EXPRS), "poses": ", ".join(wa.POSES),
-            "builds": " | ".join(wa.BUILDS), "features": ", ".join(wa.FEATURES)}
+            "builds": " | ".join(wa.BUILDS), "features": ", ".join(wa.FEATURES),
+            "face_shapes": " | ".join(wa.FACE_SHAPES), "eye_shapes": " | ".join(wa.EYE_SHAPES),
+            "brows": " | ".join(wa.BROWS)}
 
 
 IDEA_ANGLES = (
@@ -1050,6 +1052,7 @@ def write(st: dict, progress=None) -> dict:
         ending_rule=("Đoạn cuối DỪNG ở cao trào / cú sốc, bỏ lửng cho người xem chờ phần sau."
                      if st.get("cliffhanger", True) else "Đoạn cuối kết trọn vẹn."),
         style_block=style_block, narrator_rule=narrator_rule, engage_block=_engage_block(st, lang),
+        variety_block=_variety_block(st),
         **cat), task="story", timeout=600)
     if not isinstance(plan_, dict) or not plan_.get("segments"):
         raise RuntimeError("AI không lập được dàn ý.")
@@ -1148,6 +1151,65 @@ def write(st: dict, progress=None) -> dict:
     fix_places(st)
     say(1.0, "xong")
     return st
+
+
+def recent_cast(limit: int = 8) -> list[dict]:
+    """Nhân vật của các truyện webtoon làm gần đây (để AI tránh lặp)."""
+    out = []
+    try:
+        files = sorted(config.PROJECTS.glob("*/project.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    except Exception:  # noqa: BLE001
+        return out
+    n = 0
+    for f in files:
+        try:
+            d = json.loads(f.read_text("utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        if d.get("mode") != "webtoon":
+            continue
+        n += 1
+        for c in (d.get("webtoon") or {}).get("characters") or []:
+            out.append({"name": c.get("name") or "", **(c.get("look") or {})})
+        if n >= limit:
+            break
+    return out
+
+
+def design_seeds(k: int = 6) -> list[str]:
+    """Gợi ý phối ngoại hình ngẫu nhiên cho lần viết này (mỗi lần một khác) để nhân vật đa dạng."""
+    import random
+    r = random.SystemRandom()
+    colors = list(wa.CLOTH)
+    out = []
+    for i in range(k):
+        fem = i % 2 == 1
+        hair = r.choice([h for h in wa.HAIRS if h not in ("bald",)] if fem else
+                        [h for h in wa.HAIRS if h not in ("long", "long_messy", "bun", "ponytail", "braid", "wavy_long", "bob")])
+        out.append(", ".join([
+            "female" if fem else "male", r.choice(["teen", "young", "young", "adult", "middle", "old"]),
+            f"hair {hair}", "hair_color " + r.choices(list(wa.HAIR), weights=[6, 4, 1, 1, 1, 1, 2, 2])[0],
+            f"top {r.choice(wa.TOPS)} {r.choice(colors)}", f"bottom_color {r.choice(colors)}",
+            "build " + r.choice(wa.BUILDS), "face_shape " + r.choice(wa.FACE_SHAPES),
+            "eye_shape " + r.choice(wa.EYE_SHAPES), "brows " + r.choice(wa.BROWS)]))
+    return out
+
+
+def _variety_block(st: dict) -> str:
+    """Dặn AI: nhân vật mới phải khác các truyện gần đây + gợi ý phối ngẫu nhiên."""
+    seen = recent_cast()
+    lines = []
+    if seen:
+        lines.append("Nhân vật các truyện gần đây (KHÔNG lặp lại tên, và không lặp lại tổ hợp kiểu tóc + màu áo + "
+                     "dáng mặt của họ):")
+        for c in seen[:24]:
+            lines.append(f"- {c.get('name')}: {c.get('sex')}, {c.get('age')}, tóc {c.get('hair')} {c.get('hair_color')}, "
+                         f"áo {c.get('top')} {c.get('top_color')}, {c.get('build', 'average')}, mặt {c.get('face_shape', 'oval')}")
+    lines.append("Gợi ý phối ngẫu nhiên cho lần này (lấy làm điểm xuất phát rồi chỉnh cho hợp vai; nhân vật MỚI "
+                 "nên dùng ít nhất một nửa các gợi ý này):")
+    lines += [f"- {x}" for x in design_seeds()]
+    return ("### Nhân vật phải KHÁC các truyện trước (đa dạng)\n"
+            "Nhân vật đã có từ phần trước của series thì giữ nguyên; chỉ áp dụng cho nhân vật mới.\n" + "\n".join(lines))
 
 
 def _engage_block(st: dict, lang: str) -> str:

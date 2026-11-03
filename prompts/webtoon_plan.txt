@@ -17,7 +17,8 @@ NGÔN NGỮ: tên tập ("title"), móc câu ("hook"), tên nhân vật và mọ
    sex: male | female; age: child | teen | young | adult | middle | old;
    skin: light | fair | tan | dark; hair: {{hairs}}; hair_color: {{hair_colors}};
    top: {{tops}}; top_color / bottom_color: {{colors}}; glasses: true | false; beard: "" | stubble | mustache | full.
-   build (vóc dáng): {{builds}}; features (nét riêng, tuỳ chọn, mảng): {{features}}.
+   build (vóc dáng): {{builds}}; features (nét riêng, tuỳ chọn, mảng): {{features}};
+   face_shape (dáng mặt): {{face_shapes}}; eye_shape (kiểu mắt): {{eye_shapes}}; brows (lông mày): {{brows}}.
    Các nhân vật phải trông KHÁC NHAU rõ (tóc, màu áo, tuổi, vóc dáng) — mỗi người một "kiểu người" dễ nhớ như truyện tranh: vd gã đi xem mắt bất lịch sự mặt tròn mập ("build":"chubby"), cô bạn thân đeo kính tròn quầng thâm, anh đồng nghiệp đẹp trai lạnh lùng ("build":"muscular" hoặc slim), cô người yêu cũ trang điểm đậm đeo hoa tai ("features":["makeup","earrings"]), ông trưởng phòng trung niên tóc vuốt. Thêm "role": vai và tính cách trong 1 câu tiếng Việt (vd "gã xem mắt tự cao, ăn uống thô lỗ, khoe đồng hồ hàng hiệu").
 6. "places": các địa điểm (tối đa 6): "id", "name", "kind" (mẫu bối cảnh gần nhất: {{kinds}}), "time" (ngay | dem). Người nói chuyện qua điện thoại / nhắn tin ở chỗ khác (kẻ gọi điện, người nhà ở xa...) phải có địa điểm RIÊNG của họ.
    Mỗi địa điểm thêm "look": tả bối cảnh ĐÚNG như trong truyện bằng TIẾNG ANH, 1–2 câu cụ thể để AI vẽ nền: loại nơi chốn, đất nước / thành phố, đồ vật đặc trưng, chất liệu, ánh sáng, không khí (vd "a small public restroom inside a Seoul subway station, white tiled walls, metal stall doors, a mirror with a crack, flickering fluorescent ceiling light"). KHÔNG tả người.
@@ -34,8 +35,10 @@ NGÔN NGỮ: tên tập ("title"), móc câu ("hook"), tên nhân vật và mọ
 
 {{engage_block}}
 
+{{variety_block}}
+
 Output JSON đúng dạng này, không có gì khác:
 {"title":"...","hook":"...","segments":[{"summary":"..."}],"question_segment":2,"saida_segment":4,
  "engage":{"pinned_comment":"...","poll":{"question":"...","options":["...","..."]},"titles":["...","...","..."]},
- "characters":[{"id":"bo","name":"...","role":"...","look":{"sex":"male","age":"middle","skin":"fair","hair":"short_part","hair_color":"black","top":"sweater","top_color":"beige","bottom_color":"navy","glasses":false,"beard":"","build":"average","features":[]},"home":"ga"}],
+ "characters":[{"id":"bo","name":"...","role":"...","look":{"sex":"male","age":"middle","skin":"fair","hair":"short_part","hair_color":"black","top":"sweater","top_color":"beige","bottom_color":"navy","glasses":false,"beard":"","build":"average","features":[],"face_shape":"square","eye_shape":"narrow","brows":"thick"},"home":"ga"}],
  "places":[{"id":"ga","name":"...","kind":"duong_pho","time":"dem","look":"a busy subway station platform in Seoul at night, ..."}],"narrator":false}

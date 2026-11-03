@@ -1137,6 +1137,14 @@ AI viết truyện webtoon học theo các video 썰 / 사연 được xem nhi�
   Chuyện tự kể hài (썰): người kể tự giễu, phóng đại vui, kết bằng cú ngược đời.
 - **Vóc dáng** nhân vật: gầy / vừa / mập mặt tròn / vạm vỡ. **Nét riêng**: trang điểm đậm (son
   đỏ), hoa tai, quầng thâm, tàn nhang. Chỉnh ở mục 2; câu lệnh vẽ ảnh AI cũng tả theo.
+- **Nhân vật đa dạng, không lặp giữa các truyện**:
+  - Thêm **dáng mặt** (trái xoan / tròn / dài / hàm vuông / V-line), **kiểu mắt** (thường / to tròn /
+    một mí hẹp / cụp / xếch sắc), **lông mày** (thường / mảnh / rậm) — tool tự vẽ khác hẳn nhau và câu
+    lệnh vẽ ảnh AI cũng tả theo.
+  - Thêm kiểu tóc (two-block, uốn xoăn ngắn, tém pixie, tết lệch, dài gợn sóng, đinh), áo (cardigan,
+    polo, blazer, áo khoác dài, đồ thể thao, tạp dề, đồng phục), màu tóc (nâu tro, nâu sáng).
+  - Mỗi lần viết truyện, AI được xem **nhân vật của các truyện gần đây** để không lặp tên, kiểu tóc,
+    màu áo, dáng mặt, kèm **gợi ý phối ngẫu nhiên** (mỗi lần một khác). Nhân vật cũ của series thì giữ nguyên.
 - **5 nét mặt phản ứng mới**: Lờ đờ khinh (cạn lời), Nhăn mặt ghê, Nhắm tịt mắt (> <), Lườm,
   Hoảng loạn (mồ hôi, sọc xanh trên trán) — tool tự vẽ được và có trong câu lệnh vẽ ảnh AI.
 

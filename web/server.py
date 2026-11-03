@@ -2689,6 +2689,7 @@ def _webtoon_view(pid: str, data: dict) -> dict:
         "types": list(wf.SHOT_TYPES), "cameras": list(wf.CAMERAS), "exprs": list(wa.EXPRS),
         "poses": list(wa.POSES), "hairs": list(wa.HAIRS), "hair_colors": list(wa.HAIR),
         "builds": list(wa.BUILDS), "features": list(wa.FEATURES),
+        "face_shapes": list(wa.FACE_SHAPES), "eye_shapes": list(wa.EYE_SHAPES), "brows": list(wa.BROWS),
         "tops": list(wa.TOPS), "colors": list(wa.CLOTH), "skins": list(wa.SKIN),
         "kinds": [[k, v] for k, v in wf.PLACE_KINDS.items()],
         "screens": ["chat", "call", "wifi", "notice", "alert", "video", "noise", "lock", "loading", "app"],

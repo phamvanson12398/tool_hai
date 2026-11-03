@@ -92,11 +92,17 @@ def describe(c: dict) -> str:
     hair = {"short_part": "short neat hair with a side-swept fringe", "short": "short hair",
             "buzz": "buzz cut", "bald": "bald head", "side_part": "short side-parted hair",
             "long": "long straight hair", "long_messy": "long messy hair", "bob": "bob haircut",
-            "ponytail": "hair in a ponytail", "bun": "hair in a bun", "curly": "curly hair"}.get(lk.hair, "short hair")
-    hc = lk.hair_color if isinstance(lk.hair_color, str) else "black"
+            "ponytail": "hair in a ponytail", "bun": "hair in a bun", "curly": "curly hair",
+            "two_block": "two-block haircut with thick fringe", "perm": "short permed curly hair",
+            "pixie": "short pixie cut", "braid": "long hair in a side braid", "wavy_long": "long wavy hair",
+            "crew_cut": "short crew cut"}.get(lk.hair, "short hair")
+    hc = {"ash": "ash-brown", "light_brown": "light brown"}.get(lk.hair_color, lk.hair_color) \
+        if isinstance(lk.hair_color, str) else "black"
     top = {"tshirt": "T-shirt", "shirt": "collared shirt", "jacket": "jacket", "hoodie": "hoodie",
-           "suit": "suit with a tie", "blouse": "blouse", "dress": "dress", "sweater": "round-neck sweater"}.get(
-        lk.top, "sweater")
+           "suit": "suit with a tie", "blouse": "blouse", "dress": "dress", "sweater": "round-neck sweater",
+           "cardigan": "knit cardigan", "polo": "polo shirt", "blazer": "blazer", "coat": "long coat",
+           "tracksuit": "zip-up tracksuit jacket", "apron": "apron over a blouse",
+           "uniform": "work uniform"}.get(lk.top, "sweater")
     tc = lk.top_color if isinstance(lk.top_color, str) else ""
     extra = []
     if lk.glasses:
@@ -109,6 +115,12 @@ def describe(c: dict) -> str:
     feats = {"makeup": "glamorous makeup with red lipstick", "earrings": "earrings",
              "eye_bags": "dark eye bags", "freckles": "freckles"}
     extra += [feats[f] for f in lk.features if f in feats]
+    face = {"round": "round face", "long": "long face", "square": "square jaw", "v": "slim V-shaped face"}.get(
+        lk.face_shape, "")
+    eyes = {"big": "big round eyes", "narrow": "narrow eyes", "droopy": "droopy downturned eyes",
+            "sharp": "sharp upturned eyes"}.get(lk.eye_shape, "")
+    brows = {"thin": "thin eyebrows", "thick": "thick bold eyebrows"}.get(lk.brows, "")
+    extra = [x for x in (face, eyes, brows) if x] + extra
     bc = lk.bottom_color if isinstance(lk.bottom_color, str) else ""
     bottom = f", {bc} trousers" if bc and lk.top != "dress" else ""          # màu quần
     s = f"a {age} Korean {who}{', ' + build if build else ''}, {skin} skin, {hc} {hair}, {tc} {top}{bottom}".replace("  ", " ")
