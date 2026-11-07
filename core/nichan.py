@@ -822,6 +822,8 @@ class Renderer:
         self._img: dict = {}
         self._cap: dict = {}
         self._vis: dict = {}
+        self._who: dict = {}          # cảnh -> id nhân vật của từng hình (để biết ai đang nói)
+        self._env: dict = {}          # cảnh -> độ to giọng theo từng khung (nhân vật nói thì nhún)
         self._head: dict = {}
 
     # --- ảnh
@@ -854,7 +856,7 @@ class Renderer:
         if s["id"] in self._vis:
             return self._vis[s["id"]]
         v = s.get("visual") or {}
-        out = []
+        out, who = [], []
         own = self._file("scenes", f"{s['id']}.png") if s.get("img") else None
         if own:
             im = sticker_style(_fit(Image.open(own).convert("RGBA"), 900, 1000))
@@ -874,12 +876,14 @@ class Renderer:
                         out.append((_fit(im, 820, 1150), int(W * 0.38), H + 40, "stand"))
                     else:
                         out.append((_fit(im, 700, 960), int(W * 0.68), H - 170, "stand"))
+                    who.append(cid)
         elif v.get("type") == "two":
             for i, (cid, emo) in enumerate(zip(v["cids"], v["emos"])):
                 im = self.char_img(cid, emo)
                 if im is not None:
                     im = _fit(im, 560, 1000)
                     out.append((im, int(W * (0.29 if i == 0 else 0.71)), H - 50, "stand"))
+                    who.append(cid)
         elif v.get("type") == "char" and v.get("cid"):
             im = self.char_img(v["cid"], v.get("emo", "neutral"))
             if im is not None and v.get("framing") == "close":
@@ -891,13 +895,40 @@ class Renderer:
                 out = [(big, int(W / 2 - hx * k), int(cy - hy * k), "abs")]
             elif im is not None:
                 out = [(_fit(im, 1000, 1080), W // 2, H - 40, "stand")]
+            who = [v["cid"]] * len(out)
         if not out:                                       # đồ vật chưa có ảnh: giữ hình cảnh trước
-            out = last or []
+            out, who = last or [], []
             if not out and self.chars:
                 first = next(iter(self.chars))
                 out = [(_fit(self.char_img(first, "neutral"), 1000, 1080), W // 2, H - 40, "stand")]
         self._vis[s["id"]] = out
+        self._who[s["id"]] = who if len(who) == len(out) else [None] * len(out)
         return out
+
+    def talk(self, row: dict, t: float) -> float:
+        """Độ to giọng (0..1) ở giây t của cảnh: nhân vật đang nói thì nhún theo tiếng."""
+        s = row["scene"]
+        if s["id"] not in self._env:
+            env = None
+            a = row.get("audio")
+            if a and Path(a).exists():
+                try:
+                    import soundfile as sf
+                    wav, sr = sf.read(str(a), dtype="float32", always_2d=True)
+                    wav = wav.mean(axis=1)
+                    hop = max(1, sr // 30)
+                    n = len(wav) // hop
+                    if n:
+                        rms = np.sqrt((wav[:n * hop].reshape(n, hop) ** 2).mean(axis=1))
+                        env = np.clip(rms / max(float(np.percentile(rms, 90)), 1e-4), 0, 1)
+                except Exception:  # noqa: BLE001
+                    env = None
+            self._env[s["id"]] = env
+        env = self._env[s["id"]]
+        if env is None:                                   # chưa có giọng (xem trước): nhún đều suốt câu
+            return 1.0 if 0.06 < t < row["dur"] - GAP else 0.0
+        k = int((t - LEAD) * 30)
+        return float(env[k]) if 0 <= k < len(env) else 0.0
 
     def bg(self, pid: str) -> np.ndarray:
         if pid in self._bg:
@@ -982,12 +1013,19 @@ class Renderer:
         if self.st.get("pace") == "fast" and dur > 1.3 and t > dur * 0.5:
             punch = 1.0 + 0.17 * min(1.0, (t - dur * 0.5) / 0.08)
         vis = self.visual(s, None)
+        who = self._who.get(s["id"]) or [None] * len(vis)
+        speaking = s.get("who") not in (None, "", "narr") and s.get("who") in who
+        lvl = self.talk(row, t) if speaking else 0.0
         heads = []
-        for im, cx, by, kind in vis:
+        for n_im, (im, cx, by, kind) in enumerate(vis):
             u = min(1.0, t / 0.28)                              # nảy vào cảnh
             sc = 0.86 + 0.14 * (1 - (1 - u) ** 3) + 0.035 * math.sin(math.pi * u)
             sc *= 1.0 + 0.006 * math.sin(t * 2.4)              # thở nhẹ
             dx = int(14 * math.sin(t * 60)) if shake else 0
+            hop = 0
+            if lvl > 0.05 and who[n_im] == s.get("who"):       # người đang nói: nhún nhún theo tiếng
+                hop = int(-22 * lvl * abs(math.sin(t * 13)))
+                sc *= 1.0 + 0.025 * lvl * abs(math.sin(t * 13))
             hx, hy, hr = self.head_of(im)
             src = im
             if fx == "blur" and len(vis) == 1:                  # tuyệt vọng: hình nhoè
@@ -998,7 +1036,7 @@ class Renderer:
                 f = (0.92 + 0.08 * (1 - (1 - u) ** 3)) * punch
                 ax, ay = cx + hx, by + hy
                 nw, nh = max(1, int(im.width * f)), max(1, int(im.height * f))
-                x, y = int(ax - hx * f) + dx, int(ay - hy * f)
+                x, y = int(ax - hx * f) + dx, int(ay - hy * f) + hop
             else:
                 sc *= punch
                 nw, nh = max(1, int(im.width * sc)), max(1, int(im.height * sc))
@@ -1006,7 +1044,7 @@ class Renderer:
                 y = int(by - nh) if kind == "stand" else int(by - im.height / 2 - nh / 2)
                 if punch > 1.0 and len(vis) == 1:               # phóng về phía mặt
                     y += int((nh - nh / punch) * 0.55)
-                y = max(TOP - 40, y)
+                y = max(TOP - 40, y) + hop
             arr = cv2.resize(np.asarray(src), (nw, nh), interpolation=cv2.INTER_LINEAR)
             _blend(can, arr, x, y)
             k = nw / im.width

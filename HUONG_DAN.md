@@ -1307,3 +1307,5 @@ liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm
        chọn **Một người trước, một người sau** (người nói to phía trước) hoặc Cạnh nhau.
      - **Hiệu ứng mới**: lóe sáng (chụp ảnh, phát hiện), mờ + bụi rơi (tuyệt vọng, cầu xin), mặt đen sầm
        (giận thật sự).
+   - **Nhân vật nhún khi nói**: câu nói trong 「」 thì nhân vật đang nói nhún nhún theo đúng tiếng đọc
+     (có tiếng thì nhún, ngừng thì đứng yên); cảnh hai người chỉ người nói nhún. Câu lời kể thì đứng yên.
