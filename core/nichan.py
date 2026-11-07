@@ -114,7 +114,7 @@ def art_of(st: dict | None) -> dict:
 
 
 def default_story() -> dict:
-    return {"brief": "", "genre": "kando", "minutes": 3, "language": "ja", "title1": "", "title2": "",
+    return {"brief": "", "genre": "kando", "minutes": 1.2, "language": "ja", "title1": "", "title2": "",
             "cta": True, "voice_mode": "cast", "art": DEFAULT_ART, "speed": "normal", "bgm": "", "bgm_level": "soft", "narrator": {}, "characters": [], "places": [], "scenes": [],
             "pics": {}}
 
@@ -349,12 +349,47 @@ def prompt_rows(st: dict, pdir: Path | None, kind: str, cid: str | None = None, 
     return [r for r in rows if not (missing and r["have"])]
 
 
+IDEA_ANGLES = (
+    "lên Tokyo làm việc thời 昭和", "người mẹ quê lặng lẽ", "ông chủ khó tính", "bà cụ hàng xóm", "chuyến tàu đêm",
+    "lá thư cũ", "chiếc hộp cơm", "tiền tiết kiệm bí mật", "người thầy năm xưa", "cửa hàng tiện lợi ca đêm",
+    "đám cưới", "bệnh viện", "con mèo / con chó", "người cha ít nói", "đồng nghiệp bị coi thường",
+    "khách hàng hống hách", "mẹ chồng / nàng dâu", "hàng xóm khó chịu", "người lạ tốt bụng", "món ăn tuổi thơ",
+    "tấm ảnh cũ", "đồng hồ của ông", "chiếc xe đạp", "ngày tốt nghiệp", "kẻ bắt nạt hồi đi học",
+    "sếp mới", "taxi đêm", "quán ramen nhỏ", "tiền mừng năm mới (お年玉)", "mùa hoa anh đào",
+)
+
+
+def ideas(genre: str = "", avoid: list | None = None, count: int = 6) -> list[dict]:
+    """AI nghĩ một loạt ý tưởng truyện 2ch (mỗi lần một góc nhìn khác, không lặp các ý cũ)."""
+    import random
+    from . import claude_cli
+    rnd = random.SystemRandom()
+    g = GENRES.get(genre) or "Mọi thể loại: " + "; ".join(GENRES.values())
+    avoid = [str(a)[:120] for a in (avoid or []) if a][-40:]
+    data = claude_cli._run_json(claude_cli._load_prompt(
+        "nichan_ideas", genre=g, count=str(max(3, min(10, count))),
+        angles="\n".join(f"- {a}" for a in rnd.sample(IDEA_ANGLES, 5)),
+        avoid="\n".join(f"- {a}" for a in avoid) or "(chưa có)", genre_ids=" | ".join(GENRES)),
+        task="story", timeout=300)
+    out = []
+    for it in (data.get("ideas") if isinstance(data, dict) else None) or []:
+        if not isinstance(it, dict) or not it.get("brief"):
+            continue
+        out.append({"title1": str(it.get("title1") or "")[:20], "title2": str(it.get("title2") or "")[:24],
+                    "title_vi": str(it.get("title_vi") or "")[:200], "brief": str(it.get("brief") or "")[:900],
+                    "why": str(it.get("why") or "")[:300],
+                    "genre": it.get("genre") if it.get("genre") in GENRES else (genre if genre in GENRES else "kando")})
+    if not out:
+        raise RuntimeError("AI chưa nghĩ được ý tưởng nào, bấm lại thử.")
+    return out
+
+
 # ---------------------------------------------------------------- AI viết
 
 def write(st: dict, progress=None) -> dict:
     from . import claude_cli, scene_art
     say = progress or (lambda f, m: None)
-    minutes = max(0.5, min(8.0, float(st.get("minutes") or 3)))
+    minutes = max(0.5, min(8.0, float(st.get("minutes") or 1.2)))
     n = max(8, int(minutes * 60 / 2.6))
     ks = stickers()
     opt = doodle.options()

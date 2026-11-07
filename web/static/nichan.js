@@ -101,7 +101,7 @@
   }
   function collectHead() {
     return {
-      brief: $("nc-brief").value, genre: $("nc-genre").value, minutes: parseFloat($("nc-minutes").value) || 3,
+      brief: $("nc-brief").value, genre: $("nc-genre").value, minutes: parseFloat($("nc-minutes").value) || 1.2,
       voice_mode: $("nc-voicemode").value, cta: $("nc-cta").value === "1", art: $("nc-art").value,
       title1: $("nc-t1").value.trim(), title2: $("nc-t2").value.trim(),
       speed: $("nc-speed").value, bgm: $("nc-bgm").value, bgm_level: $("nc-bgm-level").value,
@@ -150,7 +150,7 @@
     fillMusic(o.music, s.bgm || "");
     fillSelect("nc-narr-voice", voiceList(o), (s.narrator || {}).voice || "");
     $("nc-brief").value = s.brief || "";
-    $("nc-minutes").value = s.minutes || 3;
+    $("nc-minutes").value = s.minutes || 1.2;
     $("nc-cta").value = s.cta === false ? "0" : "1";
     $("nc-t1").value = s.title1 || "";
     $("nc-t2").value = s.title2 || "";
@@ -395,6 +395,56 @@
       row.appendChild(act);
       box.appendChild(row);
     });
+  }
+
+  /* ---------------------------- ý tưởng tham khảo ---------------------------- */
+
+  var LS_IDEAS = "tool_hai_2ch_ideas";
+  function seenIdeas() {
+    try { return JSON.parse(localStorage.getItem(LS_IDEAS) || "[]"); } catch (e) { return []; }
+  }
+  function genreName(g) {
+    var o = $("nc-genre").querySelector('option[value="' + g + '"]');
+    return o ? o.textContent : g;
+  }
+  function moreIdeas() {
+    var btn = $("nc-ideas-btn");
+    btn.disabled = true; btn.textContent = "AI đang nghĩ...";
+    $("nc-ideas-state").textContent = "Khoảng 20–60 giây.";
+    api("/api/2ch/ideas", { body: { genre: $("nc-idea-genre").value, avoid: seenIdeas() } })
+      .then(function (d) {
+        var list = d.ideas || [];
+        try {
+          localStorage.setItem(LS_IDEAS, JSON.stringify(seenIdeas().concat(list.map(function (x) {
+            return (x.title1 || "") + " " + (x.title2 || ""); })).slice(-60)));
+        } catch (e) {}
+        var box = $("nc-ideas");
+        box.innerHTML = "";
+        list.forEach(function (it) {
+          var card = el("div", "wt-idea");
+          card.appendChild(el("div", "t", (it.title1 || "") + " / " + (it.title2 || "")));
+          if (it.title_vi) card.appendChild(el("div", "h", it.title_vi));
+          card.appendChild(el("div", "g", genreName(it.genre)));
+          card.appendChild(el("div", null, it.brief));
+          if (it.why) card.appendChild(el("div", "w", it.why));
+          var use = el("button", "btn btn-sm btn-primary", "Dùng ý này");
+          use.type = "button";
+          use.addEventListener("click", function () {
+            $("nc-brief").value = it.brief;
+            if (it.genre) $("nc-genre").value = it.genre;
+            $("nc-t1").value = it.title1 || "";
+            $("nc-t2").value = it.title2 || "";
+            if (N.id) save(true, false);
+            toast("ok", "Đã điền ý tưởng", "Bấm 'AI viết truyện & chia cảnh' để viết.");
+            $("nc-brief").scrollIntoView({ behavior: "smooth", block: "center" });
+          });
+          card.appendChild(use);
+          box.appendChild(card);
+        });
+        $("nc-ideas-state").textContent = "Bấm lại để có loạt khác.";
+      })
+      .catch(function (e) { $("nc-ideas-state").textContent = ""; toast("error", "Chưa gợi ý được", e.message); })
+      .then(function () { btn.disabled = false; btn.textContent = "Gợi ý ý tưởng mới"; });
   }
 
   /* ---------------------------- giọng, nhạc nền ---------------------------- */
@@ -681,6 +731,8 @@
     $("nc-add").addEventListener("click", addScene);
     $("nc-k-add").addEventListener("click", addSticker);
     $("nc-bgm-play").addEventListener("click", playMusic);
+    $("nc-ideas-btn").addEventListener("click", moreIdeas);
+
     $("nc-narr-up").addEventListener("click", function () {
       uploadVoice($("nc-narr-up"), function (name, names) {
         fillSelect("nc-narr-voice", voiceList({ voices: names }), name);
@@ -708,6 +760,8 @@
     fillSelect("nc-genre", [["kando", "Cảm động 感動"], ["showa", "Chuyện thời Showa 昭和"], ["sukatto", "Trả đũa đã đời スカッと"],
       ["giji", "Nhà chồng 義実家"], ["shokuba", "Công sở 職場"], ["kinjo", "Hàng xóm ご近所"], ["gakko", "Học đường 学校"],
       ["koi", "Tình cảm 恋愛"], ["warai", "Chuyện cười 笑える話"], ["kowai", "Chuyện rợn người 怖い話"]], "kando");
+    fillSelect("nc-idea-genre", [["", "Mọi thể loại"]].concat(Array.prototype.map.call($("nc-genre").options,
+      function (o) { return [o.value, o.textContent]; })), "");
     fillSelect("nc-voicemode", [["cast", "Mỗi nhân vật một giọng + giọng người kể"], ["one", "Một người kể đọc tất cả"]], "cast");
     api("/api/2ch/stickers").then(function (d) { if (!N.data) renderStickers(d.items); }).catch(function () {});
     var last = null;

@@ -1231,10 +1231,14 @@ sáng cố định ở trên, mỗi câu một hình (nhân vật viền trắng
 to viền trắng (lời kể màu xanh, câu nói trong 「」 màu theo người nói), giọng đọc tiếng Nhật
 liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm.
 
+0. **Ý tưởng tham khảo** (dưới ô Yêu cầu): chọn thể loại (hoặc Mọi thể loại), bấm **Gợi ý ý tưởng
+   mới** — AI đưa ra vài ý tưởng truyện ngắn khoảng 1 phút, mỗi ý có 2 dòng tiêu đề tiếng Nhật kèm dịch
+   nghĩa, tóm tắt diễn biến và cú lật. Mỗi lần bấm một loạt khác, không lặp ý cũ. Bấm **Dùng ý này** để
+   điền yêu cầu, thể loại và 2 dòng tiêu đề.
 1. **Câu chuyện**: gõ yêu cầu (tiếng Việt cũng được), chọn thể loại (感動, 昭和, スカッと,
    義実家, 職場…), thời lượng, giọng đọc (mỗi nhân vật một giọng, hoặc một người kể đọc tất
    cả), lời mời chia sẻ cuối video. Tiêu đề 2 dòng để trống thì AI đặt. Bấm **AI viết
-   truyện & chia cảnh**: AI viết tiếng Nhật theo khuôn hook → hoàn cảnh → chi tiết cài cắm →
+   truyện & chia cảnh**: thời lượng mặc định **1,2 phút** (khoảng 1 phút 10 giây, ~27 cảnh), AI viết tiếng Nhật theo khuôn hook → hoàn cảnh → chi tiết cài cắm →
    cú lật, mỗi câu một cảnh, tự chọn hình cho từng câu.
 2. **Nhân vật & ảnh vẽ bằng AI**: mỗi nhân vật liệt kê các nét mặt truyện dùng. Bấm
    **Chép câu lệnh vẽ** → dán vào Gemini / ChatGPT (vẽ ảnh "bình thường" trước; các nét mặt

@@ -3410,6 +3410,20 @@ def api_2ch_new():
     return jsonify(_2ch_view(pid, data))
 
 
+@app.post("/api/2ch/ideas")
+def api_2ch_ideas():
+    """Gợi ý ý tưởng truyện 2ch (mỗi lần một loạt mới, không lặp các ý đã gợi ý)."""
+    from core import nichan
+    body = request.get_json(silent=True) or {}
+    try:
+        items = nichan.ideas(str(body.get("genre") or ""),
+                             body.get("avoid") if isinstance(body.get("avoid"), list) else [])
+    except Exception as e:  # noqa: BLE001
+        traceback.print_exc()
+        return _err(f"AI gợi ý lỗi: {_short_err(e, 300)}")
+    return jsonify({"ideas": items})
+
+
 @app.get("/api/2ch/<pid>")
 def api_2ch_get(pid):
     try:

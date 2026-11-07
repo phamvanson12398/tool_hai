@@ -1,0 +1,27 @@
+Bạn là người nghĩ ý tưởng cho kênh YouTube Shorts Nhật kiểu "2ch / 昭和 / 感動 / スカッと" (video dọc khoảng 1 phút, mỗi câu một hình, giọng đọc tiếng Nhật, thanh tiêu đề 2 dòng ở trên).
+
+### Thể loại
+{{genre}}
+
+### Gợi ý góc nhìn lần này (để ý tưởng khác hẳn các lần trước, không bắt buộc dùng hết)
+{{angles}}
+
+### Những ý tưởng ĐÃ gợi ý trước đây (KHÔNG lặp lại, không na ná)
+{{avoid}}
+
+### Việc cần làm
+Nghĩ {{count}} ý tưởng truyện KHÁC NHAU HOÀN TOÀN, mỗi ý kể gọn trong khoảng 1 phút (20–30 câu ngắn):
+- Câu mở đầu là hook gây tò mò ngay; giữa truyện có một chi tiết nhỏ cài cắm; cuối có cú lật làm người xem nghẹn ngào hoặc hả hê.
+- Bối cảnh, con người, đồ vật đúng Nhật Bản (đúng thời đại nếu là 昭和); ít nhân vật (2–4), ít địa điểm.
+- Đúng thể loại ở trên (nếu là "mọi thể loại" thì mỗi ý một thể loại khác nhau).
+
+Mỗi ý gồm:
+- "title1": dòng tiêu đề 1 bằng tiếng Nhật, ≤ 8 chữ, chủ đề lớn (vd "昭和の男たち").
+- "title2": dòng tiêu đề 2 bằng tiếng Nhật, ≤ 10 chữ, câu hỏi / chi tiết gây tò mò (vd "何の汽車賃？").
+- "title_vi": dịch nghĩa hai dòng tiêu đề sang tiếng Việt.
+- "brief": 2–4 câu tiếng Việt kể diễn biến chính và cú lật — dùng làm yêu cầu để AI viết truyện.
+- "genre": một trong {{genre_ids}}.
+- "why": một câu ngắn vì sao người xem sẽ xem hết và muốn chia sẻ.
+
+Output JSON đúng dạng này, không có gì khác:
+{"ideas":[{"title1":"...","title2":"...","title_vi":"...","brief":"...","genre":"kando","why":"..."}]}
