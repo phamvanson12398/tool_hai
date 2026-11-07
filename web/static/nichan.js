@@ -92,7 +92,8 @@
     }).catch(function (e) { toast("error", "Không mở được", e.message); });
   }
   function createNew() {
-    return api("/api/2ch", { method: "POST", body: { brief: $("nc-brief").value.trim(), genre: $("nc-genre").value } })
+    return api("/api/2ch", { method: "POST", body: { brief: $("nc-brief").value.trim(), genre: $("nc-genre").value,
+                                                     series: $("nc-series").value.trim() } })
       .then(function (d) {
         N.id = d.id; N.data = d;
         try { localStorage.setItem(LS, d.id); } catch (e) {}
@@ -103,6 +104,8 @@
     return {
       brief: $("nc-brief").value, genre: $("nc-genre").value, minutes: parseFloat($("nc-minutes").value) || 1.2,
       voice_mode: $("nc-voicemode").value, cta: $("nc-cta").value === "1", art: $("nc-art").value,
+      series: $("nc-series").value.trim(), title_style: $("nc-tstyle").value, cap_style: $("nc-cstyle").value,
+      pace: $("nc-pace").value,
       title1: $("nc-t1").value.trim(), title2: $("nc-t2").value.trim(),
       speed: $("nc-speed").value, bgm: $("nc-bgm").value, bgm_level: $("nc-bgm-level").value,
       narrator: { voice: $("nc-narr-voice").value, instruct: $("nc-narr").value.trim() }
@@ -144,6 +147,11 @@
     var s = st(), o = opts();
     fillSelect("nc-genre", o.genres, s.genre || "kando");
     fillSelect("nc-voicemode", o.voice_modes, s.voice_mode || "cast");
+    fillSelect("nc-tstyle", o.title_styles || TSTYLES, s.title_style || "orange");
+    fillSelect("nc-cstyle", o.cap_styles || CSTYLES, s.cap_style || "center");
+    fillSelect("nc-pace", o.paces || PACES, s.pace || "normal");
+    $("nc-series").value = s.series || "";
+    fillSeries(o.series || []);
     fillSelect("nc-art", o.arts, s.art || "flat");
     fillSelect("nc-speed", o.speeds, s.speed || "normal");
     fillSelect("nc-bgm-level", o.bgm_levels, s.bgm_level || "soft");
@@ -397,6 +405,17 @@
     });
   }
 
+  /* ---------------------------- series, kiểu chữ, nhịp ---------------------------- */
+
+  var TSTYLES = [["orange", "Cam phát sáng"], ["red", "Đỏ viền trắng (kiểu スカッと)"]];
+  var CSTYLES = [["center", "Chữ màu giữa khung (xanh / đỏ theo người nói)"], ["left", "Chữ trắng viền đen căn trái (kiểu スカッと)"]];
+  var PACES = [["normal", "Bình thường (~2,6 giây / câu)"], ["fast", "Nhanh kiểu スカッと (~1,8 giây / câu, giật phóng to giữa câu)"]];
+  function fillSeries(list) {
+    var dl = $("nc-series-list");
+    dl.innerHTML = "";
+    (list || []).forEach(function (x) { dl.appendChild(new Option(x, x)); });
+  }
+
   /* ---------------------------- ý tưởng tham khảo ---------------------------- */
 
   var LS_IDEAS = "tool_hai_2ch_ideas";
@@ -521,11 +540,12 @@
     var s = JSON.parse(row.getAttribute("data-raw") || "{}");
     var q = function (k) { var f = row.querySelector("[data-k=" + k + "]"); return f ? f.value : ""; };
     s.text = q("text"); s.who = q("who"); s.place = q("place"); s.fx = q("fx");
+    s.mood = q("mood"); s.sfx_text = q("sfx_text");
     var t = q("vtype");
-    if (t === "two") s.visual = { type: "two", cids: [q("cid"), q("cid2")], emos: [q("emo"), q("emo2")] };
+    if (t === "two") s.visual = { type: "two", cids: [q("cid"), q("cid2")], emos: [q("emo"), q("emo2")], layout: q("layout") || "side" };
     else if (t === "sticker") s.visual = { type: "sticker", id: q("sticker") };
     else if (t === "object") s.visual = { type: "object", desc_en: q("desc") };
-    else s.visual = { type: "char", cid: q("cid"), emo: q("emo") };
+    else s.visual = { type: "char", cid: q("cid"), emo: q("emo"), framing: q("framing") || "full" };
     return s;
   }
 
@@ -564,6 +584,13 @@
           var c2 = sel(chars, (v.cids || [])[1] || (chars[1] || [])[0]); c2.setAttribute("data-k", "cid2");
           var e2 = sel(emos, (v.emos || [])[1]); e2.setAttribute("data-k", "emo2");
           extra.appendChild(c2); extra.appendChild(e2);
+          var ly = sel(o.layouts || [["side", "Hai người cạnh nhau"], ["stack", "Một người trước, một người sau"]], v.layout || "side");
+          ly.setAttribute("data-k", "layout"); ly.title = "Cách đứng";
+          extra.appendChild(ly);
+        } else {
+          var fr = sel(o.framings || [["full", "Toàn thân / nửa người"], ["close", "Cận mặt to"]], v.framing || "full");
+          fr.setAttribute("data-k", "framing"); fr.title = "Khung hình";
+          extra.appendChild(fr);
         }
       } else if (t === "sticker") {
         var ks = sel((o.stickers || []).map(function (k) { return [k.id, k.name]; }), v.id); ks.setAttribute("data-k", "sticker");
@@ -581,6 +608,12 @@
     ctl.appendChild(pl);
     var fx = sel(o.fx || [], s.fx || ""); fx.setAttribute("data-k", "fx"); fx.title = "Hiệu ứng";
     ctl.appendChild(fx);
+    var md = sel(o.moods || [["", "Nền địa điểm"]], s.mood || ""); md.setAttribute("data-k", "mood"); md.title = "Nền cảm xúc";
+    ctl.appendChild(md);
+    var sx = document.createElement("input");
+    sx.type = "text"; sx.value = s.sfx_text || ""; sx.setAttribute("data-k", "sfx_text"); sx.maxLength = 8;
+    sx.placeholder = "Chữ hiệu ứng (ニヤニヤ)"; sx.title = "Chữ hiệu ứng rải quanh mặt nhân vật, để trống nếu không có";
+    ctl.appendChild(sx);
     // ảnh riêng cho cảnh (đồ vật, hoặc bất kỳ hình nào chị muốn)
     var url = base() + "/scene/" + encodeURIComponent(s.id);
     if (v.type === "object") {
@@ -731,6 +764,16 @@
     $("nc-add").addEventListener("click", addScene);
     $("nc-k-add").addEventListener("click", addSticker);
     $("nc-bgm-play").addEventListener("click", playMusic);
+    fillSelect("nc-tstyle", TSTYLES, "orange");
+    fillSelect("nc-cstyle", CSTYLES, "center");
+    fillSelect("nc-pace", PACES, "normal");
+    api("/api/2ch/series").then(function (d) {
+      fillSeries(d.items);
+      if (!N.data && (d.items || []).length) $("nc-series").value = d.items[0];      // series dùng gần nhất
+    }).catch(function () {});
+    ["nc-tstyle", "nc-cstyle", "nc-pace", "nc-series"].forEach(function (id) {
+      $(id).addEventListener("change", function () { if (N.id) save(true, false); });
+    });
     $("nc-ideas-btn").addEventListener("click", moreIdeas);
 
     $("nc-narr-up").addEventListener("click", function () {
@@ -759,7 +802,8 @@
     // lựa chọn có sẵn cả khi chưa mở video nào
     fillSelect("nc-genre", [["kando", "Cảm động 感動"], ["showa", "Chuyện thời Showa 昭和"], ["sukatto", "Trả đũa đã đời スカッと"],
       ["giji", "Nhà chồng 義実家"], ["shokuba", "Công sở 職場"], ["kinjo", "Hàng xóm ご近所"], ["gakko", "Học đường 学校"],
-      ["koi", "Tình cảm 恋愛"], ["warai", "Chuyện cười 笑える話"], ["kowai", "Chuyện rợn người 怖い話"]], "kando");
+      ["koi", "Tình cảm 恋愛"], ["warai", "Chuyện cười 笑える話"], ["kowai", "Chuyện rợn người 怖い話"],
+      ["meigen", "スカッと迷言集 (lật kèo + câu chốt)"]], "kando");
     fillSelect("nc-idea-genre", [["", "Mọi thể loại"]].concat(Array.prototype.map.call($("nc-genre").options,
       function (o) { return [o.value, o.textContent]; })), "");
     fillSelect("nc-voicemode", [["cast", "Mỗi nhân vật một giọng + giọng người kể"], ["one", "Một người kể đọc tất cả"]], "cast");

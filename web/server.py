@@ -3368,6 +3368,13 @@ def _2ch_view(pid: str, data: dict) -> dict:
     out["options"] = {"genres": [[k, v] for k, v in nichan.GENRES.items()], "emos": list(nichan.EMOS),
                       "emo_vi": nichan.EMO_VI, "fx": [[k, v] for k, v in nichan.FX_VI.items()],
                       "voice_modes": [[k, v] for k, v in nichan.VOICE_MODES.items()],
+                      "moods": [[k, v] for k, v in nichan.MOODS.items()],
+                      "framings": [[k, v] for k, v in nichan.FRAMINGS.items()],
+                      "layouts": [[k, v] for k, v in nichan.LAYOUTS.items()],
+                      "cap_styles": [[k, v] for k, v in nichan.CAP_STYLES.items()],
+                      "title_styles": [[k, v] for k, v in nichan.TITLE_STYLES.items()],
+                      "paces": [[k, v] for k, v in nichan.PACES.items()],
+                      "series": nichan.series_list(),
                       "arts": [[k, v["label"]] for k, v in nichan.ARTS.items()],
                       "speeds": [[k, v[0]] for k, v in nichan.SPEEDS.items()],
                       "bgm_levels": [[k, v[0]] for k, v in nichan.BGM_LEVELS.items()],
@@ -3402,6 +3409,8 @@ def api_2ch_new():
     st["brief"] = str(body.get("brief") or "")
     if body.get("genre") in nichan.GENRES:
         st["genre"] = body["genre"]
+    if str(body.get("series") or "").strip():
+        st["series"] = st["title1"] = str(body["series"]).strip()[:20]
     data = {"id": pid, "mode": "2ch", "title": "", "language": "ja", "format": "9:16", "nichan": st,
             "assets": {"characters": [], "background": None, "voices": {}},
             "state": "draft", "created_at": datetime.now().isoformat(timespec="seconds")}
@@ -3450,6 +3459,14 @@ def api_2ch_save(pid):
         st["voice_mode"] = body["voice_mode"]
     if body.get("art") in nichan.ARTS:
         st["art"] = body["art"]
+    for k, ok in (("cap_style", nichan.CAP_STYLES), ("title_style", nichan.TITLE_STYLES), ("pace", nichan.PACES)):
+        if body.get(k) in ok:
+            st[k] = body[k]
+    if "series" in body:
+        st["series"] = str(body["series"] or "").strip()[:20]
+        if st["series"]:
+            st["title1"] = st["series"]                 # dòng tiêu đề 1 = tên series cố định
+            nichan.remember_series(st["series"])
     if body.get("speed") in nichan.SPEEDS:
         st["speed"] = body["speed"]
     if body.get("bgm_level") in nichan.BGM_LEVELS:
@@ -3710,6 +3727,12 @@ def api_2ch_style_sample():
     nichan.style_sample().save(buf, "PNG")
     buf.seek(0)
     return send_file(buf, mimetype="image/png", as_attachment=True, download_name="mau_net_ve_2ch.png")
+
+
+@app.get("/api/2ch/series")
+def api_2ch_series():
+    from core import nichan
+    return jsonify({"items": nichan.series_list()})
 
 
 @app.get("/api/2ch/stickers")

@@ -731,6 +731,14 @@
               <select id="nc-cta"><option value="1">Có (viết khéo theo từng truyện)</option><option value="0">Không</option></select></div>
           </div>
           <div class="field-row">
+            <div class="field"><label for="nc-series">Tên series (dòng tiêu đề 1 cố định)</label>
+              <input type="text" id="nc-series" list="nc-series-list" maxlength="20" placeholder="VD: スカッと迷言集 — để trống nếu mỗi video tự đặt">
+              <datalist id="nc-series-list"></datalist></div>
+            <div class="field"><label for="nc-tstyle">Kiểu tiêu đề</label><select id="nc-tstyle"></select></div>
+            <div class="field"><label for="nc-cstyle">Kiểu phụ đề</label><select id="nc-cstyle"></select></div>
+            <div class="field"><label for="nc-pace">Nhịp video</label><select id="nc-pace"></select></div>
+          </div>
+          <div class="field-row">
             <div class="field"><label for="nc-t1">Tiêu đề dòng 1</label><input type="text" id="nc-t1" placeholder="昭和の男たち — để trống thì AI đặt"></div>
             <div class="field"><label for="nc-t2">Tiêu đề dòng 2</label><input type="text" id="nc-t2" placeholder="何の汽車賃？"></div>
           </div>

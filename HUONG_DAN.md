@@ -1289,3 +1289,21 @@ liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm
    câu lệnh** — mỗi dòng một câu lệnh, chỉ những ảnh còn thiếu, đúng thứ tự các ô — để dán
    vào công cụ tạo hàng loạt. Vẽ xong bấm **Tải nhiều ảnh cùng lúc**, chọn hết các ảnh: ảnh
    tải về trước điền vào dòng trước.
+10. **Kiểu スカッと迷言集 (video sống động như kênh スカッと)**:
+   - **Thể loại スカッと迷言集**: kẻ xấu làm trò bẩn → nạn nhân tìm đồng minh → bàn kế → lật kèo
+     bằng mẹo → kẻ xấu cầu xin → cú lật thứ hai → câu chốt đắt giá. Câu cực ngắn, đổi cảm xúc liên tục.
+   - **Nhịp** (Bình thường / Nhanh kiểu スカッと): nhịp nhanh thì mỗi câu khoảng 1,5–2 giây, nhiều cảnh
+     hơn trong cùng thời lượng, câu dài thì giữa câu hình tự giật phóng to. Thể loại 迷言集 tự dùng nhịp nhanh.
+   - **Tên series** (ô cạnh thể loại): gõ tên kênh (vd スカッと迷言集) thì dòng tiêu đề 1 luôn là tên này,
+     AI chỉ đặt dòng 2. Tool nhớ các tên đã dùng (chọn lại trong ô) và tự điền tên gần nhất khi tạo tập mới.
+   - **Kiểu tiêu đề**: Cam phát sáng, hoặc **Đỏ viền trắng** kiểu スカッと.
+   - **Kiểu phụ đề**: Giữa màn hình, hoặc **Chữ trắng viền đen căn trái** ở góc trên.
+   - Ở từng cảnh (AI tự chọn, sửa được, sửa xong bấm **Lưu các cảnh**):
+     - **Nền cảm xúc** thay nền địa điểm ở câu đó: tia sáng đỏ (đắc ý), tia vàng (cười lớn), vạch tốc độ
+       xanh (sốc), xoáy tím (choáng), màn tím vạch rủ (u sầu, cầu xin), nền đen ánh sáng (âm mưu), rèm đỏ
+       (cao trào). Tool tự vẽ, có chuyển động.
+     - **Chữ hiệu ứng** (vd ニヤニヤ, はははは, ゴゴゴ, !?) rải quanh mặt nhân vật, nhún nhẹ.
+     - **Khung hình**: nhân vật đơn chọn **Cận mặt to** (mặt chiếm gần hết khung) hoặc Toàn thân; hai người
+       chọn **Một người trước, một người sau** (người nói to phía trước) hoặc Cạnh nhau.
+     - **Hiệu ứng mới**: lóe sáng (chụp ảnh, phát hiện), mờ + bụi rơi (tuyệt vọng, cầu xin), mặt đen sầm
+       (giận thật sự).

@@ -53,9 +53,22 @@ EMO_EN = {"neutral": "calm neutral expression, mouth closed", "happy": "big happ
           "shocked": "shocked expression, wide eyes, open mouth", "worried": "worried expression, sweat drop",
           "think": "thinking expression, hand on chin, looking up", "sleep": "eyes closed, sleeping peacefully",
           "sly": "sly smirk, half-closed eyes"}
-FX = ("", "sweat", "anger", "shock", "cry", "think", "shake", "sleep")
+FX = ("", "sweat", "anger", "shock", "cry", "think", "shake", "sleep", "flash", "blur", "dark")
 FX_VI = {"": "không", "sweat": "giọt mồ hôi", "anger": "nổi gân", "shock": "vạch sốc", "cry": "nước mắt rơi",
-         "think": "dấu suy nghĩ", "shake": "rung hình", "sleep": "zzz"}
+         "think": "dấu suy nghĩ", "shake": "rung hình", "sleep": "zzz", "flash": "lóe sáng (chụp ảnh, phát hiện)",
+         "blur": "mờ nhoè + bụi rơi (tuyệt vọng)", "dark": "mặt đen sầm (giận dữ thật sự)"}
+# nền cảm xúc tool tự vẽ (thay nền địa điểm ở câu đó)
+MOODS = {"": "Nền địa điểm", "smug_red": "Tia sáng đỏ (đắc ý, khiêu khích)",
+         "excited_yellow": "Tia sáng vàng (phấn khích, cười lớn)", "shock_blue": "Vạch tốc độ xanh (sốc)",
+         "dizzy_purple": "Xoáy tím (choáng, tuyệt vọng)", "gloom": "Màn tím vạch rủ (u sầu, cầu xin)",
+         "scheme_dark": "Nền đen ánh sáng (âm mưu)", "climax_red": "Rèm đỏ (cao trào)"}
+FRAMINGS = {"full": "Toàn thân / nửa người", "close": "Cận mặt to"}
+LAYOUTS = {"side": "Hai người cạnh nhau", "stack": "Một người trước, một người sau"}
+CAP_STYLES = {"center": "Chữ màu giữa khung (xanh / đỏ theo người nói)",
+              "left": "Chữ trắng viền đen căn trái (kiểu スカッと)"}
+TITLE_STYLES = {"orange": "Cam phát sáng", "red": "Đỏ viền trắng (kiểu スカッと)"}
+PACES = {"normal": "Bình thường (~2,6 giây / câu)", "fast": "Nhanh kiểu スカッと (~1,8 giây / câu, giật phóng to giữa câu)"}
+SERIES_FILE = config.LIBRARY / "2ch_series.json"
 GENRES = {
     "kando": "Cảm động 感動 (gia đình, người tốt, hy sinh thầm lặng)",
     "showa": "Chuyện thời Showa 昭和 (lên Tokyo làm việc, nghèo khó, tình người)",
@@ -67,6 +80,8 @@ GENRES = {
     "koi": "Tình cảm 恋愛 / 修羅場",
     "warai": "Chuyện cười 笑える話",
     "kowai": "Chuyện rợn người 怖い話",
+    "meigen": ("スカッと迷言集 (kẻ xấu làm trò bẩn → nạn nhân tìm đồng minh → kế hoạch → lật kèo bằng mẹo thông minh → "
+               "kẻ xấu cầu xin → cú lật thứ hai → câu chốt đắt giá 迷言; câu cực ngắn, cảm xúc đổi liên tục)"),
 }
 VOICE_MODES = {"cast": "Mỗi nhân vật một giọng + giọng người kể", "one": "Một người kể đọc tất cả"}
 # màu chữ: lời kể xanh, người nói theo thứ tự nhân vật
@@ -115,7 +130,8 @@ def art_of(st: dict | None) -> dict:
 
 def default_story() -> dict:
     return {"brief": "", "genre": "kando", "minutes": 1.2, "language": "ja", "title1": "", "title2": "",
-            "cta": True, "voice_mode": "cast", "art": DEFAULT_ART, "speed": "normal", "bgm": "", "bgm_level": "soft", "narrator": {}, "characters": [], "places": [], "scenes": [],
+            "cta": True, "voice_mode": "cast", "art": DEFAULT_ART, "cap_style": "center", "title_style": "orange",
+            "series": "", "pace": "normal", "speed": "normal", "bgm": "", "bgm_level": "soft", "narrator": {}, "characters": [], "places": [], "scenes": [],
             "pics": {}}
 
 
@@ -194,14 +210,16 @@ def clean_visual(v, ids: set, k_ok: set) -> dict:
         cids = [c for c in (v.get("cids") or []) if c in ids][:2]
         emos = [e if e in EMOS else "neutral" for e in (list(v.get("emos") or []) + ["neutral", "neutral"])[:2]]
         if len(cids) == 2:
-            return {"type": "two", "cids": cids, "emos": emos}
+            return {"type": "two", "cids": cids, "emos": emos,
+                    "layout": v.get("layout") if v.get("layout") in LAYOUTS else "side"}
         t, v = "char", {"cid": cids[0] if cids else "", "emo": emos[0]}
     if t == "sticker" and v.get("id") in k_ok:
         return {"type": "sticker", "id": v["id"]}
     if t == "object" and str(v.get("desc_en") or "").strip():
         return {"type": "object", "desc_en": str(v["desc_en"]).strip()[:300]}
     cid = v.get("cid") if v.get("cid") in ids else ""
-    return {"type": "char", "cid": cid, "emo": v.get("emo") if v.get("emo") in EMOS else "neutral"}
+    return {"type": "char", "cid": cid, "emo": v.get("emo") if v.get("emo") in EMOS else "neutral",
+            "framing": v.get("framing") if v.get("framing") in FRAMINGS else "full"}
 
 
 def clean_scene(s: dict, ids: set, places: set, k_ok: set, k: int) -> dict:
@@ -209,7 +227,9 @@ def clean_scene(s: dict, ids: set, places: set, k_ok: set, k: int) -> dict:
     out = {"id": s.get("id") or f"c{k + 1:03d}", "text": str(s.get("text") or "").strip()[:120], "who": who,
            "visual": clean_visual(s.get("visual"), ids, k_ok),
            "place": s.get("place") if s.get("place") in places else (next(iter(places), "")),
-           "fx": s.get("fx") if s.get("fx") in FX else ""}
+           "fx": s.get("fx") if s.get("fx") in FX else "",
+           "mood": s.get("mood") if s.get("mood") in MOODS else "",
+           "sfx_text": str(s.get("sfx_text") or "").strip()[:8]}       # chữ hiệu ứng quanh nhân vật
     if s.get("img"):
         out["img"] = s["img"]
     return out
@@ -390,7 +410,11 @@ def write(st: dict, progress=None) -> dict:
     from . import claude_cli, scene_art
     say = progress or (lambda f, m: None)
     minutes = max(0.5, min(8.0, float(st.get("minutes") or 1.2)))
-    n = max(8, int(minutes * 60 / 2.6))
+    fast = st.get("pace") == "fast" or st.get("genre") == "meigen"
+    n = max(8, int(minutes * 60 / (1.8 if fast else 2.6)))
+    series = (st.get("series") or "").strip()
+    if series:
+        st["title1"] = series                       # dòng 1 là tên series cố định của kênh
     ks = stickers()
     opt = doodle.options()
     kit_cat = "\n".join(f"   {k}: {', '.join(opt[k])}" for k in ("age", "sex", "skin", "hair", "hair_color", "hat",
@@ -403,8 +427,13 @@ def write(st: dict, progress=None) -> dict:
     data = claude_cli._run_json(claude_cli._load_prompt(
         "nichan_write", minutes=f"{minutes:g}", n=str(n), genre=GENRES.get(st.get("genre"), st.get("genre") or ""),
         brief=(st.get("brief") or "(tự nghĩ một chuyện hay theo thể loại)"),
-        title_hint=(f"Tiêu đề chị đã đặt: {st.get('title1')} / {st.get('title2')} — giữ đúng."
-                    if (st.get("title1") or "").strip() else ""),
+        title_hint=(f'Dòng tiêu đề 1 là TÊN SERIES cố định của kênh: "{series}" — "title1" giữ đúng như vậy, chỉ '
+                    'đặt "title2" là tên tập ngắn gây tò mò.' if series else
+                    f"Tiêu đề chị đã đặt: {st.get('title1')} / {st.get('title2')} — giữ đúng."
+                    if (st.get("title1") or "").strip() else "") +
+                   ("\nNHỊP NHANH kiểu スカッと: câu cực ngắn (1 dòng, ≤ 12 chữ là tốt nhất), mỗi câu khoảng 1,5–2 giây, "
+                    "cảm xúc đổi liên tục; nền cảm xúc, chữ hiệu ứng và hiệu ứng dùng dày hơn." if fast else ""),
+        moods=", ".join(f"{k} ({v})" for k, v in MOODS.items() if k),
         stickers="\n".join(f"   - {k['id']}: {k['desc']}" for k in ks) or "   (chưa có)",
         emos=", ".join(EMOS), fx=", ".join(f for f in FX if f),
         kinds=scene_art.kinds_catalog() if hasattr(scene_art, "kinds_catalog") else ", ".join(scene_art.KINDS),
@@ -413,6 +442,8 @@ def write(st: dict, progress=None) -> dict:
         raise RuntimeError("AI không viết được truyện.")
     st["title1"] = (st.get("title1") or "").strip() or str(data.get("title1") or "")[:20]
     st["title2"] = (st.get("title2") or "").strip() or str(data.get("title2") or "")[:20]
+    if series:
+        st["title1"] = series
     keep_voice = {c["id"]: c.get("voice") for c in st.get("characters") or []
                   if (c.get("voice") or {}).get("voice")}           # giữ giọng Thư viện chị đã chọn
     if (st.get("narrator") or {}).get("auto"):
@@ -596,9 +627,40 @@ def caption(text: str, color) -> Image.Image:
     return _text_layer(lines, f, color, W, 10)
 
 
-def title_bar(t1: str, t2: str) -> np.ndarray:
-    """Thanh tiêu đề đen, chữ cam chuyển màu phát sáng (2 dòng)."""
+def caption_left(text: str) -> Image.Image:
+    """Phụ đề kiểu スカッと: chữ trắng viền đen dày, căn trái ở góc trên."""
+    size = 92
+    while True:
+        f = ja_font(size)
+        lines = wrap(text, f, W - 120)
+        orphan = len(lines) > len(text.split("\n")) and len(lines[-1].strip()) <= 2
+        if (len(lines) <= 3 and not orphan) or size <= 60:
+            break
+        size -= 6
+    lh = int(f.size * 1.16)
+    img = Image.new("RGBA", (W, lh * len(lines) + 30), (0, 0, 0, 0))
+    d = ImageDraw.Draw(img)
+    for i, ln in enumerate(lines):
+        d.text((44, 12 + i * lh), ln, font=f, fill=(255, 255, 255), stroke_width=14, stroke_fill=(12, 12, 14))
+    return img
+
+
+def title_bar(t1: str, t2: str, style: str = "orange") -> np.ndarray:
+    """Thanh tiêu đề đen 2 dòng: chữ cam chuyển màu phát sáng, hoặc chữ đỏ viền trắng (kiểu スカッと)."""
     img = Image.new("RGB", (W, TOP), (0, 0, 0))
+    if style == "red":
+        d = ImageDraw.Draw(img)
+        for txt, size, y in ((t1, 150, 140), (t2, 116, 318)):
+            if not txt:
+                continue
+            f = ja_font(size)
+            while f.getlength(txt) > W - 70 and size > 60:
+                size -= 8
+                f = ja_font(size)
+            d.text((W // 2, y), txt, font=f, anchor="mm", fill=(60, 0, 0), stroke_width=22, stroke_fill=(60, 0, 0))
+            d.text((W // 2, y), txt, font=f, anchor="mm", fill=(226, 22, 34), stroke_width=12,
+                   stroke_fill=(255, 255, 255))
+        return np.asarray(img)
     for txt, size, y in ((t1, 148, 150), (t2, 112, 320)):
         if not txt:
             continue
@@ -620,6 +682,74 @@ def title_bar(t1: str, t2: str) -> np.ndarray:
             g[r] = (int(255 - 30 * u), int(224 - 110 * u), int(160 - 110 * u))
         img.paste(Image.fromarray(g), (0, 0), fill)
     return np.asarray(img)
+
+
+_GRID: dict = {}
+_MOOD: dict = {}
+
+
+def _grid(w, h, cx, cy):
+    key = (w, h, int(cx), int(cy))
+    if key not in _GRID:
+        yy, xx = np.mgrid[0:h, 0:w].astype(np.float32)
+        _GRID[key] = (np.arctan2(yy - cy, xx - cx), np.hypot(xx - cx, yy - cy), xx, yy)
+    return _GRID[key]
+
+
+def mood_bg(mood: str, w: int, h: int, t: float) -> np.ndarray:
+    """Nền cảm xúc tool tự vẽ (như video mẫu): tia sáng, vạch tốc độ, xoáy, màn u sầu, nền âm mưu, rèm."""
+    import cv2
+    if mood in ("smug_red", "excited_yellow"):
+        ang, rad, _x, _y = _grid(w, h, w / 2, h * 0.42)
+        c1, c2 = ((222, 20, 24), (168, 0, 8)) if mood == "smug_red" else ((255, 214, 40), (255, 168, 20))
+        band = (((ang + t * 0.35) * 16 / (2 * np.pi)) % 1.0) < 0.5
+        out = np.where(band[..., None], np.array(c1, np.float32), np.array(c2, np.float32))
+        glow = np.clip(1.0 - rad / (h * 0.55), 0, 1)[..., None]
+        return np.clip(out + glow * 50, 0, 255).astype(np.uint8)
+    if mood == "dizzy_purple":
+        ang, rad, _x, _y = _grid(w, h, w / 2, h * 0.45)
+        v = np.sin(rad * 0.045 - ang * 3 - t * 4)[..., None]
+        out = np.array((88, 40, 200), np.float32) * (0.5 + 0.5 * v) + np.array((40, 90, 240), np.float32) * (0.5 - 0.5 * v)
+        return np.clip(out, 0, 255).astype(np.uint8)
+    key = (mood, w, h)
+    if key not in _MOOD:
+        rnd = np.random.default_rng(7)
+        yy = np.linspace(0, 1, h, dtype=np.float32)[:, None, None]
+        if mood == "shock_blue":                     # nền sáng, vạch tốc độ xanh dọc
+            out = np.ones((h, w, 3), np.float32) * np.array((235, 244, 255), np.float32)
+            for _ in range(70):
+                x, lw = int(rnd.integers(0, w)), int(rnd.integers(3, 18))
+                col = (40, 110, 230) if rnd.random() < 0.6 else (150, 200, 255)
+                cv2.rectangle(out, (x, 0), (x + lw, h), col, -1)
+        elif mood == "gloom":                        # tím tối, vạch rủ xuống
+            out = (np.array((70, 30, 110), np.float32) * (1 - yy) + np.array((25, 10, 45), np.float32) * yy).repeat(w, 1)
+            for _ in range(28):
+                x, lw = int(rnd.integers(0, w)), int(rnd.integers(6, 22))
+                cv2.rectangle(out, (x, 0), (x + lw, int(h * rnd.uniform(0.2, 0.75))), (40, 15, 60), -1)
+                cv2.circle(out, (x + lw // 2, int(h * rnd.uniform(0.2, 0.75))), lw // 2 + 2, (40, 15, 60), -1)
+        elif mood == "scheme_dark":                  # đen, một đường sáng xanh ngang
+            out = (np.array((24, 26, 34), np.float32) * (1 - yy) + np.array((6, 6, 10), np.float32) * yy).repeat(w, 1)
+            glow = np.zeros((h, w), np.float32)
+            cv2.line(glow, (0, int(h * 0.45)), (w, int(h * 0.45)), 1.0, 10)
+            glow = cv2.GaussianBlur(glow, (0, 0), 18) * 3 + cv2.GaussianBlur(glow, (0, 0), 3)
+            out = out + np.clip(glow, 0, 1)[..., None] * np.array((60, 200, 255), np.float32)
+        elif mood == "climax_red":                   # rèm đỏ cam có nếp
+            xx = np.linspace(0, 1, w, dtype=np.float32)[None, :, None]
+            fold = 0.5 + 0.5 * np.sin(xx * np.pi * 18)
+            out = (np.array((200, 30, 20), np.float32) * fold + np.array((255, 120, 30), np.float32) * (1 - fold)).repeat(h, 0)
+        else:
+            out = np.zeros((h, w, 3), np.float32)
+        _MOOD[key] = np.clip(out, 0, 255).astype(np.uint8)
+    return _MOOD[key]
+
+
+def sfx_word(text: str, size: int = 92) -> Image.Image:
+    """Chữ hiệu ứng (ニヤニヤ, はははは...): vàng cam viền nâu đậm."""
+    f = ja_font(size)
+    w = int(f.getlength(text)) + 40
+    im = Image.new("RGBA", (w, size + 40), (0, 0, 0, 0))
+    ImageDraw.Draw(im).text((20, 18), text, font=f, fill=(255, 196, 30), stroke_width=9, stroke_fill=(90, 40, 10))
+    return im
 
 
 # ---------------------------------------------------------------- hình
@@ -685,7 +815,9 @@ class Renderer:
         self.chars = {c["id"]: c for c in st.get("characters") or []}
         self.places = {p["id"]: p for p in st.get("places") or []}
         self.colors = {c["id"]: SPEAK_COLORS[i % len(SPEAK_COLORS)] for i, c in enumerate(st.get("characters") or [])}
-        self.title = title_bar(st.get("title1") or "", st.get("title2") or "")
+        self.title = title_bar(st.get("title1") or "", st.get("title2") or "", st.get("title_style") or "orange")
+        self._sfx: dict = {}
+        self._blur: dict = {}
         self._bg: dict = {}
         self._img: dict = {}
         self._cap: dict = {}
@@ -732,6 +864,16 @@ class Renderer:
             if p:
                 im = sticker_style(_fit(Image.open(p).convert("RGBA"), 980, 1060))
                 out = [(im, W // 2, H - 60, "stand")]
+        elif v.get("type") == "two" and v.get("layout") == "stack":
+            # người thứ hai đứng sau (nhỏ hơn, lệch phải), người nói đứng trước to (lệch trái)
+            pair = list(zip(v["cids"], v["emos"]))
+            for i, (cid, emo) in reversed(list(enumerate(pair))):
+                im = self.char_img(cid, emo)
+                if im is not None:
+                    if i == 0:
+                        out.append((_fit(im, 820, 1150), int(W * 0.38), H + 40, "stand"))
+                    else:
+                        out.append((_fit(im, 700, 960), int(W * 0.68), H - 170, "stand"))
         elif v.get("type") == "two":
             for i, (cid, emo) in enumerate(zip(v["cids"], v["emos"])):
                 im = self.char_img(cid, emo)
@@ -740,7 +882,14 @@ class Renderer:
                     out.append((im, int(W * (0.29 if i == 0 else 0.71)), H - 50, "stand"))
         elif v.get("type") == "char" and v.get("cid"):
             im = self.char_img(v["cid"], v.get("emo", "neutral"))
-            if im is not None:
+            if im is not None and v.get("framing") == "close":
+                # cận mặt to: mặt chiếm gần hết khung, người bị cắt ở dưới (như video mẫu)
+                hx, hy, hr = self.head_of(im)
+                k = min(W * 0.36 / max(hr, 1.0), 4.0)
+                big = im.resize((max(1, int(im.width * k)), max(1, int(im.height * k))), Image.LANCZOS)
+                cy = TOP + (H - TOP) * 0.46
+                out = [(big, int(W / 2 - hx * k), int(cy - hy * k), "abs")]
+            elif im is not None:
                 out = [(_fit(im, 1000, 1080), W // 2, H - 40, "stand")]
         if not out:                                       # đồ vật chưa có ảnh: giữ hình cảnh trước
             out = last or []
@@ -771,8 +920,11 @@ class Renderer:
 
     def cap(self, s: dict) -> np.ndarray:
         if s["id"] not in self._cap:
-            col = NARR_COLOR if s["who"] == "narr" else self.colors.get(s["who"], NARR_COLOR)
-            self._cap[s["id"]] = np.asarray(caption(s["text"], col))
+            if self.st.get("cap_style") == "left":
+                self._cap[s["id"]] = np.asarray(caption_left(s["text"]))
+            else:
+                col = NARR_COLOR if s["who"] == "narr" else self.colors.get(s["who"], NARR_COLOR)
+                self._cap[s["id"]] = np.asarray(caption(s["text"], col))
         return self._cap[s["id"]]
 
     def head_of(self, im: Image.Image) -> tuple[float, float, float]:
@@ -814,34 +966,99 @@ class Renderer:
         s, dur = row["scene"], row["dur"]
         can = np.zeros((H, W, 3), np.uint8)
         can[:TOP] = self.title
-        bg = self.bg(s.get("place"))
-        z = 1.0 + 0.035 * min(1.0, t / max(dur, 0.1))         # máy quay đẩy vào chậm
-        bh, bw = bg.shape[:2]
-        cw, ch = int(bw / 1.08 / z * 1.0), int(bh / 1.08 / z)
-        x0, y0 = (bw - cw) // 2, (bh - ch) // 2
-        can[TOP:] = cv2.resize(bg[y0:y0 + ch, x0:x0 + cw], (W, H - TOP), interpolation=cv2.INTER_LINEAR)
-        shake = s.get("fx") in ("shake", "shock") and t < 0.6
+        fx = s.get("fx") or ""
+        if s.get("mood"):                                  # nền cảm xúc thay nền địa điểm
+            can[TOP:] = mood_bg(s["mood"], W, H - TOP, t)
+        else:
+            bg = self.bg(s.get("place"))
+            z = 1.0 + 0.035 * min(1.0, t / max(dur, 0.1))     # máy quay đẩy vào chậm
+            bh, bw = bg.shape[:2]
+            cw, ch = int(bw / 1.08 / z * 1.0), int(bh / 1.08 / z)
+            x0, y0 = (bw - cw) // 2, (bh - ch) // 2
+            can[TOP:] = cv2.resize(bg[y0:y0 + ch, x0:x0 + cw], (W, H - TOP), interpolation=cv2.INTER_LINEAR)
+        shake = fx in ("shake", "shock") and t < 0.6
+        # nhịp nhanh: giữa câu "giật" phóng to vào mặt một nhịp (như cắt cảnh)
+        punch = 1.0
+        if self.st.get("pace") == "fast" and dur > 1.3 and t > dur * 0.5:
+            punch = 1.0 + 0.17 * min(1.0, (t - dur * 0.5) / 0.08)
         vis = self.visual(s, None)
+        heads = []
         for im, cx, by, kind in vis:
             u = min(1.0, t / 0.28)                              # nảy vào cảnh
             sc = 0.86 + 0.14 * (1 - (1 - u) ** 3) + 0.035 * math.sin(math.pi * u)
             sc *= 1.0 + 0.006 * math.sin(t * 2.4)              # thở nhẹ
             dx = int(14 * math.sin(t * 60)) if shake else 0
-            arr = np.asarray(im)
-            nw, nh = max(1, int(im.width * sc)), max(1, int(im.height * sc))
-            arr = cv2.resize(arr, (nw, nh), interpolation=cv2.INTER_LINEAR)
-            x = int(cx - nw / 2) + dx
-            y = int(by - nh) if kind == "stand" else int(by - im.height / 2 - nh / 2)
-            _blend(can, arr, x, max(TOP - 40, y))
-            if s.get("fx") and len(vis) == 1:
+            hx, hy, hr = self.head_of(im)
+            src = im
+            if fx == "blur" and len(vis) == 1:                  # tuyệt vọng: hình nhoè
+                if id(im) not in self._blur:
+                    self._blur[id(im)] = im.filter(ImageFilter.GaussianBlur(max(4, im.width // 90)))
+                src = self._blur[id(im)]
+            if kind == "abs":                                   # đã đặt sẵn: phóng quanh đầu
+                f = (0.92 + 0.08 * (1 - (1 - u) ** 3)) * punch
+                ax, ay = cx + hx, by + hy
+                nw, nh = max(1, int(im.width * f)), max(1, int(im.height * f))
+                x, y = int(ax - hx * f) + dx, int(ay - hy * f)
+            else:
+                sc *= punch
+                nw, nh = max(1, int(im.width * sc)), max(1, int(im.height * sc))
+                x = int(cx - nw / 2) + dx
+                y = int(by - nh) if kind == "stand" else int(by - im.height / 2 - nh / 2)
+                if punch > 1.0 and len(vis) == 1:               # phóng về phía mặt
+                    y += int((nh - nh / punch) * 0.55)
+                y = max(TOP - 40, y)
+            arr = cv2.resize(np.asarray(src), (nw, nh), interpolation=cv2.INTER_LINEAR)
+            _blend(can, arr, x, y)
+            k = nw / im.width
+            heads.append((x + hx * k, y + hy * k, hr * k))
+            if fx == "dark" and len(vis) == 1:                  # mặt đen sầm khi giận
+                hxs, hys, hrs = heads[-1]
+                x0, y0 = int(max(0, hxs - hrs * 1.1)), int(max(TOP, hys - hrs * 1.1))
+                x1, y1 = int(min(W, hxs + hrs * 1.1)), int(min(H, hys + hrs * 1.0))
+                if x1 > x0 and y1 > y0:
+                    reg = can[y0:y1, x0:x1].astype(np.float32)
+                    m = np.zeros(reg.shape[:2], np.float32)
+                    cv2.ellipse(m, (int(hxs - x0), int(hys - y0)), (int(hrs * 0.95), int(hrs * 0.9)), 0, 0, 360, 1.0, -1)
+                    m = cv2.GaussianBlur(m, (0, 0), max(2, hrs * 0.08))[..., None] * 0.55
+                    can[y0:y1, x0:x1] = (reg * (1 - m) + np.array((70, 70, 80), np.float32) * m).astype(np.uint8)
+            if fx and len(vis) == 1:
                 act = {"sweat": "tremble", "anger": "angry", "shock": "hands_up", "cry": "cry",
-                       "think": "think", "sleep": "sleep"}.get(s["fx"])
-                if act:                                     # dấu cảm xúc bám đúng đầu nhân vật
-                    hx, hy, hr = self.head_of(im)
-                    k = nw / im.width
-                    film_rig.marks(can, act, t, (x + hx * k, max(y, TOP - 40) + hy * k, hr * k), 900, 1)
+                       "think": "think", "sleep": "sleep", "dark": "angry"}.get(fx)
+                if act:                                         # dấu cảm xúc bám đúng đầu nhân vật
+                    film_rig.marks(can, act, t, heads[-1], 900, 1)
+        if fx == "blur":                                        # bụi trắng rơi
+            rnd = np.random.default_rng(zlib_seed(s["id"]))
+            for _ in range(46):
+                px, py0, sp = rnd.uniform(0, W), rnd.uniform(0, H - TOP), rnd.uniform(60, 160)
+                py = TOP + (py0 + t * sp) % (H - TOP)
+                cv2.circle(can, (int(px), int(py)), int(rnd.uniform(3, 7)), (255, 255, 255), -1, cv2.LINE_AA)
+        if s.get("sfx_text") and heads:                         # chữ hiệu ứng quanh mặt to nhất, nhún nhảy
+            hxs, hys, hrs = max(heads, key=lambda h: h[2])
+            if s["id"] not in self._sfx:
+                self._sfx[s["id"]] = [np.asarray(sfx_word(s["sfx_text"], 84).rotate(a, expand=True, resample=Image.BICUBIC))
+                                      for a in (14, -10, 8, -14)]
+            spots = [(-1.45, -0.75), (1.2, -0.55), (-1.35, 0.55), (1.15, 0.75)]
+            for n, ((ox, oy), word) in enumerate(zip(spots, self._sfx[s["id"]])):
+                if t < 0.08 * n:
+                    continue
+                bob = 12 * math.sin(t * 9 + n * 1.7)
+                wx = int(hxs + ox * hrs - word.shape[1] / 2)
+                wy = int(max(TOP + 10, hys + oy * hrs - word.shape[0] / 2 + bob))
+                _blend(can, word, min(max(0, wx), W - word.shape[1]), wy)
+        if fx == "flash":                                       # lóe sáng trắng lúc đầu câu
+            if t < 0.25:
+                a = (1 - t / 0.25) * 0.85
+                can[TOP:] = (can[TOP:].astype(np.float32) * (1 - a) + 255 * a).astype(np.uint8)
+            if t < 0.7 and heads:
+                hxs, hys, hrs = heads[0]
+                c = (int(hxs - hrs * 1.1), int(hys - hrs * 1.0))
+                L = int(hrs * (0.5 + 0.3 * math.sin(t * 20)))
+                for a2 in range(0, 180, 45):
+                    r = math.radians(a2)
+                    cv2.line(can, (int(c[0] - L * math.cos(r)), int(c[1] - L * math.sin(r))),
+                             (int(c[0] + L * math.cos(r)), int(c[1] + L * math.sin(r))), (255, 255, 230), 6, cv2.LINE_AA)
         capa = self.cap(s)
-        _blend(can, capa, 0, TOP + 60)
+        _blend(can, capa, 0, TOP + (40 if self.st.get("cap_style") == "left" else 60))
         return can
 
 
@@ -1009,3 +1226,22 @@ def _with_bgm(st: dict, voice_mix: np.ndarray, sr: int, total: float) -> np.ndar
     gain[max(0, end - fo):end] *= np.linspace(1, 0, end - max(0, end - fo), dtype=np.float32)
     gain[end:] = 0
     return voice_mix + m * gain
+
+
+# ---------------------------------------------------------------- tên series
+
+def series_list() -> list[str]:
+    try:
+        return [x for x in json.loads(SERIES_FILE.read_text("utf-8")) if isinstance(x, str)][:30]
+    except Exception:  # noqa: BLE001
+        return []
+
+
+def remember_series(name: str) -> None:
+    """Nhớ tên series để lần sau chọn lại (dòng tiêu đề 1 cố định của kênh)."""
+    name = (name or "").strip()[:20]
+    if not name:
+        return
+    items = [name] + [x for x in series_list() if x != name]
+    SERIES_FILE.parent.mkdir(parents=True, exist_ok=True)
+    SERIES_FILE.write_text(json.dumps(items[:30], ensure_ascii=False), encoding="utf-8")
