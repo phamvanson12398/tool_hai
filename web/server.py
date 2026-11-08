@@ -2684,6 +2684,8 @@ def _webtoon_view(pid: str, data: dict) -> dict:
         "genres": [[k, v] for k, v in wf.GENRES.items()], "langs": [[k, v] for k, v in wf.LANGS.items()],
         "styles": [[k, v] for k, v in wf.STYLES.items()],
         "story_modes": [[k, v] for k, v in wf.STORY_MODES.items()],
+        "music": __import__("core.nichan", fromlist=["x"]).music_list(),
+        "bgm_levels": [[k, v[0]] for k, v in __import__("core.nichan", fromlist=["x"]).BGM_LEVELS.items()],
         "arts": wst.options(),
         "narr_voices": [[k, v] for k, v in wf.NARR_VOICES.items()],
         "types": list(wf.SHOT_TYPES), "cameras": list(wf.CAMERAS), "exprs": list(wa.EXPRS),
@@ -2846,9 +2848,19 @@ def api_webtoon_save(pid):
                 wt[k] = max(lo, min(hi, float(body[k]) if k == "minutes" else int(body[k])))
             except (TypeError, ValueError):
                 pass
-    for k in ("subtitles", "cliffhanger", "cta", "mid_q", "like_ask"):
+    for k in ("subtitles", "cliffhanger", "cta", "mid_q", "like_ask", "sfx", "auto_fx"):
         if k in body:
             wt[k] = bool(body[k])
+    from core import nichan as _nc
+    if "bgm" in body:
+        wt["bgm"] = str(body["bgm"] or "") if (not body["bgm"] or _nc.music_path(str(body["bgm"]))) else ""
+    if body.get("bgm_level") in _nc.BGM_LEVELS:
+        wt["bgm_level"] = body["bgm_level"]
+    if "edit_seed" in body:
+        try:
+            wt["edit_seed"] = int(body["edit_seed"]) % 100000
+        except (TypeError, ValueError):
+            pass
     if body.get("story_mode") in wf.STORY_MODES:
         wt["story_mode"] = body["story_mode"]
     if body.get("bg_mode") in ("draw", "3d", "2d"):
@@ -2956,6 +2968,7 @@ def api_webtoon_next(pid):
     nid = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
     nw = wf.default_story()
     for k in ("genre", "language", "minutes", "subtitles", "cliffhanger", "narrator", "bg_mode", "pics", "style", "art", "cta", "story_mode", "mid_q", "like_ask",
+              "bgm", "bgm_level", "sfx", "auto_fx",
               "narrator_id", "narrator_voice"):
         if k in wt:
             nw[k] = json.loads(json.dumps(wt[k]))

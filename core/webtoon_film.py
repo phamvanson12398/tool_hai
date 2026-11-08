@@ -748,17 +748,42 @@ def render_range(st: dict, pdir: Path | None, size, rows: list[dict], prevs: lis
                  write, tick=None) -> None:
     """Dựng các khung fi0..fi1-1 (khung thứ fi ở giây fi / FPS), mỗi khung gọi write(bytes)."""
     import bisect
+    from . import auto_edit as ae
     figs = figures(st)
     pics = wpic.load(st, pdir)
     starts = [r["start"] for r in rows]
-    cur, shot = -1, None
+    edits = ae.plan(st, rows)
+    end = (rows[-1]["start"] + rows[-1]["dur"] + 0.5) if rows else 0.0
+    cur, shot, last, prev_last = -1, None, None, None
+
+    def full(sh, k, lt):
+        e = edits[k]
+        arr = ae.emphasis(e["emph"], sh.frame(lt), lt, rows[k]["dur"], seed=k)
+        return sh.subtitle(arr, lt)
+
     for fi in range(fi0, fi1):
         t = fi / FPS
         i = max(0, bisect.bisect_right(starts, t) - 1)
-        if i != cur:
-            cur, shot = i, Shot(st, rows[i], size, figs, dict(prevs[i]), pics, pdir)
         lt = t - rows[i]["start"]
-        write(shot.subtitle(shot.frame(lt), lt).tobytes())
+        if i != cur:
+            e = edits[i]
+            prev_last = None
+            if i > 0 and e["trans"] not in ("cut", "fade_in") and lt < e["tdur"]:
+                if cur == i - 1 and last is not None:
+                    prev_last = last
+                else:                                   # chương trình con bắt đầu giữa lúc chuyển cảnh
+                    ps = Shot(st, rows[i - 1], size, figs, dict(prevs[i - 1]), pics, pdir)
+                    plt = max(0.0, rows[i - 1]["dur"] - 1.0 / FPS)
+                    prev_last = full(ps, i - 1, plt)
+            cur, shot = i, Shot(st, rows[i], size, figs, dict(prevs[i]), pics, pdir)
+        arr = full(shot, i, lt)
+        e = edits[i]
+        if lt < e["tdur"] and (prev_last is not None or e["trans"] == "fade_in"):
+            arr = ae.transition(e["trans"], prev_last, arr, lt, e["tdur"])
+        if st.get("auto_fx", True) is not False and t > end - 0.8:      # mờ dần ra đen ở cuối video
+            arr = (arr.astype(np.float32) * max(0.0, (end - t) / 0.8)).astype(np.uint8)
+        last = arr
+        write(np.ascontiguousarray(arr).tobytes())
         if tick and (fi - fi0) % 24 == 23:
             tick(24)
 
@@ -821,6 +846,11 @@ def render(st: dict, pdir: Path, size=(1920, 1080), audio: dict | None = None, p
         a = a * (0.8 / peak)
         k0 = int((r["start"] + LEAD) * sr)
         mix[k0:k0 + len(a)] += a[: max(0, len(mix) - k0)]
+    from . import auto_edit as ae, nichan
+    if rows and st.get("sfx", True) is not False:          # tiếng động tự chọn theo cảnh
+        mix += ae.sfx_track(ae.plan(st, rows), rows, len(mix), sr)
+    mix = nichan._with_bgm(st, mix, sr, total)              # nhạc nền (thư viện nhạc chung với tab 2ch)
+    mix = ae.soft_limit(mix)
     wav = out_dir / "webtoon_audio.wav"
     sf.write(str(wav), np.clip(mix, -1, 1), sr)
     out = out_dir / out_name

@@ -118,6 +118,7 @@
       part: parseInt($("wt-part").value, 10) || 1, cliffhanger: $("wt-cliff").value === "1",
       subtitles: $("wt-subs").value === "1", cta: $("wt-cta").value === "1",
       story_mode: $("wt-smode").value || "normal", mid_q: $("wt-midq").value === "1", like_ask: $("wt-like").value === "1", prev_summary: $("wt-prev").value,
+      auto_fx: $("wt-fx").value === "1", sfx: $("wt-sfx").value === "1", bgm: $("wt-bgm").value, bgm_level: $("wt-bgm-level").value,
       summary: $("wt-summary").value
     };
     if ($("wt-bgmode")) b.bg_mode = $("wt-bgmode").value;
@@ -164,6 +165,50 @@
       b.shots.push(s);
     });
     return b;
+  }
+
+  /* ---------------------------- edit tự động: nhạc nền ---------------------------- */
+
+  var BGM_LEVELS = [["soft", "Nhỏ"], ["mid", "Vừa"], ["loud", "To"]];
+  function fillMusic(items, value) {
+    fillSelect("wt-bgm", [["", "— Không nhạc nền —"]].concat((items || []).map(function (m) { return [m.name, m.name]; })), value || "");
+    $("wt-bgm").value = value || "";
+  }
+  function playMusic() {
+    var a = $("wt-bgm-audio"), name = $("wt-bgm").value;
+    if (!name) { toast("warn", "Chưa chọn bài nhạc"); return; }
+    if (!a.paused && a.getAttribute("data-name") === name) { a.pause(); $("wt-bgm-play").textContent = "▶ Nghe"; return; }
+    a.src = "/api/2ch/music/" + encodeURIComponent(name);
+    a.setAttribute("data-name", name);
+    a.play().then(function () { $("wt-bgm-play").textContent = "⏸ Dừng"; }).catch(function () {});
+    a.onended = function () { $("wt-bgm-play").textContent = "▶ Nghe"; };
+  }
+  function addMusic() {
+    var f = document.createElement("input");
+    f.type = "file"; f.accept = "audio/*,.mp3,.wav,.m4a,.ogg,.flac,.aac";
+    f.addEventListener("change", function () {
+      if (!f.files || !f.files[0]) return;
+      var fd = new FormData();
+      fd.append("file", f.files[0]);
+      $("wt-bgm-add").disabled = true;
+      api("/api/2ch/music", { method: "POST", body: fd }).then(function (d) {
+        if (W.data && W.data.options) W.data.options.music = d.items;
+        fillMusic(d.items, d.name);
+        if (W.id) save(true);
+        toast("ok", "Đã thêm nhạc nền", d.name);
+      }).catch(function (e) { toast("error", "Chưa thêm được", e.message); })
+        .then(function () { $("wt-bgm-add").disabled = false; });
+    });
+    f.click();
+  }
+  function reseed() {
+    if (!W.id) { toast("warn", "Chưa có tập nào"); return; }
+    var b = collect();
+    b.edit_seed = Math.floor(Math.random() * 99999) + 1;
+    api("/api/webtoon/" + encodeURIComponent(W.id) + "/save", { method: "POST", body: b }).then(function (d) {
+      W.data = d; render();
+      toast("ok", "Đã đổi kiểu edit", "Bấm Dựng video để ra bản mới.");
+    }).catch(function (e) { toast("error", "Chưa đổi được", e.message); });
   }
 
   function save(quiet) {
@@ -351,6 +396,10 @@
     fillSelect("wt-smode", o.story_modes || SMODE_LIST, w.story_mode || "normal");
     $("wt-midq").value = w.mid_q === false ? "0" : "1";
     $("wt-like").value = w.like_ask === false ? "0" : "1";
+    $("wt-fx").value = w.auto_fx === false ? "0" : "1";
+    $("wt-sfx").value = w.sfx === false ? "0" : "1";
+    fillSelect("wt-bgm-level", o.bgm_levels || BGM_LEVELS, w.bgm_level || "soft");
+    fillMusic(o.music, w.bgm || "");
     renderEngage(w.engage);
     $("wt-prev").value = w.prev_summary || "";
     $("wt-summary").value = w.summary || "";
@@ -1069,6 +1118,14 @@
     $("wt-save").addEventListener("click", function () { save(false); });
     $("wt-write").addEventListener("click", writeAI);
     $("wt-render").addEventListener("click", renderVideo);
+    $("wt-bgm-play").addEventListener("click", playMusic);
+    $("wt-bgm-add").addEventListener("click", addMusic);
+    $("wt-reseed").addEventListener("click", reseed);
+    ["wt-fx", "wt-sfx", "wt-bgm", "wt-bgm-level"].forEach(function (id) {
+      $(id).addEventListener("change", function () { if (W.id) save(true); });
+    });
+    fillSelect("wt-bgm-level", BGM_LEVELS, "soft");
+    api("/api/2ch/music").then(function (d) { if (!W.data) fillMusic(d.items, ""); }).catch(function () {});
     $("wt-add").addEventListener("click", addShot);
     initMark();
     $("wt-sum-ai").addEventListener("click", summaryAI);

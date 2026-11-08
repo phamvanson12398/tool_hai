@@ -1044,6 +1044,20 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
    người cùng tuổi cùng giới thì tool đổi cao độ, đo giọng mẫu và tạo lại nếu hai giọng nghe
    giống nhau; đàn ông không bị giọng cao như nữ; người kể khác hẳn giọng nhân vật. Muốn giọng
    cụ thể thì gõ mô tả (vd `male, elderly, very low pitch`) hoặc chọn giọng trong Thư viện.
+6. **Edit tự động** (khung Dựng video): video ra là đăng được luôn, không cần mở CapCut.
+   - **Chuyển cảnh & hiệu ứng**: đổi địa điểm thì chuyển cảnh lớn (lướt nhoè trái / phải, phóng
+     vào, vòng tròn mở ra, tối dần, mờ nhoè, trượt lên, mờ chồng); cùng chỗ thì cắt thẳng hoặc
+     chuyển nhẹ. Hiệu ứng nhấn theo nét mặt: sốc → lóe trắng / giật phóng to / rung / tia tốc độ;
+     giận → viền đỏ / rung; hài → dừng hình phóng vào mặt; vui → sáng rực / nhún; buồn → viền tối.
+     Đầu video hiện dần từ đen, cuối video tối dần.
+   - **Tiếng động** do tool tự tạo (không vi phạm bản quyền), nhiều biến thể: vút (whoosh), sột,
+     bụp, boing, tít, đùng, đánh mạnh khi lật kèo, chuông tin nhắn / rung điện thoại, tim đập, âm
+     nền căng thẳng ở màn đen, lấp lánh, chuông ấm, dừng đĩa kiểu hài. Không dày quá, tự nhỏ dưới giọng.
+   - **Nhạc nền**: dùng chung thư viện nhạc với tab 2ch (**+ Thêm nhạc**, **▶ Nghe**, Âm lượng nhạc);
+     nhạc tự nhỏ đi khi có lời.
+   - **Đa dạng**: kiểu chuyển cảnh, hiệu ứng và tiếng động chọn ngẫu nhiên trong nhóm hợp nội dung,
+     không lặp liền nhau. Muốn bản khác: bấm **🎲 Đổi kiểu edit** rồi **Dựng video** lại.
+   - Không muốn phần nào thì chọn **Không** ở ô đó.
 
 ### Cách kể: 사연 (mặc định) hoặc toàn thoại
 - **Kể chuyện 사연** (như các kênh 썰 Hàn): nhân vật chính tự kể chuyện đời mình ở ngôi thứ

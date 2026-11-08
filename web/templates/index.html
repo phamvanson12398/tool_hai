@@ -659,6 +659,25 @@
         <section class="card">
           <h2 class="card-title"><span class="step">4</span> Dựng video</h2>
           <img id="wt-big" class="wt-big" alt="Xem trước">
+          <div class="wt-edit">
+            <p class="hint">Edit tự động: video ra là đăng được luôn. Tiếng động, chuyển cảnh và hiệu ứng được chọn theo nội dung từng cảnh (sốc, giận, hài, vui, đổi địa điểm, điện thoại...), mỗi lần một kiểu khác nhau, không lặp liền nhau.</p>
+            <div class="field-row">
+              <div class="field"><label for="wt-fx">Chuyển cảnh &amp; hiệu ứng</label>
+                <select id="wt-fx"><option value="1">Có</option><option value="0">Không</option></select></div>
+              <div class="field"><label for="wt-sfx">Tiếng động</label>
+                <select id="wt-sfx"><option value="1">Có</option><option value="0">Không</option></select></div>
+            </div>
+            <div class="field-row">
+              <div class="field"><label for="wt-bgm">Nhạc nền</label><select id="wt-bgm"></select></div>
+              <div class="field"><label for="wt-bgm-level">Âm lượng nhạc</label><select id="wt-bgm-level"></select></div>
+            </div>
+            <div class="row-actions">
+              <button class="btn btn-sm" id="wt-bgm-play" type="button">▶ Nghe</button>
+              <button class="btn btn-sm" id="wt-bgm-add" type="button">+ Thêm nhạc</button>
+              <button class="btn btn-sm" id="wt-reseed" type="button" title="Xáo lại kiểu chuyển cảnh, hiệu ứng và tiếng động rồi dựng lại">🎲 Đổi kiểu edit</button>
+              <audio id="wt-bgm-audio" hidden></audio>
+            </div>
+          </div>
           <div class="row-actions">
             <button class="btn btn-primary" id="wt-render" type="button">Dựng video</button>
           </div>
