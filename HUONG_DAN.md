@@ -1321,5 +1321,13 @@ liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm
        chọn **Một người trước, một người sau** (người nói to phía trước) hoặc Cạnh nhau.
      - **Hiệu ứng mới**: lóe sáng (chụp ảnh, phát hiện), mờ + bụi rơi (tuyệt vọng, cầu xin), mặt đen sầm
        (giận thật sự).
+   - **Giọng "Nữ kể スカッと"** (ô Giọng đọc; chọn thể loại 迷言集 thì tool tự chọn kèm nhịp nhanh): như
+     video mẫu, một giọng nữ trẻ, cao đọc cả truyện, đọc nhanh, nghỉ ngắn. Giọng lên xuống theo cảm xúc
+     từng câu: câu sốc (「え！？」, nền sốc) vọt cao và nhanh; kẻ xấu đắc ý thì thấp, chậm; giận thì thấp
+     và to; u sầu, cầu xin thì thấp, chậm, nhỏ; vui thì cao. Câu thoại của nhân vật: người kể "đóng vai"
+     bằng cao độ riêng cho từng người (ông già thấp, trẻ con cao). Bộ đọc giọng không hiểu lệnh cảm xúc nên
+     tool đổi cao độ, tốc độ sau khi đọc — gần giống, không sống động bằng người thật. Muốn giống video nhất:
+     tải giọng nữ chị được phép dùng (tự thu / thuê thu 10 giây) bằng **+ Tải giọng mẫu**; không nên cắt
+     giọng từ video kênh khác.
    - **Nhân vật nhún khi nói**: câu nói trong 「」 thì nhân vật đang nói nhún nhún theo đúng tiếng đọc
      (có tiếng thì nhún, ngừng thì đứng yên); cảnh hai người chỉ người nói nhún. Câu lời kể thì đứng yên.

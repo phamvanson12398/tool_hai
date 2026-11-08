@@ -83,7 +83,9 @@ GENRES = {
     "meigen": ("スカッと迷言集 (kẻ xấu làm trò bẩn → nạn nhân tìm đồng minh → kế hoạch → lật kèo bằng mẹo thông minh → "
                "kẻ xấu cầu xin → cú lật thứ hai → câu chốt đắt giá 迷言; câu cực ngắn, cảm xúc đổi liên tục)"),
 }
-VOICE_MODES = {"cast": "Mỗi nhân vật một giọng + giọng người kể", "one": "Một người kể đọc tất cả"}
+VOICE_MODES = {"cast": "Mỗi nhân vật một giọng + giọng người kể", "one": "Một người kể đọc tất cả",
+               "skatto": "Nữ kể スカッと: một giọng nữ cao đọc tất cả, nhanh, lên xuống theo cảm xúc"}
+SKATTO_VOICE = "female, young adult, high pitch"
 # màu chữ: lời kể xanh, người nói theo thứ tự nhân vật
 NARR_COLOR = (24, 48, 232)
 SPEAK_COLORS = [(232, 40, 70), (0, 140, 150), (40, 150, 40), (150, 60, 200), (230, 120, 0), (220, 60, 150)]
@@ -500,6 +502,8 @@ def auto_voices(chars: list, reserved: list | None = None) -> None:
 def narrator_default(st: dict) -> dict:
     """Giọng người kể mặc định như video mẫu: kể ngôi thứ nhất "俺 / 僕" thì nam trầm ấm; còn lại
     theo giới của nhân vật chính (nhân vật đầu tiên)."""
+    if st.get("voice_mode") == "skatto":
+        return {"instruct": SKATTO_VOICE}
     text = "".join(sc.get("text", "") for sc in st.get("scenes") or [] if sc.get("who") == "narr")
     chars = st.get("characters") or []
     male = bool(re.search("俺|僕|オレ", text)) or not chars or (chars[0].get("kit") or {}).get("sex") != "female"
@@ -508,12 +512,74 @@ def narrator_default(st: dict) -> dict:
     return {"instruct": "female, middle-aged, moderate pitch"}
 
 
+def prosody(st: dict, s: dict) -> tuple[float, float, float]:
+    """Kiểu スカッと: một giọng đọc cả truyện nhưng lên xuống theo cảm xúc từng câu, và "đóng vai"
+    từng nhân vật bằng cao độ riêng. Trả về (nửa cung đổi cao độ, tốc độ, độ to)."""
+    v = s.get("visual") or {}
+    emo = v.get("emo") or ((v.get("emos") or [""])[0])
+    fx, mood, text = s.get("fx") or "", s.get("mood") or "", s.get("text") or ""
+    semi, tempo, vol = 0.0, 1.0, 1.0
+    who = s.get("who")
+    chars = [c for c in st.get("characters") or []]
+    if who and who != "narr":                             # người kể "đóng vai" nhân vật
+        c = next((x for x in chars if x.get("id") == who), {})
+        kit = c.get("kit") or {}
+        base = {"child": 2.5, "teen": 1.5, "adult": 0.5, "old": -2.0}.get(kit.get("age"), 0.5)
+        if kit.get("sex") == "male":
+            base -= 1.5
+        k = [x.get("id") for x in chars].index(who) if who in [x.get("id") for x in chars] else 0
+        semi += base + (0.0, 0.8, -0.8, 1.4)[k % 4]
+    if fx in ("shock", "flash") or mood == "shock_blue" or emo == "shocked" or re.search("[!！][?？]|[?？][!！]", text):
+        semi, tempo, vol = semi + 2.5, tempo * 1.08, 1.12      # sốc: vọt lên cao
+    elif mood == "excited_yellow" or emo == "happy" or "はは" in text:
+        semi, tempo, vol = semi + 1.5, tempo * 1.06, 1.06
+    elif mood in ("smug_red", "scheme_dark") or emo == "sly" or fx == "dark":
+        semi, tempo = semi - 2.0, tempo * 0.94                  # kẻ xấu đắc ý: thấp, chậm, dài giọng
+    elif fx == "anger" or mood == "climax_red" or emo == "angry":
+        semi, tempo, vol = semi - 1.0, tempo * 1.05, 1.12
+    elif fx in ("blur", "cry") or mood in ("gloom", "dizzy_purple") or emo in ("sad", "cry", "worried"):
+        semi, tempo, vol = semi - 1.5, tempo * 0.92, 0.9        # u sầu, cầu xin
+    return max(-4.5, min(4.5, semi)), max(0.85, min(1.2, tempo)), vol
+
+
+_RUBBER: list = []
+
+
+def shift_voice(wav: np.ndarray, sr: int, semi: float, tempo: float, vol: float) -> np.ndarray:
+    """Đổi cao độ (giữ độ dài) và tốc độ một câu bằng ffmpeg."""
+    from . import video
+    if abs(semi) < 0.05 and abs(tempo - 1) < 0.005 and abs(vol - 1) < 0.005:
+        return wav
+    ff = video._ffmpeg_path()
+    if not _RUBBER:
+        try:
+            out = subprocess.run([ff, "-hide_banner", "-filters"], capture_output=True, text=True, timeout=20).stdout
+            _RUBBER.append("rubberband" in out)
+        except Exception:  # noqa: BLE001
+            _RUBBER.append(False)
+    k = 2 ** (semi / 12)
+    if _RUBBER[0]:
+        af = f"rubberband=pitch={k:.4f}:tempo={tempo:.4f}:formant=preserved"
+    else:                                                 # dự phòng: đổi tần số lấy mẫu rồi bù độ dài
+        af = f"asetrate={int(sr * k)},aresample={sr},atempo={max(0.5, min(2.0, tempo / k)):.4f}"
+    af += f",volume={vol:.3f}"
+    try:
+        r = subprocess.run([ff, "-v", "error", "-f", "f32le", "-ar", str(sr), "-ac", "1", "-i", "-", "-af", af,
+                            "-f", "f32le", "-ar", str(sr), "-ac", "1", "-"],
+                           input=np.asarray(wav, np.float32).tobytes(), capture_output=True, timeout=120)
+        y = np.frombuffer(r.stdout, dtype=np.float32)
+        return y if len(y) > sr * 0.05 else wav
+    except Exception:  # noqa: BLE001
+        return wav
+
+
 def narrate(st: dict, pdir: Path, progress=None) -> dict:
     """Đọc từng câu bằng tiếng Nhật. {id cảnh: file wav}."""
     import soundfile as sf
     from . import film_render, voice
     chars = {c["id"]: c for c in st.get("characters") or []}
-    one = st.get("voice_mode") == "one"
+    skatto = st.get("voice_mode") == "skatto"
+    one = st.get("voice_mode") in ("one", "skatto")
     scenes = [s for s in st.get("scenes") or [] if speak_text(s.get("text", ""))]
     speakers = {("narr" if one or s["who"] not in chars else s["who"]) for s in scenes}
     adir = pdir / AUDIO_DIR
@@ -521,21 +587,25 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict:
     if progress:
         progress(0.0, "chọn giọng cho người kể và nhân vật")
     narr = dict(st.get("narrator") or {})
-    narr.pop("auto", None)
+    if narr.pop("auto", None):
+        narr = narrator_default(st)                       # mô tả tool tự điền: theo kiểu giọng hiện tại
     if not narr.get("voice") and not (narr.get("instruct") or "").strip():
-        narr = narrator_default(st)
+        narr = {"instruct": SKATTO_VOICE} if skatto else narrator_default(st)
     if not narr.get("voice"):                    # chữ thêm này bộ đọc bỏ qua; để không bị đổi sang giọng khác
         narr["instruct"] = narr["instruct"] + ", storytelling voice"
     shim = {"characters": [{"id": c["id"], "voice": c.get("voice") or {}, "kit": c["kit"]} for c in chars.values()],
             "narrator": narr}
     speed = SPEEDS.get(st.get("speed") or "normal", SPEEDS["normal"])[1]
+    if skatto and not speed:
+        speed = SPEEDS["fast"][1]                          # kiểu スカッと luôn đọc nhanh
     got = film_render.cast(shim, pdir, "ja", [x for x in speakers if x != "narr"], narr="narr" in speakers)
     out = {}
     for k, s in enumerate(scenes):
         who = "narr" if one or s["who"] not in chars else s["who"]
         cfg, ref = got.get("nguoi_ke" if who == "narr" else f"nv_{who}") or ({"instruct": "female, young adult"}, {})
         text = speak_text(s["text"])
-        key = hashlib.md5(json.dumps([text, ref.get("ref"), ref.get("ref_text"), cfg.get("instruct"), speed, "ja2"],
+        pro = prosody(st, s) if skatto else (0.0, 1.0, 1.0)
+        key = hashlib.md5(json.dumps([text, ref.get("ref"), ref.get("ref_text"), cfg.get("instruct"), speed, "ja2", pro],
                                      ensure_ascii=False)
                           .encode("utf-8")).hexdigest()[:12]
         path = adir / f"{s['id']}_{key}.wav"
@@ -547,6 +617,8 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict:
                                        instruct=None if ref.get("ref") else cfg.get("instruct"),
                                        speed=speed, seed=int(key[:6], 16))
             wav = voice.trim_silence(np.asarray(wav, dtype=np.float32), sr)
+            if skatto:
+                wav = shift_voice(wav, sr, *pro)
             for old in adir.glob(f"{s['id']}_*.wav"):
                 old.unlink(missing_ok=True)
             sf.write(str(path), wav, sr)

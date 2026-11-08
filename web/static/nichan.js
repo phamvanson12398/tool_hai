@@ -806,7 +806,13 @@
       ["meigen", "スカッと迷言集 (lật kèo + câu chốt)"]], "kando");
     fillSelect("nc-idea-genre", [["", "Mọi thể loại"]].concat(Array.prototype.map.call($("nc-genre").options,
       function (o) { return [o.value, o.textContent]; })), "");
-    fillSelect("nc-voicemode", [["cast", "Mỗi nhân vật một giọng + giọng người kể"], ["one", "Một người kể đọc tất cả"]], "cast");
+    fillSelect("nc-voicemode", [["cast", "Mỗi nhân vật một giọng + giọng người kể"], ["one", "Một người kể đọc tất cả"],
+      ["skatto", "Nữ kể スカッと: một giọng nữ cao đọc tất cả, nhanh, lên xuống theo cảm xúc"]], "cast");
+    $("nc-genre").addEventListener("change", function () {     // thể loại 迷言集: giọng và nhịp kiểu スカッと
+      if (this.value !== "meigen") return;
+      $("nc-voicemode").value = "skatto";
+      if ($("nc-pace")) $("nc-pace").value = "fast";
+    });
     api("/api/2ch/stickers").then(function (d) { if (!N.data) renderStickers(d.items); }).catch(function () {});
     var last = null;
     try { last = localStorage.getItem(LS); } catch (e) {}

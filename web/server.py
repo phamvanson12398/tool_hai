@@ -3422,6 +3422,8 @@ def api_2ch_new():
     st["brief"] = str(body.get("brief") or "")
     if body.get("genre") in nichan.GENRES:
         st["genre"] = body["genre"]
+        if st["genre"] == "meigen":
+            st["voice_mode"], st["pace"] = "skatto", "fast"
     if str(body.get("series") or "").strip():
         st["series"] = st["title1"] = str(body["series"]).strip()[:20]
     data = {"id": pid, "mode": "2ch", "title": "", "language": "ja", "format": "9:16", "nichan": st,
@@ -3502,6 +3504,8 @@ def api_2ch_save(pid):
         st["narrator"] = new
         if not new["voice"] and not new["instruct"] and st.get("scenes"):
             st["narrator"] = dict(nichan.narrator_default(st), auto=True)
+    if (st.get("narrator") or {}).get("auto"):            # đổi kiểu giọng: mô tả tự điền đổi theo
+        st["narrator"] = dict(nichan.narrator_default(st), auto=True)
     for k in ("characters", "places", "scenes"):
         if isinstance(body.get(k), list):
             st[k] = body[k]
