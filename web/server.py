@@ -3437,6 +3437,24 @@ def api_2ch_new():
     return jsonify(_2ch_view(pid, data))
 
 
+@app.post("/api/2ch/<pid>/post")
+def api_2ch_post(pid):
+    """Soạn lại gói đăng TikTok (tiêu đề, hashtag, bình luận ghim) bằng tiếng Nhật."""
+    from core import nichan
+    try:
+        data, st = _load_2ch(pid)
+    except FileNotFoundError as e:
+        return _err(str(e), 404)
+    try:
+        nichan.post_pack(st)
+    except Exception as e:  # noqa: BLE001
+        traceback.print_exc()
+        return _err(f"AI soạn lỗi: {_short_err(e, 300)}")
+    data["nichan"] = st
+    _save_project(pid, data)
+    return jsonify(_2ch_view(pid, data))
+
+
 @app.post("/api/2ch/ideas")
 def api_2ch_ideas():
     """Gợi ý ý tưởng truyện 2ch (mỗi lần một loạt mới, không lặp các ý đã gợi ý)."""
@@ -3475,6 +3493,12 @@ def api_2ch_save(pid):
         st["genre"] = body["genre"]
     if body.get("voice_mode") in nichan.VOICE_MODES:
         st["voice_mode"] = body["voice_mode"]
+    if isinstance(body.get("post"), dict):                  # chị sửa gói đăng
+        po = body["post"]
+        st["post"] = {"captions": [str(x).strip()[:80] for x in (po.get("captions") or []) if str(x).strip()][:3],
+                      "hashtags": [("#" + str(x).strip().lstrip("#"))[:30] for x in (po.get("hashtags") or [])
+                                   if str(x).strip().lstrip("#")][:10],
+                      "comment": str(po.get("comment") or "").strip()[:150]}
     if body.get("source") in nichan.SOURCES:
         st["source"] = body["source"]
     if "jp_check" in body:

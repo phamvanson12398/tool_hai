@@ -1345,7 +1345,13 @@ liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm
      chỗ đọc sai thì gõ cách đọc đúng vào ô **Cách đọc** của cảnh đó rồi dựng lại. Sửa câu thì cách đọc cũ tự bỏ.
    - Giọng đọc AI cũng là thứ người Nhật nhận ra ngay: dùng giọng thật (tự thu / thuê người Nhật thu, tải bằng
      **+ Tải giọng mẫu**) sẽ khác hẳn.
-11. **Kiểu スカッと迷言集 (video sống động như kênh スカッと)**:
+11. **Đăng TikTok** (khung bên phải, dưới Dựng video): AI viết truyện xong thì tự soạn gói đăng bằng tiếng Nhật theo
+   đúng truyện: **3 tiêu đề** (3 hướng: câu hỏi gây tò mò về kết, trích câu thoại đắt, một câu cảm xúc; ≤ 40 chữ, không
+   lộ kết, không giật tít 「実話」「衝撃」), **hashtag** 5–7 cái hay dùng ở TikTok Nhật (#2ch #スカッとする話 #感動する話
+   #朗読...) + 1–2 cái hợp truyện, và **bình luận ghim** hỏi ý kiến người xem về một cảnh cụ thể. Bấm **Chép tiêu đề +
+   hashtag** cạnh tiêu đề chị chọn rồi dán vào ô mô tả khi đăng; đăng xong tự bình luận câu ghim và ghim lên đầu. Sửa
+   được, bấm **Lưu**; muốn bản khác bấm **Soạn lại**.
+12. **Kiểu スカッと迷言集 (video sống động như kênh スカッと)**:
    - **Thể loại スカッと迷言集**: kẻ xấu làm trò bẩn → nạn nhân tìm đồng minh → bàn kế → lật kèo
      bằng mẹo → kẻ xấu cầu xin → cú lật thứ hai → câu chốt đắt giá. Câu cực ngắn, đổi cảm xúc liên tục.
    - **Nhịp** (Bình thường / Nhanh kiểu スカッと): nhịp nhanh thì mỗi câu khoảng 1,5–2 giây, nhiều cảnh

@@ -149,6 +149,7 @@
     fillSelect("nc-voicemode", o.voice_modes, s.voice_mode || "cast");
     $("nc-source").value = s.source || "ai";
     $("nc-jpcheck").value = s.jp_check === false ? "0" : "1";
+    renderPost(s.post || {});
     var ck = s.check || {};
     $("nc-check").hidden = !(ck.issues && ck.issues.length);
     $("nc-check").textContent = "Biên tập viên người Nhật đã sửa " + (ck.fixed || 0) + " câu: " + (ck.issues || []).join(" · ");
@@ -498,6 +499,49 @@
     });
   }
 
+  /* ---------------------------- đăng TikTok ---------------------------- */
+
+  function postOf() {
+    var caps = Array.prototype.map.call(document.querySelectorAll("#nc-post-caps textarea"), function (t) { return t.value.trim(); })
+      .filter(Boolean);
+    return { captions: caps, hashtags: $("nc-post-tags").value.split(/\s+/).filter(Boolean),
+             comment: $("nc-post-comment").value.trim() };
+  }
+  function renderPost(p) {
+    var box = $("nc-post-caps");
+    box.innerHTML = "";
+    var caps = (p.captions && p.captions.length) ? p.captions : [""];
+    caps.forEach(function (c) {
+      var row = el("div", "nc-post-cap");
+      var ta = document.createElement("textarea");
+      ta.rows = 2; ta.value = c; ta.placeholder = "Bấm Soạn lại để AI soạn tiêu đề";
+      var cp = el("button", "btn btn-sm", "Chép tiêu đề + hashtag");
+      cp.type = "button";
+      cp.addEventListener("click", function () {
+        copyText((ta.value.trim() + "\n" + $("nc-post-tags").value.trim()).trim())
+          .then(function () { toast("ok", "Đã chép tiêu đề + hashtag", "Dán vào ô mô tả khi đăng TikTok"); });
+      });
+      row.appendChild(ta); row.appendChild(cp); box.appendChild(row);
+    });
+    $("nc-post-tags").value = (p.hashtags || []).join(" ");
+    $("nc-post-comment").value = p.comment || "";
+  }
+  function genPost() {
+    if (!N.id) { toast("warn", "Chưa có tập nào"); return; }
+    var b = $("nc-post-gen");
+    b.disabled = true; b.textContent = "Đang soạn…";
+    save(true).then(function () {
+      return api(base() + "/post", { method: "POST", body: {} });
+    }).then(function (d) { N.data = d; render(); toast("ok", "Đã soạn gói đăng TikTok"); })
+      .catch(function (e) { toast("error", "Chưa soạn được", e.message); })
+      .then(function () { b.disabled = false; b.textContent = "Soạn lại"; });
+  }
+  function savePost() {
+    if (!N.id) return;
+    api(base() + "/save", { body: { post: postOf() } }).then(function (d) { N.data = d; render(); toast("ok", "Đã lưu gói đăng"); })
+      .catch(function (e) { toast("error", "Lưu thất bại", e.message); });
+  }
+
   function fillMusic(items, value) {
     fillSelect("nc-bgm", [["", "— Không nhạc nền —"]].concat((items || []).map(function (m) { return [m.name, m.name]; })), value);
     $("nc-bgm").value = value || "";
@@ -796,6 +840,11 @@
       });
     });
     $("nc-bgm-add").addEventListener("click", addMusic);
+    $("nc-post-gen").addEventListener("click", genPost);
+    $("nc-post-save").addEventListener("click", savePost);
+    $("nc-post-copyc").addEventListener("click", function () {
+      copyText($("nc-post-comment").value || "").then(function () { toast("ok", "Đã chép bình luận ghim"); });
+    });
     $("nc-bgm-del").addEventListener("click", delMusic);
     ["nc-speed", "nc-bgm", "nc-bgm-level", "nc-narr-voice"].forEach(function (id) {
       $(id).addEventListener("change", function () { if (N.id) save(true); });

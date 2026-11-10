@@ -1041,3 +1041,6 @@ input[type="checkbox"], input[type="radio"] { accent-color: var(--accent); curso
 .wt-ref img { width: 90px; height: 90px; object-fit: contain; background: #fff; border-radius: 6px; flex: none; }
 .wt-ref .hint { margin: 4px 0 0; }
 .wt-shot .ctl input.choice { flex: 0 1 140px; max-width: 160px; }
+
+.nc-post-cap { display: flex; gap: 8px; align-items: flex-start; margin-bottom: 8px; }
+.nc-post-cap textarea { flex: 1; }

@@ -481,8 +481,39 @@ def write(st: dict, progress=None) -> dict:
     if st.get("jp_check", True) is not False and st["scenes"]:
         say(0.85, "Biên tập viên người Nhật soát lại tiếng Nhật, văn hoá, độ phóng đại")
         jp_check(st, keep_title2=user_t2)
+    st.pop("post", None)
+    try:                                                  # gói đăng TikTok (lỗi thì bấm Tạo lại sau)
+        say(0.95, "Soạn tiêu đề, hashtag đăng TikTok")
+        post_pack(st)
+    except Exception as e:  # noqa: BLE001
+        log.warning("Chưa soạn được gói đăng: %s", e)
     say(1.0, "xong")
     return st
+
+
+def post_pack(st: dict) -> dict:
+    """Gói đăng TikTok bằng tiếng Nhật: 3 tiêu đề (caption), hashtag, bình luận ghim. Lưu vào st["post"]."""
+    from . import claude_cli
+    scenes = st.get("scenes") or []
+    if not scenes:
+        raise RuntimeError("Chưa có truyện — bấm AI viết truyện trước.")
+    script = "\n".join(("（語り）" if s.get("who") == "narr" else "") + (s.get("text") or "").replace("\n", "")
+                       for s in scenes)
+    data = claude_cli._run_json(claude_cli._load_prompt(
+        "nichan_post", title1=st.get("title1") or "", title2=st.get("title2") or "",
+        genre=GENRES.get(st.get("genre"), st.get("genre") or ""), script=script[:6000]), task="story", timeout=300)
+    if not isinstance(data, dict):
+        raise RuntimeError("AI chưa soạn được, bấm lại thử.")
+    tags = []
+    for t in data.get("hashtags") or []:
+        t = "#" + re.sub(r"[\s#]+", "", str(t))
+        if len(t) > 1 and t not in tags:
+            tags.append(t[:30])
+    st["post"] = {"captions": [str(x).strip()[:80] for x in (data.get("captions") or []) if str(x).strip()][:3],
+                  "hashtags": tags[:8], "comment": str(data.get("comment") or "").strip()[:120]}
+    if not st["post"]["captions"]:
+        raise RuntimeError("AI chưa soạn được tiêu đề, bấm lại thử.")
+    return st["post"]
 
 
 def jp_check(st: dict, keep_title2: bool = False) -> dict:
