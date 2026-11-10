@@ -738,6 +738,15 @@
             <label for="nc-brief">Yêu cầu</label>
             <textarea id="nc-brief" rows="3" placeholder="VD: Cậu bé 15 tuổi lên Tokyo làm ở xưởng, ông chủ khó tính giữ hết lương — cuối cùng mới biết ông để dành tiền đón mẹ cậu lên thăm"></textarea>
           </div>
+          <div class="field-row">
+            <div class="field"><label for="nc-source">Nguồn truyện</label>
+              <select id="nc-source" title="Chuyển thể: dán câu chuyện gốc (chị tự viết, hoặc chuyện được phép dùng) vào ô Yêu cầu — AI giữ đúng tình tiết, chỉ chia cảnh và viết lại cho tự nhiên, không thêm thắt">
+                <option value="ai">AI tự nghĩ truyện từ yêu cầu</option><option value="user">Chuyển thể truyện chị đưa (giữ đúng tình tiết, AI không thêm thắt)</option></select></div>
+            <div class="field"><label for="nc-jpcheck">Soát bởi biên tập viên người Nhật (AI)</label>
+              <select id="nc-jpcheck" title="Viết xong, AI đóng vai biên tập viên người Nhật sửa câu không tự nhiên, sai văn hoá / thời đại, phóng đại, định kiến (mất thêm một lượt AI)">
+                <option value="1">Có</option><option value="0">Không</option></select></div>
+          </div>
+          <p class="hint" id="nc-check" hidden></p>
           <div class="wt-ideas">
             <div class="wt-ideas-head">
               <b>Ý tưởng tham khảo</b>

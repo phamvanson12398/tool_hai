@@ -12,6 +12,13 @@ Thể loại: {{genre}}
 - MỖI cảnh một câu ngắn: tối đa 2 dòng, mỗi dòng ≤ 11 chữ; chỗ xuống dòng ghi "\n" đúng chỗ ngắt nghĩa. Câu nói của nhân vật đặt trong 「」 và "who" là id người nói; lời kể "who":"narr".
 - Nhịp nhanh, không lặp ý, không câu thừa. Thoại ít mà đắt.
 
+### Tiếng Nhật tự nhiên, KHÔNG xuyên tạc (người xem Nhật rất ghét video "AIっぽい" và truyện bịa quá đà)
+- Viết như người Nhật thật kể trên mạng, KHÔNG văn dịch: lời kể kiểu 「〜だった」「〜なんだが」「〜らしい」, thoại đúng tuổi, vai, quan hệ (kính ngữ đúng chỗ); tránh lối AI: 「〜という」「〜することができる」 lặp lại, giải thích dài dòng, cảm thán quá mức, cùng một đuôi câu liên tiếp.
+- Đúng đời sống, phong tục, công sở, trường học, gia đình, tiền bạc của Nhật; truyện 昭和 thì không có đồ vật / từ ngữ sai thời đại (điện thoại di động, LINE...). Điều gì không chắc (luật, chế độ, con số) thì KHÔNG viết cụ thể, không bịa số điều luật, tên cơ quan.
+- Không phóng đại vô lý: quy mô và diễn biến phải có thể xảy ra thật; phản diện có động cơ con người (một câu là đủ), không ác vô cớ; không định kiến về vùng miền, nghề, thế hệ, quốc tịch; không gợi tới công ty / người / vụ việc có thật; KHÔNG ghi 「実話」「本当にあった話」.
+- Cú lật phải được gài trước, không từ trên trời rơi xuống.
+{{source_rule}}
+
 ### Hình từng cảnh ("visual") — chọn hình đúng NỘI DUNG câu
 - {"type":"char","cid":"id","emo":"..."}: một nhân vật với nét mặt đúng cảm xúc câu. emo: {{emos}}
 - {"type":"two","cids":["a","b"],"emos":["...","..."]}: hai người cùng khung (đối đáp, gặp nhau).

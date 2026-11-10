@@ -1321,7 +1321,20 @@ liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm
    câu lệnh** — mỗi dòng một câu lệnh, chỉ những ảnh còn thiếu, đúng thứ tự các ô — để dán
    vào công cụ tạo hàng loạt. Vẽ xong bấm **Tải nhiều ảnh cùng lúc**, chọn hết các ảnh: ảnh
    tải về trước điền vào dòng trước.
-10. **Kiểu スカッと迷言集 (video sống động như kênh スカッと)**:
+10. **Để người Nhật không chê "AIっぽい" / xuyên tạc**:
+   - **Luật viết**: tiếng Nhật kiểu người Nhật kể trên mạng (không văn dịch, không lối nói AI lặp 「〜という」), thoại
+     đúng tuổi / vai / kính ngữ; đúng đời sống Nhật và đúng thời đại (昭和 không có điện thoại di động, LINE...); không
+     phóng đại vô lý, phản diện có động cơ, không định kiến, không gợi tới công ty / người / vụ việc có thật, không ghi
+     「実話」; điều không chắc (luật, con số) thì không viết cụ thể.
+   - **Soát bởi biên tập viên người Nhật (AI)** (mặc định Có): viết xong, AI đóng vai biên tập viên người Nhật đọc lại
+     từng câu, sửa câu không tự nhiên, sai văn hoá / thời đại, phóng đại, định kiến (không thêm / bớt cảnh). Số câu đã
+     sửa và các lỗi tìm thấy hiện dưới ô Nguồn truyện. Mất thêm một lượt AI.
+   - **Nguồn truyện → Chuyển thể truyện chị đưa**: dán câu chuyện gốc (chị tự viết, hoặc chuyện chị được phép dùng)
+     vào ô Yêu cầu (tối đa ~8000 chữ). AI giữ đúng nhân vật, tình tiết, kết cục, chỉ chia câu, viết lại cho tự nhiên và
+     chọn hình — không thêm tình tiết, cú lật, con số mới. Đây là cách giảm "phụ thuộc AI" rõ nhất.
+   - Giọng đọc AI cũng là thứ người Nhật nhận ra ngay: dùng giọng thật (tự thu / thuê người Nhật thu, tải bằng
+     **+ Tải giọng mẫu**) sẽ khác hẳn.
+11. **Kiểu スカッと迷言集 (video sống động như kênh スカッと)**:
    - **Thể loại スカッと迷言集**: kẻ xấu làm trò bẩn → nạn nhân tìm đồng minh → bàn kế → lật kèo
      bằng mẹo → kẻ xấu cầu xin → cú lật thứ hai → câu chốt đắt giá. Câu cực ngắn, đổi cảm xúc liên tục.
    - **Nhịp** (Bình thường / Nhanh kiểu スカッと): nhịp nhanh thì mỗi câu khoảng 1,5–2 giây, nhiều cảnh

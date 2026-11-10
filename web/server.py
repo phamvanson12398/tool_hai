@@ -3470,11 +3470,15 @@ def api_2ch_save(pid):
     body = request.get_json(silent=True) or {}
     for k in ("brief", "title1", "title2"):
         if k in body:
-            st[k] = str(body[k] or "")[:2000 if k == "brief" else 30]
+            st[k] = str(body[k] or "")[:8000 if k == "brief" else 30]
     if body.get("genre") in nichan.GENRES:
         st["genre"] = body["genre"]
     if body.get("voice_mode") in nichan.VOICE_MODES:
         st["voice_mode"] = body["voice_mode"]
+    if body.get("source") in nichan.SOURCES:
+        st["source"] = body["source"]
+    if "jp_check" in body:
+        st["jp_check"] = bool(body["jp_check"])
     if body.get("art") in nichan.ARTS:
         st["art"] = body["art"]
     for k, ok in (("cap_style", nichan.CAP_STYLES), ("title_style", nichan.TITLE_STYLES), ("pace", nichan.PACES)):

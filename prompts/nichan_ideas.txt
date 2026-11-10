@@ -14,6 +14,7 @@ Nghĩ {{count}} ý tưởng truyện KHÁC NHAU HOÀN TOÀN, mỗi ý kể gọn
 - Câu mở đầu là hook gây tò mò ngay; giữa truyện có một chi tiết nhỏ cài cắm; cuối có cú lật làm người xem nghẹn ngào hoặc hả hê.
 - Bối cảnh, con người, đồ vật đúng Nhật Bản (đúng thời đại nếu là 昭和); ít nhân vật (2–4), ít địa điểm.
 - Đúng thể loại ở trên (nếu là "mọi thể loại" thì mỗi ý một thể loại khác nhau).
+- Người xem Nhật ghét truyện "AIっぽい" và bịa quá đà: tình huống phải có thể xảy ra thật, quy mô hợp lý, phản diện có động cơ con người, không định kiến vùng miền / nghề / quốc tịch, không gợi tới công ty / người / vụ việc có thật, không mô-típ sáo mòn.
 
 Mỗi ý gồm:
 - "title1": dòng tiêu đề 1 bằng tiếng Nhật, ≤ 8 chữ, chủ đề lớn (vd "昭和の男たち").

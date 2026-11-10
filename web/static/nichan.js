@@ -103,7 +103,7 @@
   function collectHead() {
     return {
       brief: $("nc-brief").value, genre: $("nc-genre").value, minutes: parseFloat($("nc-minutes").value) || 1.2,
-      voice_mode: $("nc-voicemode").value, cta: $("nc-cta").value === "1", art: $("nc-art").value,
+      voice_mode: $("nc-voicemode").value, source: $("nc-source").value, jp_check: $("nc-jpcheck").value === "1", cta: $("nc-cta").value === "1", art: $("nc-art").value,
       series: $("nc-series").value.trim(), title_style: $("nc-tstyle").value, cap_style: $("nc-cstyle").value,
       pace: $("nc-pace").value,
       title1: $("nc-t1").value.trim(), title2: $("nc-t2").value.trim(),
@@ -147,6 +147,11 @@
     var s = st(), o = opts();
     fillSelect("nc-genre", o.genres, s.genre || "kando");
     fillSelect("nc-voicemode", o.voice_modes, s.voice_mode || "cast");
+    $("nc-source").value = s.source || "ai";
+    $("nc-jpcheck").value = s.jp_check === false ? "0" : "1";
+    var ck = s.check || {};
+    $("nc-check").hidden = !(ck.issues && ck.issues.length);
+    $("nc-check").textContent = "Biên tập viên người Nhật đã sửa " + (ck.fixed || 0) + " câu: " + (ck.issues || []).join(" · ");
     fillSelect("nc-tstyle", o.title_styles || TSTYLES, s.title_style || "orange");
     fillSelect("nc-cstyle", o.cap_styles || CSTYLES, s.cap_style || "center");
     fillSelect("nc-pace", o.paces || PACES, s.pace || "normal");

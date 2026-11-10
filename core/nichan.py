@@ -18,6 +18,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import logging
 import math
 import re
 import subprocess
@@ -29,6 +30,8 @@ import numpy as np
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from . import config, doodle
+
+log = logging.getLogger(__name__)
 
 W, H = 1080, 1920
 TOP = 420                     # thanh tiêu đề
@@ -86,6 +89,15 @@ GENRES = {
 VOICE_MODES = {"cast": "Mỗi nhân vật một giọng + giọng người kể", "one": "Một người kể đọc tất cả",
                "skatto": "Nữ kể スカッと: một giọng nữ cao đọc tất cả, nhanh, lên xuống theo cảm xúc"}
 SKATTO_VOICE = "female, young adult, high pitch"
+SOURCES = {"ai": "AI tự nghĩ truyện từ yêu cầu",
+           "user": "Chuyển thể truyện chị đưa (giữ đúng tình tiết, AI không thêm thắt)"}
+SOURCE_RULE = {
+    "ai": "",
+    "user": ("- CHUYỂN THỂ TRUNG THÀNH: phần \"Yêu cầu của chị\" là câu chuyện gốc. Giữ ĐÚNG nhân vật, tình tiết, thứ tự, "
+             "kết cục của chuyện gốc; KHÔNG thêm nhân vật, tình tiết, cú lật, con số hay chi tiết mới; chỉ chia thành "
+             "câu ngắn, viết lại cho tự nhiên và chọn hình. Chỗ nào chuyện gốc không nói thì để trống / nói chung chung, "
+             "không tự bịa."),
+}
 # màu chữ: lời kể xanh, người nói theo thứ tự nhân vật
 NARR_COLOR = (24, 48, 232)
 SPEAK_COLORS = [(232, 40, 70), (0, 140, 150), (40, 150, 40), (150, 60, 200), (230, 120, 0), (220, 60, 150)]
@@ -133,7 +145,7 @@ def art_of(st: dict | None) -> dict:
 def default_story() -> dict:
     return {"brief": "", "genre": "kando", "minutes": 1.2, "language": "ja", "title1": "", "title2": "",
             "cta": True, "voice_mode": "cast", "art": DEFAULT_ART, "cap_style": "center", "title_style": "orange",
-            "series": "", "pace": "normal", "speed": "normal", "bgm": "", "bgm_level": "soft", "narrator": {}, "characters": [], "places": [], "scenes": [],
+            "series": "", "pace": "normal", "source": "ai", "jp_check": True, "speed": "normal", "bgm": "", "bgm_level": "soft", "narrator": {}, "characters": [], "places": [], "scenes": [],
             "pics": {}}
 
 
@@ -425,6 +437,7 @@ def write(st: dict, progress=None) -> dict:
     cta = claude_cli._load_prompt("webtoon_cta", cta_who='người kể ("who":"narr")',
                                   cta_shot='"visual" là nhân vật chính với nét mặt chân thành',
                                   lang_label="tiếng Nhật") if st.get("cta", True) else ""
+    user_t2 = bool((st.get("title2") or "").strip())            # tên tập chị tự đặt: soát không đổi
     say(0.05, "AI viết truyện, chia cảnh")
     data = claude_cli._run_json(claude_cli._load_prompt(
         "nichan_write", minutes=f"{minutes:g}", n=str(n), genre=GENRES.get(st.get("genre"), st.get("genre") or ""),
@@ -439,7 +452,8 @@ def write(st: dict, progress=None) -> dict:
         stickers="\n".join(f"   - {k['id']}: {k['desc']}" for k in ks) or "   (chưa có)",
         emos=", ".join(EMOS), fx=", ".join(f for f in FX if f),
         kinds=scene_art.kinds_catalog() if hasattr(scene_art, "kinds_catalog") else ", ".join(scene_art.KINDS),
-        kit_cat=kit_cat, cta_block=cta), task="story", timeout=900)
+        kit_cat=kit_cat, cta_block=cta,
+        source_rule=SOURCE_RULE.get(st.get("source") or "ai", "")), task="story", timeout=900)
     if not isinstance(data, dict) or not data.get("scenes"):
         raise RuntimeError("AI không viết được truyện.")
     st["title1"] = (st.get("title1") or "").strip() or str(data.get("title1") or "")[:20]
@@ -457,7 +471,48 @@ def write(st: dict, progress=None) -> dict:
     for c in st["characters"]:
         if keep_voice.get(c["id"]):
             c["voice"] = keep_voice[c["id"]]
+    st.pop("check", None)
+    if st.get("jp_check", True) is not False and st["scenes"]:
+        say(0.85, "Biên tập viên người Nhật soát lại tiếng Nhật, văn hoá, độ phóng đại")
+        jp_check(st, keep_title2=user_t2)
     say(1.0, "xong")
+    return st
+
+
+def jp_check(st: dict, keep_title2: bool = False) -> dict:
+    """AI đóng vai biên tập viên người Nhật: sửa câu không tự nhiên, sai văn hoá / thời đại, phóng đại, định kiến.
+    Chỉ sửa chữ từng câu (không thêm / bớt cảnh). Lỗi thì giữ nguyên bản cũ."""
+    from . import claude_cli
+    scenes = st.get("scenes") or []
+    nl = "\\n"
+    lines = "\n".join("[%d] %s: %s" % (i, s.get("who"), (s.get("text") or "").replace("\n", nl))
+                      for i, s in enumerate(scenes))
+    try:
+        data = claude_cli._run_json(claude_cli._load_prompt(
+            "nichan_check", title1=st.get("title1") or "", title2=st.get("title2") or "",
+            genre=GENRES.get(st.get("genre"), st.get("genre") or ""),
+            source_rule=("※ 原作がある脚色です。原作にない出来事・人物・数字を足さないこと。"
+                         if st.get("source") == "user" else ""),
+            lines=lines), task="story", timeout=600)
+    except Exception as e:  # noqa: BLE001
+        log.warning("Soát tiếng Nhật lỗi, giữ bản cũ: %s", e)
+        return st
+    if not isinstance(data, dict):
+        return st
+    n = 0
+    for f in data.get("fixes") or []:
+        try:
+            i = int(f.get("i"))
+        except (TypeError, ValueError, AttributeError):
+            continue
+        t = str(f.get("text") or "").replace("\\n", "\n").strip()
+        if 0 <= i < len(scenes) and t and t != scenes[i].get("text"):
+            scenes[i]["text"] = t[:80]
+            n += 1
+    t2 = str(data.get("title2") or "").strip()
+    if t2 and not keep_title2:
+        st["title2"] = t2[:20]
+    st["check"] = {"fixed": n, "issues": [str(x)[:200] for x in (data.get("issues") or []) if str(x).strip()][:8]}
     return st
 
 
