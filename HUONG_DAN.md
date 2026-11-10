@@ -1336,6 +1336,10 @@ liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm
      làm người Nhật không hiểu). Câu dài thì chia sang 2 cảnh liền nhau, mỗi phần vẫn tự nhiên. Cấm bỏ trợ từ, cắt cụt,
      tự chế từ / viết tắt, dịch sát thành ngữ nước ngoài, tiếng lóng cũ hiếm; người Nhật nghe một lần phải hiểu ngay.
      Biên tập viên người Nhật soát điểm này đầu tiên. Phụ đề tự thu nhỏ chữ để giữ đúng chỗ xuống dòng, không ngắt giữa từ.
+   - **Câu kết video** (trước là "Lời mời chia sẻ"): bỏ hẳn kiểu 「この話を大切な人に届けてください」 / 「シェアして」 —
+     người Nhật thấy như thư dây chuyền, dịch máy (có người bình luận "gửi cho ai thì người gửi cũng xấu hổ"). Giờ kết
+     1–2 câu kiểu kênh Nhật thật: hỏi ý kiến về chính truyện (「みなさんならどうしますか？」), hoặc một câu dư âm bằng lời
+     trong truyện, hoặc xin 高評価 ngắn. Tập cũ: xoá / sửa câu kết đó ở mục Các cảnh, hoặc bấm AI viết lại.
    - **Cách đọc** (ô ở từng cảnh): máy đọc hay đọc sai tên riêng và chữ Hán (vd 清 phải là きよし). AI tự ghi cách đọc
      bằng hiragana cho câu có tên, chữ khó, con số; bộ đọc giọng đọc theo cách đọc này, phụ đề vẫn hiện chữ gốc. Nghe thấy
      chỗ đọc sai thì gõ cách đọc đúng vào ô **Cách đọc** của cảnh đó rồi dựng lại. Sửa câu thì cách đọc cũ tự bỏ.

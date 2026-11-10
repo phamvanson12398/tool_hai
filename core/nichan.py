@@ -441,9 +441,7 @@ def write(st: dict, progress=None) -> dict:
     kit_cat = "\n".join(f"   {k}: {', '.join(opt[k])}" for k in ("age", "sex", "skin", "hair", "hair_color", "hat",
                                                                     "glasses", "facial", "top", "top_color",
                                                                     "bottom", "bottom_color"))
-    cta = claude_cli._load_prompt("webtoon_cta", cta_who='người kể ("who":"narr")',
-                                  cta_shot='"visual" là nhân vật chính với nét mặt chân thành',
-                                  lang_label="tiếng Nhật") if st.get("cta", True) else ""
+    cta = claude_cli._load_prompt("nichan_cta") if st.get("cta", True) else ""   # kết kiểu kênh Nhật thật
     user_t2 = bool((st.get("title2") or "").strip())            # tên tập chị tự đặt: soát không đổi
     say(0.05, "AI viết truyện, chia cảnh")
     data = claude_cli._run_json(claude_cli._load_prompt(
