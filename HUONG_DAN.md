@@ -1053,6 +1053,14 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
      luật, mức phạt, con số — chỗ pháp lý / y tế khuyên hỏi luật sư, bác sĩ;
    - cuối truyện (trước lời mời chia sẻ), người kể **nói luôn bài học rút ra** trong 1–2 câu tự nhiên như tâm sự
      (không hiện bảng chữ, không liệt kê 1, 2, 3). Muốn sửa thì sửa câu đó ở mục Phân cảnh.
+   - **Chống sáo mòn**: tránh các mô-típ hàng nghìn kênh đã làm (mẹ chồng ác vô cớ, ngoại tình với bạn thân, con riêng
+     bí mật, tài phiệt giấu mặt, mất trí nhớ, trúng số...); nhân vật không ngốc vô lý, cú lật gài sớm, nhân vật chính
+     có lúc sai và tự nhận ra điều gì, kết có ý nghĩa.
+   - **Không lặp tập cũ**: AI xem cốt truyện và bài học của ~10 tập gần nhất của kênh rồi chọn hướng khác hẳn (phần
+     tiếp của series thì vẫn viết nối tiếp như thường).
+   - **Biên tập viên AI**: viết xong dàn ý, AI đóng vai biên tập viên khó tính chấm bản nháp theo 6 tiêu chí (giá trị,
+     độc đáo, logic, cảm xúc, mở đầu, kết — thang 10) rồi viết lại chỗ yếu trước khi phân cảnh. Điểm và việc đã sửa hiện
+     dưới ô Chủ đề bài học. Bước này mất thêm một lượt AI (chỉ chạy khi Giá trị nội dung = Có).
    Chọn **Không** nếu chỉ muốn truyện giải trí.
 7. **Edit tự động** (khung Dựng video): video ra là đăng được luôn, không cần mở CapCut.
    - **Chuyển cảnh & hiệu ứng**: đổi địa điểm thì chuyển cảnh lớn (lướt nhoè trái / phải, phóng

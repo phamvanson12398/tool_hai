@@ -401,6 +401,12 @@
     $("wt-fx").value = w.auto_fx === false ? "0" : "1";
     $("wt-value").value = w.value === false ? "0" : "1";
     fillSelect("wt-lesson", o.lessons || LESSONS, w.lesson || "auto");
+    var rv = w.review || {}, sc = rv.scores || {};
+    var lab = { value: "giá trị", originality: "độc đáo", logic: "logic", emotion: "cảm xúc", hook: "mở đầu", ending: "kết" };
+    var parts = Object.keys(lab).filter(function (k) { return sc[k] != null; }).map(function (k) { return lab[k] + " " + sc[k]; });
+    $("wt-review").hidden = !(parts.length || rv.notes);
+    $("wt-review").textContent = "Biên tập viên AI chấm bản nháp đầu (thang 10): " + parts.join(", ") +
+      (rv.notes ? " — Đã sửa: " + rv.notes : "");
     $("wt-sfx").value = w.sfx === false ? "0" : "1";
     fillSelect("wt-bgm-level", o.bgm_levels || BGM_LEVELS, w.bgm_level || "soft");
     fillMusic(o.music, w.bgm || "");

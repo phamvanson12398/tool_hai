@@ -1103,6 +1103,9 @@ def write(st: dict, progress=None) -> dict:
         **cat), task="story", timeout=600)
     if not isinstance(plan_, dict) or not plan_.get("segments"):
         raise RuntimeError("AI không lập được dàn ý.")
+    if st.get("value", True) is not False:
+        say(0.07, "Biên tập viên AI chấm và sửa dàn ý cho có giá trị")
+        plan_ = _review_plan(st, plan_, minutes, lang, prev)
     st["title"] = st.get("title") or str(plan_.get("title") or "")[:120]
     st["hook"] = str(plan_.get("hook") or "")[:300]
     st["engage"] = _clean_engage(plan_.get("engage"))
@@ -1226,6 +1229,31 @@ def recent_cast(limit: int = 8) -> list[dict]:
     return out
 
 
+def recent_stories(st: dict, limit: int = 10) -> list[str]:
+    """Cốt truyện + bài học các truyện webtoon làm gần đây (để AI không lặp cốt truyện / bài học)."""
+    out = []
+    try:
+        files = sorted(config.PROJECTS.glob("*/project.json"), key=lambda p: p.stat().st_mtime, reverse=True)
+    except Exception:  # noqa: BLE001
+        return out
+    for f in files:
+        try:
+            d = json.loads(f.read_text("utf-8"))
+        except Exception:  # noqa: BLE001
+            continue
+        w = d.get("webtoon") or {}
+        if d.get("mode") != "webtoon" or not w.get("segments") or w is st:
+            continue
+        if (w.get("title") or "") and w.get("title") == st.get("title"):
+            continue
+        seg = str((w.get("segments") or [{}])[0].get("summary") or "")[:160]
+        topic = (w.get("lesson_card") or {}).get("topic") or ""
+        out.append(f"- \"{w.get('title') or '?'}\": {seg}" + (f" — bài học: {topic}" if topic else ""))
+        if len(out) >= limit:
+            break
+    return out
+
+
 def design_seeds(k: int = 6) -> list[str]:
     """Gợi ý phối ngoại hình ngẫu nhiên cho lần viết này (mỗi lần một khác) để nhân vật đa dạng."""
     import random
@@ -1258,8 +1286,13 @@ def _variety_block(st: dict) -> str:
     lines.append("Gợi ý phối ngẫu nhiên cho lần này (lấy làm điểm xuất phát rồi chỉnh cho hợp vai; nhân vật MỚI "
                  "nên dùng ít nhất một nửa các gợi ý này):")
     lines += [f"- {x}" for x in design_seeds()]
-    return ("### Nhân vật phải KHÁC các truyện trước (đa dạng)\n"
-            "Nhân vật đã có từ phần trước của series thì giữ nguyên; chỉ áp dụng cho nhân vật mới.\n" + "\n".join(lines))
+    out = ("### Nhân vật phải KHÁC các truyện trước (đa dạng)\n"
+           "Nhân vật đã có từ phần trước của series thì giữ nguyên; chỉ áp dụng cho nhân vật mới.\n" + "\n".join(lines))
+    stories = [] if (st.get("prev_summary") or "").strip() else recent_stories(st)
+    if stories:
+        out += ("\n\n### Cốt truyện các tập gần đây của kênh (KHÔNG lặp lại tình huống, cú lật hay bài học này; chọn "
+                "hướng khác hẳn)\n" + "\n".join(stories))
+    return out
 
 
 def _engage_block(st: dict, lang: str) -> str:
@@ -1280,6 +1313,36 @@ def _engage_block(st: dict, lang: str) -> str:
     return "### Kéo người xem tương tác (bình luận, thích, chia sẻ)\n" + "\n".join(out)
 
 
+def _review_plan(st: dict, plan_: dict, minutes: float, lang: str, prev: str) -> dict:
+    """Bước biên tập: AI chấm dàn ý theo giá trị / độc đáo / logic / cảm xúc rồi viết lại. Lỗi thì giữ bản cũ."""
+    from . import claude_cli
+    topic = st.get("lesson") or "auto"
+    try:
+        data = claude_cli._run_json(claude_cli._load_prompt(
+            "webtoon_review", lang_label=LANGS.get(lang, lang), minutes=f"{minutes:g}",
+            genre=GENRES.get(st.get("genre"), st.get("genre") or ""),
+            lesson_line=("" if topic == "auto" else f"Chủ đề bài học chị chọn: {LESSONS.get(topic, topic)}."),
+            series_line=(f"Đây là phần tiếp của series. Tóm tắt các phần trước:\n{prev}" if prev else ""),
+            plan_json=json.dumps(plan_, ensure_ascii=False)), task="story", timeout=600)
+    except Exception as e:  # noqa: BLE001
+        logger.warning("Biên tập dàn ý lỗi, giữ bản gốc: %s", e)
+        return plan_
+    new = data.get("plan") if isinstance(data, dict) else None
+    if not isinstance(new, dict) or not isinstance(new.get("segments"), list) or len(new["segments"]) < 2:
+        return plan_
+    for k, v in plan_.items():                            # thiếu trường nào thì lấy của bản gốc
+        if k not in new or new[k] in (None, "", [], {}):
+            new[k] = v
+    looks = {wa_slug(c.get("id") or c.get("name")): c.get("look") for c in plan_.get("characters") or []
+             if isinstance(c, dict)}
+    for c in new.get("characters") or []:                # giữ nguyên ngoại hình đã chọn
+        if isinstance(c, dict) and looks.get(wa_slug(c.get("id") or c.get("name"))) and not c.get("look"):
+            c["look"] = looks[wa_slug(c.get("id") or c.get("name"))]
+    st["review"] = {"scores": data.get("scores") if isinstance(data.get("scores"), dict) else {},
+                    "notes": str(data.get("notes") or "")[:600]}
+    return new
+
+
 def _value_block(st: dict, lang: str) -> str:
     """Dặn AI khi lập dàn ý: truyện phải có giá trị thật cho người xem, không chỉ kịch tính."""
     if st.get("value", True) is False:
@@ -1295,6 +1358,12 @@ Truyện vẫn cuốn, kịch tính như thường, nhưng được dựng QUANH
   cách làm theo.
 - Phản diện có động cơ, lý do (không ác vô cớ); mâu thuẫn có chiều sâu để người xem suy nghĩ, tranh luận.
 - KHÔNG ghi "chuyện có thật"; không chửi tục, không bạo lực / cảnh gây sốc chỉ để câu view.
+- KHÔNG sáo mòn: tránh mẹ chồng ác vô cớ, ngoại tình với bạn thân, con riêng bí mật, tài phiệt giấu mặt, mất trí nhớ,
+  trúng số... trừ khi có góc nhìn thật mới. Chọn tình huống đời thật cụ thể, ít kênh làm (một chiêu lừa mới, một kiểu
+  mâu thuẫn tiền bạc trong gia đình, một tình huống công sở thật).
+- Logic: không nhân vật nào ngốc vô lý để truyện chạy; cú lật được gài sớm; mỗi đoạn đẩy câu chuyện tiến lên.
+- Cảm xúc thật: nhân vật chính có lúc sai, lúc yếu, có khoảnh khắc tự nhận ra điều gì; kết có ý nghĩa (nhân vật thay
+  đổi / hiểu ra), không chỉ "kẻ xấu bị trừng phạt".
 - AN TOÀN THÔNG TIN: chỉ dùng kiến thức PHỔ THÔNG chắc chắn đúng (cách nhận biết, cách xử lý, nguyên tắc chung).
   KHÔNG bịa số điều luật, mức phạt, thời hạn, con số thống kê, tên cơ quan cụ thể. Chỗ liên quan pháp lý / y tế thì
   khuyên hỏi luật sư / bác sĩ / cơ quan chức năng.

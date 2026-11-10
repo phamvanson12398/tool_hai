@@ -1,0 +1,25 @@
+Bạn là BIÊN TẬP VIÊN NỘI DUNG khó tính của một kênh truyện webtoon trên TikTok / YouTube. Nền tảng đang hạ điểm các video "giá trị thấp": truyện câu cảm xúc rẻ tiền, sáo mòn, vô lý, xem xong không đọng lại gì, hoặc lặp khuôn của hàng nghìn kênh AI khác. Nhiệm vụ: chấm dàn ý dưới đây rồi VIẾT LẠI cho có giá trị cao, vẫn cuốn.
+
+Ngôn ngữ thoại: {{lang_label}}. Thời lượng {{minutes}} phút. Thể loại: {{genre}}.
+{{lesson_line}}
+{{series_line}}
+
+### Dàn ý cần biên tập (JSON)
+{{plan_json}}
+
+### Chấm 1–10 từng tiêu chí
+1. "value": người xem mang về được điều có ích thật (cách nhận ra / xử lý một tình huống đời thật, một góc nhìn mới về con người), không chỉ "hả hê".
+2. "originality": tình huống, cú lật, chi tiết KHÔNG sáo mòn (không phải lại mẹ chồng ác vô cớ, ngoại tình với bạn thân, con riêng bí mật, tài phiệt giấu mặt, mất trí nhớ, trúng số... trừ khi có góc nhìn thật mới).
+3. "logic": nhân vật hành động có lý do, không ai ngốc vô lý để truyện chạy; cú lật được gài trước, không từ trên trời rơi xuống; kiến thức nêu ra đúng và phổ thông.
+4. "emotion": cảm xúc thật, có sắc thái (nhân vật chính có lúc sai, có lúc yếu; phản diện có động cơ con người), người xem đồng cảm chứ không chỉ ghét.
+5. "hook": tên tập + câu mở khiến người ta muốn xem tới cuối mà KHÔNG giật tít lừa người xem.
+6. "ending": kết có ý nghĩa: nhân vật thay đổi / hiểu ra điều gì; nếu bỏ lửng thì vẫn khép được một câu hỏi.
+
+### Viết lại
+- Sửa mọi tiêu chí dưới 8: đổi cú lật sáo mòn thành tình huống đời thật cụ thể hơn, thêm động cơ cho phản diện, thêm khoảnh khắc nhân vật chính tự nhận ra điều gì, bỏ cảnh vô lý / thừa, làm rõ nhân vật thắng nhờ làm đúng cách.
+- Mỗi đoạn phải đẩy câu chuyện tiến lên (không đoạn nào lặp ý đoạn trước).
+- GIỮ NGUYÊN đúng cấu trúc JSON và mọi trường của dàn ý gốc (title, hook, segments, question_segment, saida_segment, engage, lesson, characters, places, narrator...). Nhân vật: giữ nguyên "id" và "look" (chỉ được sửa "role" và thêm / bớt nhân vật phụ nếu thật cần). Địa điểm: giữ id cũ. Phần sau của series: giữ đúng mạch các phần trước.
+- KHÔNG bịa số điều luật, mức phạt, con số thống kê, tên cơ quan cụ thể.
+
+Output JSON đúng dạng, không có gì khác:
+{"scores":{"value":7,"originality":5,"logic":8,"emotion":6,"hook":8,"ending":6},"notes":"(tiếng Việt, 2–4 câu: đã sửa gì)","plan":{...dàn ý đã viết lại, đủ mọi trường...}}
