@@ -60,7 +60,6 @@ LESSONS = {"auto": "AI tự chọn hợp truyện",
            "abuse": "Nhận ra thao túng, bạo hành tâm lý và cách thoát ra",
            "safety": "An toàn: bị theo dõi, lộ thông tin cá nhân, an toàn trên mạng",
            "mind": "Sức khoẻ tinh thần: kiệt sức, tự trọng, vượt qua mất mát"}
-CARD_TITLE = {"ko": "꼭 기억하세요", "en": "Remember this", "vi": "Điều rút ra", "ja": "覚えておきたいこと"}
 ENGAGE_MODE_RULE = {
     "judge": ("KIỂU TRUYỆN: ĐỂ NGƯỜI XEM PHÁN XỬ — cố ý để nhân vật chính cũng có MỘT điểm gây tranh cãi "
               "(phản ứng hơi quá, quyết định táo bạo, nói lời khó nghe...), không ai hoàn toàn đúng, để người xem "
@@ -117,10 +116,11 @@ def clean_shot(s: dict, ids: set, k: int) -> dict:
         s["choice"] = {"a": a, "b": b}                  # thẻ chọn A / B hiện trên màn hình
     else:
         s.pop("choice", None)
-    if s.get("card"):
-        s["card"] = True                                 # thẻ "Điều rút ra" hiện trên cảnh này
+    if s.get("lesson") or s.get("card"):
+        s["lesson"] = True                               # câu người kể nói bài học rút ra
     else:
-        s.pop("card", None)
+        s.pop("lesson", None)
+    s.pop("card", None)
     s["extras"] = [x for x in (s.get("extras") or []) if x in ("sweat", "tears", "blush", "bags",
                                                                "bruise", "shadow")]
     return s
@@ -679,53 +679,10 @@ class Shot:
         out[y0:y1, x0:x1] = (reg * (1 - al * k) + rgb * al * k).astype(np.uint8)
         return out
 
-    def _card(self, arr: np.ndarray, t: float) -> np.ndarray:
-        """Thẻ "Điều rút ra": làm tối nền, khung trắng bo góc, các dòng hiện lần lượt theo lời đọc."""
-        card = self.st["lesson_card"]
-        items = card["items"]
-        W, H = self.W, self.H
-        if not hasattr(self, "_cd"):
-            ft = wp.font(int(H * 0.066), True, self.lang)
-            fi = wp.font(int(H * 0.052), True, self.lang)
-            pw = int(W * 0.74)
-            probe = ImageDraw.Draw(Image.new("RGBA", (10, 10)))
-            rows = [wp._wrap(probe, f"{k + 1}. {x}", fi, pw - int(W * 0.08)) for k, x in enumerate(items)]
-            lh = int(H * 0.072)
-            ph = int(H * 0.2) + lh * sum(len(r) for r in rows) + int(H * 0.025) * len(rows)
-            x0, y0 = (W - pw) // 2, max(int(H * 0.05), (H - ph) // 2 - int(H * 0.04))
-            layers = []
-            for upto in range(len(items) + 1):            # vẽ sẵn từng bước (0..n dòng)
-                lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
-                d = ImageDraw.Draw(lay)
-                d.rounded_rectangle([x0 + 8, y0 + 10, x0 + pw + 8, y0 + ph + 10], radius=int(H * 0.04), fill=(0, 0, 0, 110))
-                d.rounded_rectangle([x0, y0, x0 + pw, y0 + ph], radius=int(H * 0.04), fill=(255, 252, 240, 248),
-                                    outline=(255, 196, 40, 255), width=max(4, int(H * 0.007)))
-                tw = d.textlength(card["title"], font=ft)
-                d.text(((W - tw) / 2, y0 + int(H * 0.045)), card["title"], font=ft, fill=(214, 92, 20))
-                y = y0 + int(H * 0.16)
-                for k, r in enumerate(rows):
-                    for ln in r:
-                        if k < upto:
-                            d.text((x0 + int(W * 0.04), y), ln, font=fi, fill=(40, 40, 52))
-                        y += lh
-                    y += int(H * 0.025)
-                a = np.asarray(lay).astype(np.float32)
-                layers.append((a[:, :, :3], a[:, :, 3:4] / 255.0))
-            self._cd = layers
-        dur = max(1.0, self.row["dur"])
-        upto = min(len(items), 1 + int(max(0.0, t - 0.25) / max(0.4, (dur - 0.6) / len(items))))
-        rgb, al = self._cd[upto]
-        dim = min(1.0, t / 0.3) * 0.55
-        base = arr.astype(np.float32) * (1 - dim)
-        k = min(1.0, t / 0.3)
-        return (base * (1 - al * k) + rgb * al * k).astype(np.uint8)
-
     def subtitle(self, arr: np.ndarray, t: float, name: str = "") -> np.ndarray:
         """Phụ đề như video mẫu: chữ trắng to, viền đen dày, không nền. Chữ cả cảnh như nhau
         nên vẽ một lần rồi chỉ trộn vào vùng chữ ở mỗi khung (dựng nhanh)."""
         arr = self._choice(arr, t)
-        if self.s.get("card") and (self.st.get("lesson_card") or {}).get("items"):
-            return self._card(arr, t)                       # thẻ Điều rút ra thay phụ đề
         ln = self.s.get("line") or {}
         if not ln.get("text") or not self.st.get("subtitles", True):
             return arr
@@ -1346,11 +1303,12 @@ Thêm vào output "lesson" (viết bằng {lab}):
   "facts": 2–3 câu KIẾN THỨC ngắn (≤ 30 chữ mỗi câu) sẽ lồng tự nhiên vào lời kể, mỗi câu kèm "segment" là số thứ tự
   đoạn đặt câu đó (rải ở các đoạn khác nhau, đúng lúc nhân vật cần tới kiến thức đó), vd
   {{"segment":3,"text":"그때 알았어요. 문자랑 녹음도 다 증거가 된다는 걸요."}};
-  "takeaways": 2–3 điều rút ra, mỗi điều ≤ 14 chữ, dạng việc nên làm (vd "대화는 녹음해 두기"), hiện thành thẻ cuối video."""
+  "takeaways": 2–3 ý bài học rút ra, mỗi ý ≤ 14 chữ (vd "대화는 녹음해 두기") — cuối truyện người kể sẽ NÓI bài học
+  này thành lời (không hiện bảng chữ)."""
 
 
 def _clean_lesson(st: dict, raw, n: int) -> tuple[dict, dict]:
-    """(thẻ "Điều rút ra" {title, items}, {chỉ số đoạn: [câu kiến thức]})."""
+    """(bài học rút ra {topic, items}, {chỉ số đoạn: [câu kiến thức]})."""
     if st.get("value", True) is False or not isinstance(raw, dict):
         return {}, {}
     items = [str(x).strip()[:60] for x in (raw.get("takeaways") or []) if str(x).strip()][:3]
@@ -1363,13 +1321,12 @@ def _clean_lesson(st: dict, raw, n: int) -> tuple[dict, dict]:
         except (TypeError, ValueError):
             k = 0
         facts.setdefault(k, []).append(str(f["text"]).strip()[:200])
-    card = {"topic": str(raw.get("topic") or "")[:200],
-            "title": CARD_TITLE.get(st.get("language") or "ko", CARD_TITLE["en"]), "items": items} if items else {}
+    card = {"topic": str(raw.get("topic") or "")[:200], "items": items} if items else {}
     return card, facts
 
 
 def _value_rule(st: dict, lang: str, i: int, n: int, facts: dict) -> str:
-    """Dặn thêm khi phân cảnh: câu kiến thức của đoạn này, thẻ Điều rút ra ở đoạn cuối."""
+    """Dặn thêm khi phân cảnh: câu kiến thức của đoạn này, câu nói bài học ở đoạn cuối."""
     if st.get("value", True) is False:
         return ""
     out = []
@@ -1378,18 +1335,18 @@ def _value_rule(st: dict, lang: str, i: int, n: int, facts: dict) -> str:
                    f'(giữ nguyên ý, được chỉnh chữ cho trôi): "{f}"')
     card = st.get("lesson_card") or {}
     if i == n - 1 and card.get("items"):
-        out.append('THẺ ĐIỀU RÚT RA: sau khi câu chuyện khép lại (TRƯỚC lời mời chia sẻ nếu có), thêm đúng 1 cảnh người kể '
-                   f'("who":"narr") nói gọn điều người xem nên nhớ, bằng {LANGS.get(lang, lang)}, ≤ 40 chữ, theo đúng ý các '
-                   f'dòng: {" / ".join(card["items"])}. Cảnh đó thêm "card": true (tool hiện thẻ tóm tắt lên màn hình), '
-                   'cận mặt nhân vật chính, nét mặt điềm tĩnh, "camera":"still".')
+        out.append('NÓI BÀI HỌC: sau khi câu chuyện khép lại (TRƯỚC lời mời chia sẻ nếu có), người kể ("who":"narr") nói '
+                   f'thẳng bài học rút ra trong 1–2 câu tự nhiên như đang tâm sự, bằng {LANGS.get(lang, lang)}, mỗi câu ≤ 40 chữ, '
+                   f'theo đúng ý: {" / ".join(card["items"])}. KHÔNG liệt kê kiểu 1, 2, 3; không hiện bảng chữ. Cảnh đó thêm '
+                   '"lesson": true, cận mặt nhân vật chính, nét mặt điềm tĩnh, "camera":"push_in".')
     return ("\n\n" + "\n".join(out)) if out else ""
 
 
 def _ensure_card(st: dict) -> None:
-    """AI quên cảnh thẻ Điều rút ra: chèn một cảnh trước lời mời chia sẻ cuối video."""
+    """AI quên câu nói bài học: chèn một câu người kể trước lời mời chia sẻ cuối video."""
     card = st.get("lesson_card") or {}
     shots = st.get("shots") or []
-    if not card.get("items") or not shots or any(x.get("card") for x in shots):
+    if not card.get("items") or not shots or any(x.get("lesson") for x in shots):
         return
     k = len(shots)
     if st.get("cta", True):                               # lời mời cuối: chuỗi câu người kể ở cuối
@@ -1397,10 +1354,11 @@ def _ensure_card(st: dict) -> None:
             k -= 1
     nid = st.get("narrator_id") or (shots[-1].get("who") or "")
     base = shots[max(0, k - 1)]
-    sh = {"id": f"card_{len(shots) + 1:03d}", "type": "close" if nid else "wide", "who": nid,
-          "expr": "neutral", "pose": "down", "camera": "still", "place": base.get("place") or "",
-          "line": {"who": "narr", "text": " ".join(card["items"])}, "front": "", "extras": [], "with": [],
-          "card": True}
+    sep = "" if (st.get("language") or "ko") == "ja" else " "
+    text = sep.join(x.rstrip(".。") + ("。" if sep == "" else ".") for x in card["items"])
+    sh = {"id": f"bai_hoc_{len(shots) + 1:03d}", "type": "close" if nid else "wide", "who": nid,
+          "expr": "neutral", "pose": "down", "camera": "push_in", "place": base.get("place") or "",
+          "line": {"who": "narr", "text": text}, "front": "", "extras": [], "with": [], "lesson": True}
     shots.insert(k, sh)
 
 

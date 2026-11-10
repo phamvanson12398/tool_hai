@@ -1051,8 +1051,8 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
      hay trả thù bạo lực; phản diện có động cơ; không ghi "chuyện có thật", bớt chửi bới / cảnh sốc;
    - 2–3 câu kiến thức lồng tự nhiên vào lời kể đúng lúc nhân vật cần; chỉ kiến thức phổ thông, không bịa số điều
      luật, mức phạt, con số — chỗ pháp lý / y tế khuyên hỏi luật sư, bác sĩ;
-   - cuối truyện (trước lời mời chia sẻ) hiện **thẻ Điều rút ra** 2–3 dòng, hiện lần lượt theo lời người kể. Sau khi AI
-     viết, các dòng của thẻ hiện ở ô **Thẻ Điều rút ra** để chị sửa (mỗi dòng một ý), bấm Lưu.
+   - cuối truyện (trước lời mời chia sẻ), người kể **nói luôn bài học rút ra** trong 1–2 câu tự nhiên như tâm sự
+     (không hiện bảng chữ, không liệt kê 1, 2, 3). Muốn sửa thì sửa câu đó ở mục Phân cảnh.
    Chọn **Không** nếu chỉ muốn truyện giải trí.
 7. **Edit tự động** (khung Dựng video): video ra là đăng được luôn, không cần mở CapCut.
    - **Chuyển cảnh & hiệu ứng**: đổi địa điểm thì chuyển cảnh lớn (lướt nhoè trái / phải, phóng

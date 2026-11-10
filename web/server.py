@@ -2866,12 +2866,6 @@ def api_webtoon_save(pid):
         wt["story_mode"] = body["story_mode"]
     if body.get("lesson") in wf.LESSONS:
         wt["lesson"] = body["lesson"]
-    if isinstance(body.get("lesson_card"), dict):                 # chị sửa các dòng trên thẻ
-        items = [str(x).strip()[:60] for x in (body["lesson_card"].get("items") or []) if str(x).strip()][:3]
-        old = wt.get("lesson_card") or {}
-        wt["lesson_card"] = dict(old, items=items,
-                                 title=old.get("title") or wf.CARD_TITLE.get(wt.get("language") or "ko", "Remember this")
-                                 ) if items else {}
     if body.get("bg_mode") in ("draw", "3d", "2d"):
         wt["bg_mode"] = body["bg_mode"]
     if body.get("style") in wf.STYLES:

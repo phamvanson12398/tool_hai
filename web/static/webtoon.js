@@ -123,7 +123,6 @@
       summary: $("wt-summary").value
     };
     if ($("wt-bgmode")) b.bg_mode = $("wt-bgmode").value;
-    if (!$("wt-card-box").hidden) b.lesson_card = { items: $("wt-card").value.split("\n") };
     if (!$("wt-engage").hidden) b.engage = collectEngage();
     var cur = wt();
     if ((cur.characters || []).length) {
@@ -402,9 +401,6 @@
     $("wt-fx").value = w.auto_fx === false ? "0" : "1";
     $("wt-value").value = w.value === false ? "0" : "1";
     fillSelect("wt-lesson", o.lessons || LESSONS, w.lesson || "auto");
-    var card = w.lesson_card || {};
-    $("wt-card-box").hidden = !(card.items && card.items.length);
-    $("wt-card").value = (card.items || []).join("\n");
     $("wt-sfx").value = w.sfx === false ? "0" : "1";
     fillSelect("wt-bgm-level", o.bgm_levels || BGM_LEVELS, w.bgm_level || "soft");
     fillMusic(o.music, w.bgm || "");
