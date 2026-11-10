@@ -236,6 +236,12 @@ def clean_visual(v, ids: set, k_ok: set) -> dict:
             "framing": v.get("framing") if v.get("framing") in FRAMINGS else "full"}
 
 
+def clean_yomi(v) -> str:
+    """Cách đọc: chỉ giữ chữ kana, dấu câu và số (bỏ chữ Hán / chữ Latin lẫn vào)."""
+    t = re.sub(r"\s+", "", str(v or "").replace("「", "").replace("」", ""))[:160]
+    return t if t and re.fullmatch(r"[\u3040-\u30ff\u3000-\u303f\uff01-\uff5e0-9、。！？!?ー・…〜～]+", t) else ""
+
+
 def clean_scene(s: dict, ids: set, places: set, k_ok: set, k: int) -> dict:
     who = s.get("who") if s.get("who") in ids or s.get("who") == "narr" else "narr"
     out = {"id": s.get("id") or f"c{k + 1:03d}", "text": str(s.get("text") or "").strip()[:120], "who": who,
@@ -243,7 +249,8 @@ def clean_scene(s: dict, ids: set, places: set, k_ok: set, k: int) -> dict:
            "place": s.get("place") if s.get("place") in places else (next(iter(places), "")),
            "fx": s.get("fx") if s.get("fx") in FX else "",
            "mood": s.get("mood") if s.get("mood") in MOODS else "",
-           "sfx_text": str(s.get("sfx_text") or "").strip()[:8]}       # chữ hiệu ứng quanh nhân vật
+           "sfx_text": str(s.get("sfx_text") or "").strip()[:8],       # chữ hiệu ứng quanh nhân vật
+           "yomi": clean_yomi(s.get("yomi"))}                          # cách đọc cho bộ đọc giọng (hiragana)
     if s.get("img"):
         out["img"] = s["img"]
     return out
@@ -446,8 +453,9 @@ def write(st: dict, progress=None) -> dict:
                     'đặt "title2" là tên tập ngắn gây tò mò.' if series else
                     f"Tiêu đề chị đã đặt: {st.get('title1')} / {st.get('title2')} — giữ đúng."
                     if (st.get("title1") or "").strip() else "") +
-                   ("\nNHỊP NHANH kiểu スカッと: câu cực ngắn (1 dòng, ≤ 12 chữ là tốt nhất), mỗi câu khoảng 1,5–2 giây, "
-                    "cảm xúc đổi liên tục; nền cảm xúc, chữ hiệu ứng và hiệu ứng dùng dày hơn." if fast else ""),
+                   ("\nNHỊP NHANH kiểu スカッと: câu ngắn gọn (thường 1 dòng) nhưng vẫn là câu tiếng Nhật đầy đủ, tự nhiên — "
+                    "KHÔNG cắt cụt hay bỏ trợ từ cho ngắn; mỗi câu khoảng 1,5–2 giây, cảm xúc đổi liên tục; nền cảm xúc, "
+                    "chữ hiệu ứng và hiệu ứng dùng dày hơn." if fast else ""),
         moods=", ".join(f"{k} ({v})" for k, v in MOODS.items() if k),
         stickers="\n".join(f"   - {k['id']}: {k['desc']}" for k in ks) or "   (chưa có)",
         emos=", ".join(EMOS), fx=", ".join(f for f in FX if f),
@@ -505,10 +513,16 @@ def jp_check(st: dict, keep_title2: bool = False) -> dict:
             i = int(f.get("i"))
         except (TypeError, ValueError, AttributeError):
             continue
+        if not 0 <= i < len(scenes):
+            continue
         t = str(f.get("text") or "").replace("\\n", "\n").strip()
-        if 0 <= i < len(scenes) and t and t != scenes[i].get("text"):
+        if t and t != scenes[i].get("text"):
             scenes[i]["text"] = t[:80]
+            scenes[i]["yomi"] = ""                        # câu đổi thì cách đọc cũ không còn đúng
             n += 1
+        y = clean_yomi(f.get("yomi"))
+        if y:
+            scenes[i]["yomi"] = y
     t2 = str(data.get("title2") or "").strip()
     if t2 and not keep_title2:
         st["title2"] = t2[:20]
@@ -658,7 +672,7 @@ def narrate(st: dict, pdir: Path, progress=None) -> dict:
     for k, s in enumerate(scenes):
         who = "narr" if one or s["who"] not in chars else s["who"]
         cfg, ref = got.get("nguoi_ke" if who == "narr" else f"nv_{who}") or ({"instruct": "female, young adult"}, {})
-        text = speak_text(s["text"])
+        text = speak_text(s.get("yomi") or s["text"])        # có cách đọc thì đọc theo cách đọc (tên, chữ khó)
         pro = prosody(st, s) if skatto else (0.0, 1.0, 1.0)
         key = hashlib.md5(json.dumps([text, ref.get("ref"), ref.get("ref_text"), cfg.get("instruct"), speed, "ja2", pro],
                                      ensure_ascii=False)
@@ -745,12 +759,13 @@ def _text_layer(lines, font, color, w, gap, stroke=12) -> Image.Image:
 
 def caption(text: str, color) -> Image.Image:
     size = 104
+    want = len(text.split("\n"))                         # giữ đúng chỗ xuống dòng của câu, không ngắt giữa từ
     while True:
         f = ja_font(size)
         lines = wrap(text, f, W - 90)
-        if len(lines) <= 3 or size <= 64:
+        if (len(lines) <= want or (len(lines) <= 3 and size <= 72)) or size <= 64:
             break
-        size -= 8
+        size -= 4
     return _text_layer(lines, f, color, W, 10)
 
 
@@ -760,10 +775,9 @@ def caption_left(text: str) -> Image.Image:
     while True:
         f = ja_font(size)
         lines = wrap(text, f, W - 120)
-        orphan = len(lines) > len(text.split("\n")) and len(lines[-1].strip()) <= 2
-        if (len(lines) <= 3 and not orphan) or size <= 60:
+        if len(lines) <= len(text.split("\n")) or size <= 60:   # giữ đúng chỗ xuống dòng của câu
             break
-        size -= 6
+        size -= 4
     lh = int(f.size * 1.16)
     img = Image.new("RGBA", (W, lh * len(lines) + 30), (0, 0, 0, 0))
     d = ImageDraw.Draw(img)

@@ -1332,6 +1332,13 @@ liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm
    - **Nguồn truyện → Chuyển thể truyện chị đưa**: dán câu chuyện gốc (chị tự viết, hoặc chuyện chị được phép dùng)
      vào ô Yêu cầu (tối đa ~8000 chữ). AI giữ đúng nhân vật, tình tiết, kết cục, chỉ chia câu, viết lại cho tự nhiên và
      chọn hình — không thêm tình tiết, cú lật, con số mới. Đây là cách giảm "phụ thuộc AI" rõ nhất.
+   - **Câu phải hiểu được**: mỗi dòng phụ đề tới ~14 chữ (trước là 11, quá chật nên AI cắt cụt câu, bỏ trợ từ, tự chế từ
+     làm người Nhật không hiểu). Câu dài thì chia sang 2 cảnh liền nhau, mỗi phần vẫn tự nhiên. Cấm bỏ trợ từ, cắt cụt,
+     tự chế từ / viết tắt, dịch sát thành ngữ nước ngoài, tiếng lóng cũ hiếm; người Nhật nghe một lần phải hiểu ngay.
+     Biên tập viên người Nhật soát điểm này đầu tiên. Phụ đề tự thu nhỏ chữ để giữ đúng chỗ xuống dòng, không ngắt giữa từ.
+   - **Cách đọc** (ô ở từng cảnh): máy đọc hay đọc sai tên riêng và chữ Hán (vd 清 phải là きよし). AI tự ghi cách đọc
+     bằng hiragana cho câu có tên, chữ khó, con số; bộ đọc giọng đọc theo cách đọc này, phụ đề vẫn hiện chữ gốc. Nghe thấy
+     chỗ đọc sai thì gõ cách đọc đúng vào ô **Cách đọc** của cảnh đó rồi dựng lại. Sửa câu thì cách đọc cũ tự bỏ.
    - Giọng đọc AI cũng là thứ người Nhật nhận ra ngay: dùng giọng thật (tự thu / thuê người Nhật thu, tải bằng
      **+ Tải giọng mẫu**) sẽ khác hẳn.
 11. **Kiểu スカッと迷言集 (video sống động như kênh スカッと)**:

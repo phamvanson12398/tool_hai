@@ -546,6 +546,8 @@
     var q = function (k) { var f = row.querySelector("[data-k=" + k + "]"); return f ? f.value : ""; };
     s.text = q("text"); s.who = q("who"); s.place = q("place"); s.fx = q("fx");
     s.mood = q("mood"); s.sfx_text = q("sfx_text");
+    var raw = JSON.parse(row.getAttribute("data-raw") || "{}"), yo = q("yomi").trim();
+    s.yomi = (s.text !== (raw.text || "") && yo === (raw.yomi || "")) ? "" : yo;   // sửa câu thì cách đọc cũ bỏ đi
     var t = q("vtype");
     if (t === "two") s.visual = { type: "two", cids: [q("cid"), q("cid2")], emos: [q("emo"), q("emo2")], layout: q("layout") || "side" };
     else if (t === "sticker") s.visual = { type: "sticker", id: q("sticker") };
@@ -619,6 +621,11 @@
     sx.type = "text"; sx.value = s.sfx_text || ""; sx.setAttribute("data-k", "sfx_text"); sx.maxLength = 8;
     sx.placeholder = "Chữ hiệu ứng (ニヤニヤ)"; sx.title = "Chữ hiệu ứng rải quanh mặt nhân vật, để trống nếu không có";
     ctl.appendChild(sx);
+    var yo = document.createElement("input");
+    yo.type = "text"; yo.className = "wide"; yo.value = s.yomi || ""; yo.setAttribute("data-k", "yomi");
+    yo.placeholder = "Cách đọc bằng hiragana (chỉ khi máy đọc sai tên / chữ khó, vd きよし、おおきくなったねえ)";
+    yo.title = "Bộ đọc giọng đọc theo dòng này thay cho chữ của câu. Để trống là đọc theo chữ của câu.";
+    ctl.appendChild(yo);
     // ảnh riêng cho cảnh (đồ vật, hoặc bất kỳ hình nào chị muốn)
     var url = base() + "/scene/" + encodeURIComponent(s.id);
     if (v.type === "object") {
