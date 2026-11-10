@@ -2684,6 +2684,7 @@ def _webtoon_view(pid: str, data: dict) -> dict:
         "genres": [[k, v] for k, v in wf.GENRES.items()], "langs": [[k, v] for k, v in wf.LANGS.items()],
         "styles": [[k, v] for k, v in wf.STYLES.items()],
         "story_modes": [[k, v] for k, v in wf.STORY_MODES.items()],
+        "lessons": [[k, v] for k, v in wf.LESSONS.items()],
         "music": __import__("core.nichan", fromlist=["x"]).music_list(),
         "bgm_levels": [[k, v[0]] for k, v in __import__("core.nichan", fromlist=["x"]).BGM_LEVELS.items()],
         "arts": wst.options(),
@@ -2848,7 +2849,7 @@ def api_webtoon_save(pid):
                 wt[k] = max(lo, min(hi, float(body[k]) if k == "minutes" else int(body[k])))
             except (TypeError, ValueError):
                 pass
-    for k in ("subtitles", "cliffhanger", "cta", "mid_q", "like_ask", "sfx", "auto_fx"):
+    for k in ("subtitles", "cliffhanger", "cta", "mid_q", "like_ask", "sfx", "auto_fx", "value"):
         if k in body:
             wt[k] = bool(body[k])
     from core import nichan as _nc
@@ -2863,6 +2864,14 @@ def api_webtoon_save(pid):
             pass
     if body.get("story_mode") in wf.STORY_MODES:
         wt["story_mode"] = body["story_mode"]
+    if body.get("lesson") in wf.LESSONS:
+        wt["lesson"] = body["lesson"]
+    if isinstance(body.get("lesson_card"), dict):                 # chị sửa các dòng trên thẻ
+        items = [str(x).strip()[:60] for x in (body["lesson_card"].get("items") or []) if str(x).strip()][:3]
+        old = wt.get("lesson_card") or {}
+        wt["lesson_card"] = dict(old, items=items,
+                                 title=old.get("title") or wf.CARD_TITLE.get(wt.get("language") or "ko", "Remember this")
+                                 ) if items else {}
     if body.get("bg_mode") in ("draw", "3d", "2d"):
         wt["bg_mode"] = body["bg_mode"]
     if body.get("style") in wf.STYLES:
@@ -2968,7 +2977,7 @@ def api_webtoon_next(pid):
     nid = datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:4]
     nw = wf.default_story()
     for k in ("genre", "language", "minutes", "subtitles", "cliffhanger", "narrator", "bg_mode", "pics", "style", "art", "cta", "story_mode", "mid_q", "like_ask",
-              "bgm", "bgm_level", "sfx", "auto_fx",
+              "bgm", "bgm_level", "sfx", "auto_fx", "value", "lesson",
               "narrator_id", "narrator_voice"):
         if k in wt:
             nw[k] = json.loads(json.dumps(wt[k]))

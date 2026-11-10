@@ -118,10 +118,12 @@
       part: parseInt($("wt-part").value, 10) || 1, cliffhanger: $("wt-cliff").value === "1",
       subtitles: $("wt-subs").value === "1", cta: $("wt-cta").value === "1",
       story_mode: $("wt-smode").value || "normal", mid_q: $("wt-midq").value === "1", like_ask: $("wt-like").value === "1", prev_summary: $("wt-prev").value,
+      value: $("wt-value").value === "1", lesson: $("wt-lesson").value || "auto",
       auto_fx: $("wt-fx").value === "1", sfx: $("wt-sfx").value === "1", bgm: $("wt-bgm").value, bgm_level: $("wt-bgm-level").value,
       summary: $("wt-summary").value
     };
     if ($("wt-bgmode")) b.bg_mode = $("wt-bgmode").value;
+    if (!$("wt-card-box").hidden) b.lesson_card = { items: $("wt-card").value.split("\n") };
     if (!$("wt-engage").hidden) b.engage = collectEngage();
     var cur = wt();
     if ((cur.characters || []).length) {
@@ -169,6 +171,7 @@
 
   /* ---------------------------- edit tự động: nhạc nền ---------------------------- */
 
+  var LESSONS = [["auto", "AI tự chọn hợp truyện"]];
   var BGM_LEVELS = [["soft", "Nhỏ"], ["mid", "Vừa"], ["loud", "To"]];
   function fillMusic(items, value) {
     fillSelect("wt-bgm", [["", "— Không nhạc nền —"]].concat((items || []).map(function (m) { return [m.name, m.name]; })), value || "");
@@ -397,6 +400,11 @@
     $("wt-midq").value = w.mid_q === false ? "0" : "1";
     $("wt-like").value = w.like_ask === false ? "0" : "1";
     $("wt-fx").value = w.auto_fx === false ? "0" : "1";
+    $("wt-value").value = w.value === false ? "0" : "1";
+    fillSelect("wt-lesson", o.lessons || LESSONS, w.lesson || "auto");
+    var card = w.lesson_card || {};
+    $("wt-card-box").hidden = !(card.items && card.items.length);
+    $("wt-card").value = (card.items || []).join("\n");
     $("wt-sfx").value = w.sfx === false ? "0" : "1";
     fillSelect("wt-bgm-level", o.bgm_levels || BGM_LEVELS, w.bgm_level || "soft");
     fillMusic(o.music, w.bgm || "");
@@ -1125,6 +1133,7 @@
       $(id).addEventListener("change", function () { if (W.id) save(true); });
     });
     fillSelect("wt-bgm-level", BGM_LEVELS, "soft");
+    fillSelect("wt-lesson", LESSONS, "auto");
     api("/api/2ch/music").then(function (d) { if (!W.data) fillMusic(d.items, ""); }).catch(function () {});
     $("wt-add").addEventListener("click", addShot);
     initMark();

@@ -50,6 +50,17 @@ FRONTS = ("table", "dining", "bed", "car", "desk", "sofa")
 STORY_MODES = {"normal": "Bình thường",
                "judge": "Để người xem phán xử (cố ý để điểm tranh cãi, hỏi ai đúng ai sai)",
                "vote_next": "Người xem chọn phần sau (kết ở ngã rẽ A / B)"}
+# giá trị nội dung: mỗi truyện gánh một bài học thật, dùng được ngoài đời
+LESSONS = {"auto": "AI tự chọn hợp truyện",
+           "scam": "Nhận biết và xử lý lừa đảo (tin nhắn, cuộc gọi, đầu tư, tình cảm)",
+           "money": "Tiền bạc: cho vay, nợ, tài sản chung, giữ tiền với người thân",
+           "family_law": "Hôn nhân, ly hôn, thừa kế: quyền lợi cơ bản (kiến thức chung)",
+           "work": "Nơi làm việc: quyền lợi người lao động, sếp chèn ép, quấy rối",
+           "boundary": "Giao tiếp, đặt ranh giới với nhà chồng / người thân / bạn bè",
+           "abuse": "Nhận ra thao túng, bạo hành tâm lý và cách thoát ra",
+           "safety": "An toàn: bị theo dõi, lộ thông tin cá nhân, an toàn trên mạng",
+           "mind": "Sức khoẻ tinh thần: kiệt sức, tự trọng, vượt qua mất mát"}
+CARD_TITLE = {"ko": "꼭 기억하세요", "en": "Remember this", "vi": "Điều rút ra", "ja": "覚えておきたいこと"}
 ENGAGE_MODE_RULE = {
     "judge": ("KIỂU TRUYỆN: ĐỂ NGƯỜI XEM PHÁN XỬ — cố ý để nhân vật chính cũng có MỘT điểm gây tranh cãi "
               "(phản ứng hơi quá, quyết định táo bạo, nói lời khó nghe...), không ai hoàn toàn đúng, để người xem "
@@ -63,6 +74,7 @@ ENGAGE_MODE_RULE = {
 def default_story() -> dict:
     return {"title": "", "brief": "", "genre": "marriage", "language": "ko", "minutes": 4, "style": "saeon",
             "bg_mode": "2d", "cta": True, "story_mode": "normal", "mid_q": True, "like_ask": True,
+            "value": True, "lesson": "auto",
             "part": 1, "subtitles": True, "characters": [], "places": [], "shots": []}
 
 
@@ -105,6 +117,10 @@ def clean_shot(s: dict, ids: set, k: int) -> dict:
         s["choice"] = {"a": a, "b": b}                  # thẻ chọn A / B hiện trên màn hình
     else:
         s.pop("choice", None)
+    if s.get("card"):
+        s["card"] = True                                 # thẻ "Điều rút ra" hiện trên cảnh này
+    else:
+        s.pop("card", None)
     s["extras"] = [x for x in (s.get("extras") or []) if x in ("sweat", "tears", "blush", "bags",
                                                                "bruise", "shadow")]
     return s
@@ -663,10 +679,53 @@ class Shot:
         out[y0:y1, x0:x1] = (reg * (1 - al * k) + rgb * al * k).astype(np.uint8)
         return out
 
+    def _card(self, arr: np.ndarray, t: float) -> np.ndarray:
+        """Thẻ "Điều rút ra": làm tối nền, khung trắng bo góc, các dòng hiện lần lượt theo lời đọc."""
+        card = self.st["lesson_card"]
+        items = card["items"]
+        W, H = self.W, self.H
+        if not hasattr(self, "_cd"):
+            ft = wp.font(int(H * 0.066), True, self.lang)
+            fi = wp.font(int(H * 0.052), True, self.lang)
+            pw = int(W * 0.74)
+            probe = ImageDraw.Draw(Image.new("RGBA", (10, 10)))
+            rows = [wp._wrap(probe, f"{k + 1}. {x}", fi, pw - int(W * 0.08)) for k, x in enumerate(items)]
+            lh = int(H * 0.072)
+            ph = int(H * 0.2) + lh * sum(len(r) for r in rows) + int(H * 0.025) * len(rows)
+            x0, y0 = (W - pw) // 2, max(int(H * 0.05), (H - ph) // 2 - int(H * 0.04))
+            layers = []
+            for upto in range(len(items) + 1):            # vẽ sẵn từng bước (0..n dòng)
+                lay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+                d = ImageDraw.Draw(lay)
+                d.rounded_rectangle([x0 + 8, y0 + 10, x0 + pw + 8, y0 + ph + 10], radius=int(H * 0.04), fill=(0, 0, 0, 110))
+                d.rounded_rectangle([x0, y0, x0 + pw, y0 + ph], radius=int(H * 0.04), fill=(255, 252, 240, 248),
+                                    outline=(255, 196, 40, 255), width=max(4, int(H * 0.007)))
+                tw = d.textlength(card["title"], font=ft)
+                d.text(((W - tw) / 2, y0 + int(H * 0.045)), card["title"], font=ft, fill=(214, 92, 20))
+                y = y0 + int(H * 0.16)
+                for k, r in enumerate(rows):
+                    for ln in r:
+                        if k < upto:
+                            d.text((x0 + int(W * 0.04), y), ln, font=fi, fill=(40, 40, 52))
+                        y += lh
+                    y += int(H * 0.025)
+                a = np.asarray(lay).astype(np.float32)
+                layers.append((a[:, :, :3], a[:, :, 3:4] / 255.0))
+            self._cd = layers
+        dur = max(1.0, self.row["dur"])
+        upto = min(len(items), 1 + int(max(0.0, t - 0.25) / max(0.4, (dur - 0.6) / len(items))))
+        rgb, al = self._cd[upto]
+        dim = min(1.0, t / 0.3) * 0.55
+        base = arr.astype(np.float32) * (1 - dim)
+        k = min(1.0, t / 0.3)
+        return (base * (1 - al * k) + rgb * al * k).astype(np.uint8)
+
     def subtitle(self, arr: np.ndarray, t: float, name: str = "") -> np.ndarray:
         """Phụ đề như video mẫu: chữ trắng to, viền đen dày, không nền. Chữ cả cảnh như nhau
         nên vẽ một lần rồi chỉ trộn vào vùng chữ ở mỗi khung (dựng nhanh)."""
         arr = self._choice(arr, t)
+        if self.s.get("card") and (self.st.get("lesson_card") or {}).get("items"):
+            return self._card(arr, t)                       # thẻ Điều rút ra thay phụ đề
         ln = self.s.get("line") or {}
         if not ln.get("text") or not self.st.get("subtitles", True):
             return arr
@@ -1082,6 +1141,7 @@ def write(st: dict, progress=None) -> dict:
         ending_rule=("Đoạn cuối DỪNG ở cao trào / cú sốc, bỏ lửng cho người xem chờ phần sau."
                      if st.get("cliffhanger", True) else "Đoạn cuối kết trọn vẹn."),
         style_block=style_block, narrator_rule=narrator_rule, engage_block=_engage_block(st, lang),
+        value_block=_value_block(st, lang),
         variety_block=_variety_block(st),
         **cat), task="story", timeout=600)
     if not isinstance(plan_, dict) or not plan_.get("segments"):
@@ -1089,6 +1149,7 @@ def write(st: dict, progress=None) -> dict:
     st["title"] = st.get("title") or str(plan_.get("title") or "")[:120]
     st["hook"] = str(plan_.get("hook") or "")[:300]
     st["engage"] = _clean_engage(plan_.get("engage"))
+    st["lesson_card"], facts = _clean_lesson(st, plan_.get("lesson"), len(plan_.get("segments") or []))
     old_c = {c["id"]: c for c in st.get("characters") or []} if prev else {}
     old_p = {p["id"]: p for p in st.get("places") or []} if prev else {}
     st["characters"] = [{"id": wa_slug(c.get("id") or c.get("name")), "name": str(c.get("name") or ""),
@@ -1170,6 +1231,7 @@ def write(st: dict, progress=None) -> dict:
                          (" Đây là đoạn CUỐI: dừng ở cú sốc, câu chuyện kết bằng một câu bỏ lửng."
                           if i == len(segs) - 1 and st.get("cliffhanger", True) else "") +
                          _engage_rule(st, lang, i, len(segs), q_seg, s_seg) +
+                         _value_rule(st, lang, i, len(segs), facts) +
                          ("\n\n" + cta if cta and i == len(segs) - 1 else ""),
             before_block=("### Thoại ngay trước đó (nối tiếp, không lặp lại)\n" + "\n".join(before)) if before else "",
             style_rule=style_rule, **cat), task="story", timeout=600)
@@ -1178,6 +1240,7 @@ def write(st: dict, progress=None) -> dict:
             raise RuntimeError(f"AI không phân cảnh được đoạn {i + 1}.")
         shots += [s for s in got if isinstance(s, dict)]
     st["shots"] = [clean_shot(s, ids, k) for k, s in enumerate(shots)]
+    _ensure_card(st)
     fix_places(st)
     say(1.0, "xong")
     return st
@@ -1258,6 +1321,87 @@ def _engage_block(st: dict, lang: str) -> str:
         '({"question": câu hỏi khảo sát, "options": 2–4 lựa chọn ngắn}), "titles" (3 tên tập dạng câu hỏi gây '
         'tranh luận, vd "...제가 예민한 건가요?").')
     return "### Kéo người xem tương tác (bình luận, thích, chia sẻ)\n" + "\n".join(out)
+
+
+def _value_block(st: dict, lang: str) -> str:
+    """Dặn AI khi lập dàn ý: truyện phải có giá trị thật cho người xem, không chỉ kịch tính."""
+    if st.get("value", True) is False:
+        return ""
+    lab = LANGS.get(lang, lang)
+    topic = st.get("lesson") or "auto"
+    pick = ("Tự chọn MỘT bài học hợp nhất với thể loại và yêu cầu." if topic == "auto" else
+            f"Bài học thuộc chủ đề: {LESSONS.get(topic, topic)}.")
+    return f"""### GIÁ TRỊ NỘI DUNG (bắt buộc): người xem xem xong phải mang về được điều có ích
+Truyện vẫn cuốn, kịch tính như thường, nhưng được dựng QUANH MỘT bài học thật, dùng được ngoài đời. {pick}
+- Cú lật / chiến thắng của nhân vật chính đến từ việc làm ĐÚNG cách (giữ bằng chứng, biết quyền của mình, biết
+  nói rõ ràng, nhờ đúng người / đúng nơi giúp), KHÔNG nhờ may mắn, phép màu hay trả thù bạo lực. Người xem học được
+  cách làm theo.
+- Phản diện có động cơ, lý do (không ác vô cớ); mâu thuẫn có chiều sâu để người xem suy nghĩ, tranh luận.
+- KHÔNG ghi "chuyện có thật"; không chửi tục, không bạo lực / cảnh gây sốc chỉ để câu view.
+- AN TOÀN THÔNG TIN: chỉ dùng kiến thức PHỔ THÔNG chắc chắn đúng (cách nhận biết, cách xử lý, nguyên tắc chung).
+  KHÔNG bịa số điều luật, mức phạt, thời hạn, con số thống kê, tên cơ quan cụ thể. Chỗ liên quan pháp lý / y tế thì
+  khuyên hỏi luật sư / bác sĩ / cơ quan chức năng.
+Thêm vào output "lesson" (viết bằng {lab}):
+  "topic": bài học trong 1 câu ngắn;
+  "facts": 2–3 câu KIẾN THỨC ngắn (≤ 30 chữ mỗi câu) sẽ lồng tự nhiên vào lời kể, mỗi câu kèm "segment" là số thứ tự
+  đoạn đặt câu đó (rải ở các đoạn khác nhau, đúng lúc nhân vật cần tới kiến thức đó), vd
+  {{"segment":3,"text":"그때 알았어요. 문자랑 녹음도 다 증거가 된다는 걸요."}};
+  "takeaways": 2–3 điều rút ra, mỗi điều ≤ 14 chữ, dạng việc nên làm (vd "대화는 녹음해 두기"), hiện thành thẻ cuối video."""
+
+
+def _clean_lesson(st: dict, raw, n: int) -> tuple[dict, dict]:
+    """(thẻ "Điều rút ra" {title, items}, {chỉ số đoạn: [câu kiến thức]})."""
+    if st.get("value", True) is False or not isinstance(raw, dict):
+        return {}, {}
+    items = [str(x).strip()[:60] for x in (raw.get("takeaways") or []) if str(x).strip()][:3]
+    facts: dict = {}
+    for f in raw.get("facts") or []:
+        if not isinstance(f, dict) or not str(f.get("text") or "").strip():
+            continue
+        try:
+            k = max(0, min(n - 1, int(f.get("segment") or 1) - 1))
+        except (TypeError, ValueError):
+            k = 0
+        facts.setdefault(k, []).append(str(f["text"]).strip()[:200])
+    card = {"topic": str(raw.get("topic") or "")[:200],
+            "title": CARD_TITLE.get(st.get("language") or "ko", CARD_TITLE["en"]), "items": items} if items else {}
+    return card, facts
+
+
+def _value_rule(st: dict, lang: str, i: int, n: int, facts: dict) -> str:
+    """Dặn thêm khi phân cảnh: câu kiến thức của đoạn này, thẻ Điều rút ra ở đoạn cuối."""
+    if st.get("value", True) is False:
+        return ""
+    out = []
+    for f in facts.get(i, []):
+        out.append(f'CÂU KIẾN THỨC: lồng thật tự nhiên vào lời kể / thoại của đoạn này, đúng lúc nhân vật cần tới nó '
+                   f'(giữ nguyên ý, được chỉnh chữ cho trôi): "{f}"')
+    card = st.get("lesson_card") or {}
+    if i == n - 1 and card.get("items"):
+        out.append('THẺ ĐIỀU RÚT RA: sau khi câu chuyện khép lại (TRƯỚC lời mời chia sẻ nếu có), thêm đúng 1 cảnh người kể '
+                   f'("who":"narr") nói gọn điều người xem nên nhớ, bằng {LANGS.get(lang, lang)}, ≤ 40 chữ, theo đúng ý các '
+                   f'dòng: {" / ".join(card["items"])}. Cảnh đó thêm "card": true (tool hiện thẻ tóm tắt lên màn hình), '
+                   'cận mặt nhân vật chính, nét mặt điềm tĩnh, "camera":"still".')
+    return ("\n\n" + "\n".join(out)) if out else ""
+
+
+def _ensure_card(st: dict) -> None:
+    """AI quên cảnh thẻ Điều rút ra: chèn một cảnh trước lời mời chia sẻ cuối video."""
+    card = st.get("lesson_card") or {}
+    shots = st.get("shots") or []
+    if not card.get("items") or not shots or any(x.get("card") for x in shots):
+        return
+    k = len(shots)
+    if st.get("cta", True):                               # lời mời cuối: chuỗi câu người kể ở cuối
+        while k > 0 and (shots[k - 1].get("line") or {}).get("who") == "narr" and len(shots) - k < 3:
+            k -= 1
+    nid = st.get("narrator_id") or (shots[-1].get("who") or "")
+    base = shots[max(0, k - 1)]
+    sh = {"id": f"card_{len(shots) + 1:03d}", "type": "close" if nid else "wide", "who": nid,
+          "expr": "neutral", "pose": "down", "camera": "still", "place": base.get("place") or "",
+          "line": {"who": "narr", "text": " ".join(card["items"])}, "front": "", "extras": [], "with": [],
+          "card": True}
+    shots.insert(k, sh)
 
 
 def _clean_engage(e) -> dict:

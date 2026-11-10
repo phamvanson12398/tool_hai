@@ -1044,7 +1044,17 @@ phần lớn là **cận mặt**, đối thoại liên tục, hay chèn **màn h
    người cùng tuổi cùng giới thì tool đổi cao độ, đo giọng mẫu và tạo lại nếu hai giọng nghe
    giống nhau; đàn ông không bị giọng cao như nữ; người kể khác hẳn giọng nhân vật. Muốn giọng
    cụ thể thì gõ mô tả (vd `male, elderly, very low pitch`) hoặc chọn giọng trong Thư viện.
-6. **Edit tự động** (khung Dựng video): video ra là đăng được luôn, không cần mở CapCut.
+6. **Giá trị nội dung** (mặc định Có): để TikTok / YouTube đánh giá video có giá trị, không chỉ câu cảm xúc.
+   Truyện vẫn kịch tính nhưng dựng quanh MỘT bài học thật (ô **Chủ đề bài học**: lừa đảo, tiền bạc, hôn nhân –
+   thừa kế, nơi làm việc, đặt ranh giới, thao túng tâm lý, an toàn, sức khoẻ tinh thần, hoặc để AI chọn):
+   - nhân vật chính thắng nhờ làm ĐÚNG cách (giữ bằng chứng, biết quyền, nói rõ ràng, nhờ đúng người), không nhờ may mắn
+     hay trả thù bạo lực; phản diện có động cơ; không ghi "chuyện có thật", bớt chửi bới / cảnh sốc;
+   - 2–3 câu kiến thức lồng tự nhiên vào lời kể đúng lúc nhân vật cần; chỉ kiến thức phổ thông, không bịa số điều
+     luật, mức phạt, con số — chỗ pháp lý / y tế khuyên hỏi luật sư, bác sĩ;
+   - cuối truyện (trước lời mời chia sẻ) hiện **thẻ Điều rút ra** 2–3 dòng, hiện lần lượt theo lời người kể. Sau khi AI
+     viết, các dòng của thẻ hiện ở ô **Thẻ Điều rút ra** để chị sửa (mỗi dòng một ý), bấm Lưu.
+   Chọn **Không** nếu chỉ muốn truyện giải trí.
+7. **Edit tự động** (khung Dựng video): video ra là đăng được luôn, không cần mở CapCut.
    - **Chuyển cảnh & hiệu ứng**: đổi địa điểm thì chuyển cảnh lớn (lướt nhoè trái / phải, phóng
      vào, vòng tròn mở ra, tối dần, mờ nhoè, trượt lên, mờ chồng); cùng chỗ thì cắt thẳng hoặc
      chuyển nhẹ. Hiệu ứng nhấn theo nét mặt: sốc → lóe trắng / giật phóng to / rung / tia tốc độ;

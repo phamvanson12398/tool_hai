@@ -35,10 +35,13 @@ NGÔN NGỮ: tên tập ("title"), móc câu ("hook"), tên nhân vật và mọ
 
 {{engage_block}}
 
+{{value_block}}
+
 {{variety_block}}
 
 Output JSON đúng dạng này, không có gì khác:
 {"title":"...","hook":"...","segments":[{"summary":"..."}],"question_segment":2,"saida_segment":4,
  "engage":{"pinned_comment":"...","poll":{"question":"...","options":["...","..."]},"titles":["...","...","..."]},
+ "lesson":{"topic":"...","facts":[{"segment":2,"text":"..."}],"takeaways":["...","..."]},
  "characters":[{"id":"bo","name":"...","role":"...","look":{"sex":"male","age":"middle","skin":"fair","hair":"short_part","hair_color":"black","top":"sweater","top_color":"beige","bottom_color":"navy","glasses":false,"beard":"","build":"average","features":[],"face_shape":"square","eye_shape":"narrow","brows":"thick"},"home":"ga"}],
  "places":[{"id":"ga","name":"...","kind":"duong_pho","time":"dem","look":"a busy subway station platform in Seoul at night, ..."}],"narrator":false}
