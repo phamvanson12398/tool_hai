@@ -589,7 +589,7 @@
     var s = JSON.parse(row.getAttribute("data-raw") || "{}");
     var q = function (k) { var f = row.querySelector("[data-k=" + k + "]"); return f ? f.value : ""; };
     s.text = q("text"); s.who = q("who"); s.place = q("place"); s.fx = q("fx");
-    s.mood = q("mood"); s.sfx_text = q("sfx_text");
+    s.mood = q("mood"); s.sfx_text = q("sfx_text"); s.move = q("move");
     var raw = JSON.parse(row.getAttribute("data-raw") || "{}"), yo = q("yomi").trim();
     s.yomi = (s.text !== (raw.text || "") && yo === (raw.yomi || "")) ? "" : yo;   // sửa câu thì cách đọc cũ bỏ đi
     var t = q("vtype");
@@ -661,6 +661,9 @@
     ctl.appendChild(fx);
     var md = sel(o.moods || [["", "Nền địa điểm"]], s.mood || ""); md.setAttribute("data-k", "mood"); md.title = "Nền cảm xúc";
     ctl.appendChild(md);
+    var mv = sel(o.moves || [["", "Đứng yên"]], s.move || ""); mv.setAttribute("data-k", "move");
+    mv.title = "Chuyển động của nhân vật (cảnh hai người: người đang nói)";
+    ctl.appendChild(mv);
     var sx = document.createElement("input");
     sx.type = "text"; sx.value = s.sfx_text || ""; sx.setAttribute("data-k", "sfx_text"); sx.maxLength = 8;
     sx.placeholder = "Chữ hiệu ứng (ニヤニヤ)"; sx.title = "Chữ hiệu ứng rải quanh mặt nhân vật, để trống nếu không có";

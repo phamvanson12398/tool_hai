@@ -3384,6 +3384,7 @@ def _2ch_view(pid: str, data: dict) -> dict:
     out["options"] = {"genres": [[k, v] for k, v in nichan.GENRES.items()], "emos": list(nichan.EMOS),
                       "emo_vi": nichan.EMO_VI, "fx": [[k, v] for k, v in nichan.FX_VI.items()],
                       "voice_modes": [[k, v] for k, v in nichan.VOICE_MODES.items()],
+                      "moves": [[k, v] for k, v in nichan.MOVES.items()],
                       "moods": [[k, v] for k, v in nichan.MOODS.items()],
                       "framings": [[k, v] for k, v in nichan.FRAMINGS.items()],
                       "layouts": [[k, v] for k, v in nichan.LAYOUTS.items()],

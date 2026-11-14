@@ -1377,5 +1377,11 @@ liền mạch, hình nảy nhẹ khi đổi cảnh, máy quay đẩy vào chậm
      tool đổi cao độ, tốc độ sau khi đọc — gần giống, không sống động bằng người thật. Muốn giống video nhất:
      tải giọng nữ chị được phép dùng (tự thu / thuê thu 10 giây) bằng **+ Tải giọng mẫu**; không nên cắt
      giọng từ video kênh khác.
+   - **Chuyển động** (ô ở từng cảnh, AI tự chọn cho khoảng một nửa số câu theo hành động trong câu): đi vào từ trái /
+     phải, đi ra, đi bộ, chạy, tiến lại gần (to dần), lùi lại, xông tới / chỉ thẳng mặt (lao về phía người kia), nhảy lên,
+     gật đầu, lắc đầu, cúi đầu, run rẩy, ngã quỵ / ngất (cận mặt thì nghiêng đầu tụt xuống), xoay vòng, lơ lửng. Cảnh hai
+     người: người đang nói chuyển động. Không chọn thì tool tự thêm theo hiệu ứng: sốc → nhảy dựng, giận / bối rối → run.
+   - **Rung mạnh hơn**: hiệu ứng sốc / rung giờ rung gần 1 giây, biên độ gấp đôi, và rung cả khung hình như máy quay
+     bị giật (phụ đề vẫn đứng yên để dễ đọc).
    - **Nhân vật nhún khi nói**: câu nói trong 「」 thì nhân vật đang nói nhún nhún theo đúng tiếng đọc
      (có tiếng thì nhún, ngừng thì đứng yên); cảnh hai người chỉ người nói nhún. Câu lời kể thì đứng yên.

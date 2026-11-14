@@ -66,6 +66,14 @@ MOODS = {"": "Nền địa điểm", "smug_red": "Tia sáng đỏ (đắc ý, kh
          "dizzy_purple": "Xoáy tím (choáng, tuyệt vọng)", "gloom": "Màn tím vạch rủ (u sầu, cầu xin)",
          "scheme_dark": "Nền đen ánh sáng (âm mưu)", "climax_red": "Rèm đỏ (cao trào)"}
 FRAMINGS = {"full": "Toàn thân / nửa người", "close": "Cận mặt to"}
+# chuyển động của nhân vật trong cảnh (để video "sống", cuốn hơn)
+MOVES = {"": "Đứng yên (tự chọn theo hiệu ứng)",
+         "enter_left": "Đi vào từ trái", "enter_right": "Đi vào từ phải",
+         "exit_left": "Đi ra bên trái", "exit_right": "Đi ra bên phải",
+         "walk": "Đi bộ", "run": "Chạy", "approach": "Tiến lại gần (to dần)", "retreat": "Lùi lại (sợ, né)",
+         "lunge": "Xông tới / chỉ thẳng mặt", "jump": "Nhảy lên (vui, giật mình)", "nod": "Gật đầu",
+         "shake_head": "Lắc đầu", "bow": "Cúi đầu (xin lỗi, buồn)", "tremble": "Run rẩy",
+         "faint": "Ngã quỵ / ngất", "spin": "Xoay vòng (choáng)", "float": "Lơ lửng (mơ màng, hồi tưởng)"}
 LAYOUTS = {"side": "Hai người cạnh nhau", "stack": "Một người trước, một người sau"}
 CAP_STYLES = {"center": "Chữ màu giữa khung (xanh / đỏ theo người nói)",
               "left": "Chữ trắng viền đen căn trái (kiểu スカッと)"}
@@ -250,7 +258,8 @@ def clean_scene(s: dict, ids: set, places: set, k_ok: set, k: int) -> dict:
            "fx": s.get("fx") if s.get("fx") in FX else "",
            "mood": s.get("mood") if s.get("mood") in MOODS else "",
            "sfx_text": str(s.get("sfx_text") or "").strip()[:8],       # chữ hiệu ứng quanh nhân vật
-           "yomi": clean_yomi(s.get("yomi"))}                          # cách đọc cho bộ đọc giọng (hiragana)
+           "yomi": clean_yomi(s.get("yomi")),                          # cách đọc cho bộ đọc giọng (hiragana)
+           "move": s.get("move") if s.get("move") in MOVES else ""}    # chuyển động của nhân vật
     if s.get("img"):
         out["img"] = s["img"]
     return out
@@ -455,6 +464,7 @@ def write(st: dict, progress=None) -> dict:
                     "KHÔNG cắt cụt hay bỏ trợ từ cho ngắn; mỗi câu khoảng 1,5–2 giây, cảm xúc đổi liên tục; nền cảm xúc, "
                     "chữ hiệu ứng và hiệu ứng dùng dày hơn." if fast else ""),
         moods=", ".join(f"{k} ({v})" for k, v in MOODS.items() if k),
+        moves=", ".join(f"{k} ({v})" for k, v in MOVES.items() if k),
         stickers="\n".join(f"   - {k['id']}: {k['desc']}" for k in ks) or "   (chưa có)",
         emos=", ".join(EMOS), fx=", ".join(f for f in FX if f),
         kinds=scene_art.kinds_catalog() if hasattr(scene_art, "kinds_catalog") else ", ".join(scene_art.KINDS),
@@ -977,6 +987,109 @@ def _fit(im: Image.Image, mw: int, mh: int) -> Image.Image:
     return im.resize((max(1, int(im.width * k)), max(1, int(im.height * k))), Image.LANCZOS)
 
 
+def _ease_out_back(u: float) -> float:
+    u = max(0.0, min(1.0, u)) - 1
+    return 1 + 2.2 * u ** 3 + 1.2 * u ** 2
+
+
+def _ease_io(u: float) -> float:
+    u = max(0.0, min(1.0, u))
+    return u * u * (3 - 2 * u)
+
+
+def auto_move(s: dict) -> str:
+    """Cảnh không chọn chuyển động: tự chọn theo hiệu ứng (sốc nhảy dựng, giận / bối rối run lên)."""
+    fx = s.get("fx") or ""
+    return {"shock": "jump", "anger": "tremble", "dark": "tremble", "sweat": "tremble", "shake": "tremble"}.get(fx, "")
+
+
+PIVOT_CENTER = {"spin", "shake_head", "float"}           # xoay quanh giữa người (còn lại: quanh bàn chân)
+
+
+def motion(move: str, t: float, dur: float, toward: int = 0) -> tuple[float, float, float, float]:
+    """(dx, dy, hệ số phóng, góc xoay độ) của nhân vật ở giây t. toward: -1 / 1 hướng về phía người kia."""
+    dx = dy = ang = 0.0
+    sc = 1.0
+    if move in ("enter_left", "enter_right"):
+        u = _ease_out_back(t / 0.45)
+        dx = (1 - u) * W * (-0.95 if move == "enter_left" else 0.95)
+        if t < 0.45:
+            dy, ang = -abs(math.sin(t * 22)) * 26, (6 if move == "enter_left" else -6)
+    elif move in ("exit_left", "exit_right"):
+        t0 = max(0.35, dur - 0.65)
+        u = _ease_io((t - t0) / 0.55) ** 1.5
+        dx = u * W * (-1.05 if move == "exit_left" else 1.05)
+        if t > t0:
+            dy, ang = -abs(math.sin(t * 22)) * 26, (6 if move == "exit_left" else -6)
+    elif move == "walk":
+        dx = (-0.18 + 0.36 * min(1.0, t / max(dur, 0.5))) * W
+        dy, ang = -abs(math.sin(t * 9)) * 22, 3.5 * math.sin(t * 9)
+    elif move == "run":
+        dx = (0.22 - 0.44 * min(1.0, t / max(dur, 0.5))) * W
+        dy, ang = -abs(math.sin(t * 17)) * 38, 9.0
+    elif move == "approach":
+        sc = 0.78 + 0.4 * _ease_io(t / max(0.4, dur * 0.7))
+        dy = -abs(math.sin(t * 8)) * 12
+    elif move == "retreat":
+        u = _ease_io(t / 0.6)
+        sc, dx = 1.08 - 0.3 * u, (toward or 1) * -W * 0.16 * u
+        dx += 6 * math.sin(t * 60)
+    elif move == "lunge":
+        if t < 0.2:
+            u = _ease_io(t / 0.2)
+            sc, dx = 1.0 + 0.3 * u, (toward or 0) * W * 0.2 * u
+        else:
+            u = _ease_io((t - 0.2) / 0.35)
+            sc, dx = 1.3 - 0.12 * u, (toward or 0) * W * (0.2 - 0.06 * u)
+        ang = (toward or 0) * -6 * (1 - _ease_io((t - 0.2) / 0.4))
+        dy = -6 * math.sin(t * 30) if t < 0.5 else 0.0
+    elif move == "jump":
+        p = t / 0.5
+        if p < 2:
+            h = math.sin(math.pi * (p % 1))
+            dy, sc = -h * (190 if p < 1 else 110), 1.0 + 0.05 * h
+    elif move == "nod":
+        if t < 1.4:
+            dy, ang = 18 * abs(math.sin(t * 7.5)), -4 * abs(math.sin(t * 7.5))
+    elif move == "shake_head":
+        if t < 1.4:
+            ang = 9 * math.sin(t * 13) * (1 - t / 1.4)
+    elif move == "bow":
+        u = _ease_io(t / 0.45)
+        ang, dy = -20 * u, 34 * u
+    elif move == "tremble":
+        dx, dy = 9 * math.sin(t * 71), 6 * math.cos(t * 57)
+    elif move == "faint":                                  # ngã ngửa sang trái, vẫn nằm trong khung
+        u = _ease_io((t - 0.35) / 0.5) ** 2
+        ang, dy, dx = 70 * u, 20 * u, W * 0.36 * u
+        if t < 0.35:
+            dx = 8 * math.sin(t * 60)
+    elif move == "spin":
+        ang = 360 * _ease_io(t / 0.9) if t < 0.9 else 0.0
+        sc = 1.0 - 0.15 * math.sin(math.pi * min(1.0, t / 0.9))
+    elif move == "float":
+        dy, ang = -26 * math.sin(t * 2.2) - 20, 4 * math.sin(t * 1.6)
+    return dx, dy, sc, ang
+
+
+def _rot_blend(can: np.ndarray, arr: np.ndarray, x: int, y: int, px: float, py: float, ang: float) -> None:
+    """Xoay ảnh RGBA quanh điểm (px, py) trên khung (vd bàn chân) rồi trộn vào khung."""
+    import cv2
+    if abs(ang) < 0.3:
+        _blend(can, arr, x, y)
+        return
+    h, w = arr.shape[:2]
+    M = cv2.getRotationMatrix2D((float(px - x), float(py - y)), float(ang), 1.0)
+    pts = np.array([[0, 0, 1], [w, 0, 1], [0, h, 1], [w, h, 1]], np.float32) @ M.T
+    x0, y0 = np.floor(pts.min(axis=0)).astype(int)
+    x1, y1 = np.ceil(pts.max(axis=0)).astype(int)
+    M[0, 2] -= x0
+    M[1, 2] -= y0
+    out = cv2.warpAffine(np.ascontiguousarray(arr), M, (int(x1 - x0), int(y1 - y0)), flags=cv2.INTER_LINEAR,
+                         borderMode=cv2.BORDER_CONSTANT, borderValue=(0, 0, 0, 0))
+    _blend(can, out, x + x0, y + y0)
+
+
 class Renderer:
     """Vẽ khung hình: chuẩn bị sẵn nền, hình, chữ của từng cảnh (cache), mỗi khung chỉ ghép."""
 
@@ -1177,7 +1290,8 @@ class Renderer:
             cw, ch = int(bw / 1.08 / z * 1.0), int(bh / 1.08 / z)
             x0, y0 = (bw - cw) // 2, (bh - ch) // 2
             can[TOP:] = cv2.resize(bg[y0:y0 + ch, x0:x0 + cw], (W, H - TOP), interpolation=cv2.INTER_LINEAR)
-        shake = fx in ("shake", "shock") and t < 0.6
+        shake = fx in ("shake", "shock") and t < 0.9           # rung mạnh khi sốc
+        decay = max(0.0, 1 - t / 0.9)
         # nhịp nhanh: giữa câu "giật" phóng to vào mặt một nhịp (như cắt cảnh)
         punch = 1.0
         if self.st.get("pace") == "fast" and dur > 1.3 and t > dur * 0.5:
@@ -1186,13 +1300,32 @@ class Renderer:
         who = self._who.get(s["id"]) or [None] * len(vis)
         speaking = s.get("who") not in (None, "", "narr") and s.get("who") in who
         lvl = self.talk(row, t) if speaking else 0.0
+        move = s.get("move") or auto_move(s)
+        # nhân vật chuyển động: người đang nói (cảnh hai người) hoặc nhân vật duy nhất
+        tgt = who.index(s.get("who")) if speaking else (len(vis) - 1 if (s.get("visual") or {}).get("layout") == "stack"
+                                                     and len(vis) > 1 else 0)
         heads = []
         for n_im, (im, cx, by, kind) in enumerate(vis):
             u = min(1.0, t / 0.28)                              # nảy vào cảnh
             sc = 0.86 + 0.14 * (1 - (1 - u) ** 3) + 0.035 * math.sin(math.pi * u)
             sc *= 1.0 + 0.006 * math.sin(t * 2.4)              # thở nhẹ
-            dx = int(14 * math.sin(t * 60)) if shake else 0
+            dx = int(30 * math.sin(t * 58) * decay) if shake else 0
             hop = 0
+            mdx = mdy = mang = 0.0
+            msc = 1.0
+            if move and n_im == tgt:
+                toward = 0
+                if len(vis) > 1:                              # hướng về phía người kia
+                    other = vis[1 - tgt if len(vis) == 2 else 0]
+                    toward = 1 if other[1] > cx else -1
+                mdx, mdy, msc, mang = motion(move, t, dur, toward)
+                if kind == "abs":                             # cận mặt: xoay / nhún nhẹ hơn để không lộ mép
+                    mang, mdy = mang * 0.5, mdy * 0.6
+                    if move == "faint":                       # cận mặt ngất: nghiêng đầu rồi tụt xuống
+                        u = _ease_io((t - 0.35) / 0.5) ** 2
+                        mdx, mang, mdy = 0.0, 22 * u, (H - TOP) * 0.3 * u
+            elif move == "tremble" and len(vis) == 1:
+                mdx, mdy, _, _ = motion(move, t, dur)
             if lvl > 0.05 and who[n_im] == s.get("who"):       # người đang nói: nhún nhún theo tiếng
                 hop = int(-22 * lvl * abs(math.sin(t * 13)))
                 sc *= 1.0 + 0.025 * lvl * abs(math.sin(t * 13))
@@ -1203,20 +1336,22 @@ class Renderer:
                     self._blur[id(im)] = im.filter(ImageFilter.GaussianBlur(max(4, im.width // 90)))
                 src = self._blur[id(im)]
             if kind == "abs":                                   # đã đặt sẵn: phóng quanh đầu
-                f = (0.92 + 0.08 * (1 - (1 - u) ** 3)) * punch
+                f = (0.92 + 0.08 * (1 - (1 - u) ** 3)) * punch * msc
                 ax, ay = cx + hx, by + hy
                 nw, nh = max(1, int(im.width * f)), max(1, int(im.height * f))
-                x, y = int(ax - hx * f) + dx, int(ay - hy * f) + hop
+                x, y = int(ax - hx * f + mdx) + dx, int(ay - hy * f + mdy) + hop
+                piv = (x + hx * f, y + hy * f)
             else:
-                sc *= punch
+                sc *= punch * msc
                 nw, nh = max(1, int(im.width * sc)), max(1, int(im.height * sc))
-                x = int(cx - nw / 2) + dx
+                x = int(cx - nw / 2 + mdx) + dx
                 y = int(by - nh) if kind == "stand" else int(by - im.height / 2 - nh / 2)
                 if punch > 1.0 and len(vis) == 1:               # phóng về phía mặt
                     y += int((nh - nh / punch) * 0.55)
-                y = max(TOP - 40, y) + hop
+                y = max(TOP - 40, y) + hop + int(mdy)
+                piv = (x + nw / 2, y + nh) if kind == "stand" and move not in PIVOT_CENTER else (x + nw / 2, y + nh * 0.45)
             arr = cv2.resize(np.asarray(src), (nw, nh), interpolation=cv2.INTER_LINEAR)
-            _blend(can, arr, x, y)
+            _rot_blend(can, arr, x, y, piv[0], piv[1], mang)
             k = nw / im.width
             heads.append((x + hx * k, y + hy * k, hr * k))
             if fx == "dark" and len(vis) == 1:                  # mặt đen sầm khi giận
@@ -1265,6 +1400,13 @@ class Renderer:
                     r = math.radians(a2)
                     cv2.line(can, (int(c[0] - L * math.cos(r)), int(c[1] - L * math.sin(r))),
                              (int(c[0] + L * math.cos(r)), int(c[1] + L * math.sin(r))), (255, 255, 230), 6, cv2.LINE_AA)
+        if shake or move == "faint" and 0.35 < t < 1.1:      # máy quay rung cả khung (phụ đề vẫn đứng yên)
+            k = decay if shake else max(0.0, 1 - (t - 0.35) / 0.75)
+            cx_, cy_ = 26 * math.sin(t * 53) * k, 18 * math.cos(t * 47) * k
+            M = np.float32([[1.04, 0, W * 0.5 - 1.04 * W * 0.5 + cx_],
+                            [0, 1.04, (H - TOP) * 0.5 - 1.04 * (H - TOP) * 0.5 + cy_]])
+            can[TOP:] = cv2.warpAffine(np.ascontiguousarray(can[TOP:]), M, (W, H - TOP), flags=cv2.INTER_LINEAR,
+                                       borderMode=cv2.BORDER_REFLECT)
         capa = self.cap(s)
         _blend(can, capa, 0, TOP + (40 if self.st.get("cap_style") == "left" else 60))
         return can
